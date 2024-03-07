@@ -18,7 +18,7 @@ def check_dir_path(dir_path):
     return os.path.normpath(os.path.abspath(dir_path))
 
 
-def check_file_path(file_path):
+def check_file_path(file_path, extension='.json'):
     """
     check if the file_path belongs to a valid dir and has a .json extension
     :param file_path: a file path
@@ -31,8 +31,8 @@ def check_file_path(file_path):
     if not ext:
         raise ValueError(f"File name should have an extension: {file_name}")
 
-    if ext != '.json':
-        raise ValueError(f"File extension should be .json: {file_name}")
+    if ext != extension:
+        raise ValueError(f"File extension should be {extension}: {file_name}")
 
     file_path = os.path.normpath(os.path.abspath(os.path.join(dir_path, file_name)))
     return file_path
@@ -93,6 +93,8 @@ def save_to_json_file(data, file_path, encoding='utf-8', output_log=False):
 
     if output_log:
         logger.info(f"Data saved to {file_path}")
+
+
 def calculate_file_md5(file_path):
     """计算文件的SHA-256哈希值"""
     sha256 = hashlib.sha256()
