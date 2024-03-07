@@ -11,7 +11,8 @@ from environs import Env
 env = Env()
 env.read_env()
 
+# tree-sitter settings
 # 所有文件的大小总和限制，防止内存溢出
 FEATURE_EXTRACTOR_MEMORY_LIMIT = 2048
-# 计算commit time
+# 是否计算commit time
 CAL_COMMIT_TIME = env.bool("CAL_COMMIT_TIME", False)
