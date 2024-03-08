@@ -1,5 +1,5 @@
 from bintools.general.file_tool import load_from_json_file, save_to_json_file
-from main.interface import FunctionFeature, TrainDataItemForModel1
+from main.interface import FunctionFeature, TrainDataItemForFunctionConfirmModel
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
 
 
@@ -20,4 +20,18 @@ def debug_convert_function_feature_to_train_data():
 
 
 if __name__ == '__main__':
-    debug_convert_function_feature_to_train_data()
+    # debug_convert_function_feature_to_train_data()
+    from transformers import RobertaTokenizer, RobertaForSequenceClassification
+
+    # Load GraphCodeBERT tokenizer
+    tokenizer = RobertaTokenizer.from_pretrained('microsoft/graphcodebert-base')
+
+    # Load GraphCodeBERT model for sequence classification
+    # model = RobertaForSequenceClassification.from_pretrained('microsoft/graphcodebert-base')
+
+    vocab = set(tokenizer.get_vocab().keys())
+    print(len(vocab))
+
+    for special_token in ["[SRC_CODE]", "[SRC_STR]", "[SRC_NUM]", "[BIN_CODE]", "[BIN_STR]", "[BIN_NUM]"]:
+        print(special_token in vocab)
+    print("[SRC_CODE]" in vocab)

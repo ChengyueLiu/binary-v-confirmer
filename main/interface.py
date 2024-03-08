@@ -105,12 +105,21 @@ class FunctionFeature:
         return [cls.init_from_dict(item) for item in data]
 
 
-class TrainDataItemForModel1:
+class TrainDataItemForFunctionConfirmModel:
+    src_code_separator = "[SRC_CODE]"
+    src_string_separator = "[SRC_STR]"
+    src_number_separator = "[SRC_NUM]"
+    asm_code_separator = "[ASM_CODE]"
+    bin_string_separator = "[BIN_STR]"
+    bin_number_separator = "[BIN_NUM]"
+
     def __init__(self, function_feature: FunctionFeature):
         """
         从原始特征中初始化训练数据
         :param function_feature:
         """
+        # 分隔符
+
 
         # 部分源代码函数会重名，二进制中的函数不会重名，为了省事儿，重名的直接不用，避免对应错误
         self.src_function_feature = function_feature.src_function_features[0]
@@ -128,17 +137,40 @@ class TrainDataItemForModel1:
         self.asm_codes: List[str] = self.bin_function_feature.asm_codes
         self.bin_strings: List[str] = self.bin_function_feature.strings
         self.bin_numbers: List[int] = self.bin_function_feature.numbers
+        self.label = 1
 
     def custom_serialize(self):
         return {
             "function_name": self.function_name,
-            # "src_codes": self.src_codes,
+            "src_codes": self.src_codes,
             "src_strings": self.src_strings,
             "src_numbers": self.src_numbers,
-            # "asm_codes": self.asm_codes,
+            "asm_codes": self.asm_codes,
             "bin_strings": self.bin_strings,
             "bin_numbers": self.bin_numbers
         }
+    @classmethod
+    def get_special_tokens(cls):
+        return [cls.src_code_separator,
+                cls.src_string_separator,
+                cls.src_number_separator,
+                cls.asm_code_separator,
+                cls.bin_string_separator,
+                cls.bin_number_separator]
+
+    def get_train_text(self):
+        src_code_text = " ".join(self.src_codes)
+        src_strings = " ".join([self.function_name, *self.src_strings])
+        src_numbers = " ".join([str(num) for num in self.src_numbers])
+        src_text = f"{self.src_code_separator} {src_code_text} {self.src_string_separator} {src_strings} {self.src_number_separator} {src_numbers}"
+
+        asm_code_text = " ".join(self.asm_codes)
+        bin_strings = " ".join(self.bin_strings)
+        bin_numbers = " ".join([str(num) for num in self.bin_numbers])
+        bin_text = f"{self.asm_code_separator} {asm_code_text} {self.bin_string_separator} {bin_strings} {self.bin_number_separator} {bin_numbers}"
+
+        merged_text = f"{src_text} {bin_text}"
+        return merged_text
 
     def _normalize_src_function_feature(self):
         # 正规化处理源代码
