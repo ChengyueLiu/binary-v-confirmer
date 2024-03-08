@@ -34,8 +34,9 @@ def init_train(filepath,
         tokenizer.add_tokens(special_token)
 
     # model
-    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels).to(device)
+    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
     model.resize_token_embeddings(len(tokenizer))
+    model = torch.nn.DataParallel(model).to(device)
 
     # datasets
     train_dataset, val_dataset, test_dataset = create_datasets(filepath,
