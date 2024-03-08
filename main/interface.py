@@ -113,31 +113,27 @@ class TrainDataItemForFunctionConfirmModel:
     bin_string_separator = "[BIN_STR]"
     bin_number_separator = "[BIN_NUM]"
 
-    def __init__(self, function_feature: FunctionFeature):
+    def __init__(self, function_name: str,
+                 src_codes: List[str],
+                 src_strings: List[str],
+                 src_numbers: List,
+                 asm_codes: List[str],
+                 bin_strings: List[str],
+                 bin_numbers: List):
         """
         从原始特征中初始化训练数据
         :param function_feature:
         """
-        # 分隔符
-
-
-        # 部分源代码函数会重名，二进制中的函数不会重名，为了省事儿，重名的直接不用，避免对应错误
-        self.src_function_feature = function_feature.src_function_features[0]
-        self.bin_function_feature = function_feature.bin_function_feature
-
-        # 正规化处理
-        self._normalize_src_function_feature()
-        self._normalize_bin_function_feature()
-
-        # 赋值
-        self.function_name = function_feature.function_name
-        self.src_codes: List[str] = self.src_function_feature.original_lines
-        self.src_strings: List[str] = self.src_function_feature.strings
-        self.src_numbers: List[int] = self.src_function_feature.numbers
-        self.asm_codes: List[str] = self.bin_function_feature.asm_codes
-        self.bin_strings: List[str] = self.bin_function_feature.strings
-        self.bin_numbers: List[int] = self.bin_function_feature.numbers
+        self.function_name = function_name
+        self.src_codes: List[str] = src_codes
+        self.src_strings: List[str] = src_strings
+        self.src_numbers: List[str] = [str(num) for num in src_numbers]
+        self.asm_codes: List[str] = asm_codes
+        self.bin_strings: List[str] = bin_strings
+        self.bin_numbers: List[str] = [str(num) for num in bin_numbers]
         self.label = 1
+
+        self._normalize()
 
     def custom_serialize(self):
         return {
@@ -149,6 +145,31 @@ class TrainDataItemForFunctionConfirmModel:
             "bin_strings": self.bin_strings,
             "bin_numbers": self.bin_numbers
         }
+
+    @classmethod
+    def init_from_dict(cls, json_data_item):
+        return cls(
+            json_data_item['function_name'],
+            json_data_item['src_codes'],
+            json_data_item['src_strings'],
+            json_data_item['src_numbers'],
+            json_data_item['asm_codes'],
+            json_data_item['bin_strings'],
+            json_data_item['bin_numbers']
+        )
+
+    @classmethod
+    def init_from_function_feature(cls, function_feature: FunctionFeature):
+        return cls(
+            function_feature.function_name,
+            function_feature.src_function_features[0].original_lines,
+            function_feature.src_function_features[0].strings,
+            function_feature.src_function_features[0].numbers,
+            function_feature.bin_function_feature.asm_codes,
+            function_feature.bin_function_feature.strings,
+            function_feature.bin_function_feature.numbers
+        )
+
     @classmethod
     def get_special_tokens(cls):
         return [cls.src_code_separator,
@@ -172,31 +193,24 @@ class TrainDataItemForFunctionConfirmModel:
         merged_text = f"{src_text} {bin_text}"
         return merged_text
 
-    def _normalize_src_function_feature(self):
+    def _normalize(self):
         # 正规化处理源代码
-        self.src_function_feature.original_lines = [self._normalize_src_code(line)
-                                                    for line in self.src_function_feature.original_lines]
+        self.src_codes = [self._normalize_src_code(line) for line in self.src_codes]
 
         # 正规化处理字符串
-        self.src_function_feature.strings = [self._normalize_src_string(s)
-                                             for s in self.src_function_feature.strings if s]
+        self.src_strings = [self._normalize_src_string(s) for s in self.src_strings]
 
         # 正规化处理数字
-        self.src_function_feature.numbers = [self._normalize_src_number(n)
-                                             for n in self.src_function_feature.numbers]
+        self.src_numbers = [self._normalize_src_number(num) for num in self.src_numbers]
 
-    def _normalize_bin_function_feature(self):
         # 正规化处理汇编代码
-        self.bin_function_feature.asm_codes = [self._normalize_bin_code(code)
-                                               for code in self.bin_function_feature.asm_codes]
+        self.asm_codes = [self._normalize_bin_code(code) for code in self.asm_codes]
 
         # 正规化处理字符串
-        self.bin_function_feature.strings = [self._normalize_bin_string(s)
-                                             for s in self.bin_function_feature.strings if s]
+        self.bin_strings = [self._normalize_bin_string(s) for s in self.bin_strings]
 
         # 正规化处理数字
-        self.bin_function_feature.numbers = [self._normalize_bin_number(n)
-                                             for n in self.bin_function_feature.numbers]
+        self.bin_numbers = [self._normalize_bin_number(num) for num in self.bin_numbers]
 
     def _normalize_src_code(self, src_code: str):
         # 正规化处理源代码
@@ -205,7 +219,7 @@ class TrainDataItemForFunctionConfirmModel:
     def _normalize_src_string(self, src_string: str):
         return src_string
 
-    def _normalize_src_number(self, src_number: int):
+    def _normalize_src_number(self, src_number: str):
         # 正规化处理数字
         return src_number
 
@@ -218,6 +232,6 @@ class TrainDataItemForFunctionConfirmModel:
         # 正规化处理字符串
         return bin_string
 
-    def _normalize_bin_number(self, bin_number: int):
+    def _normalize_bin_number(self, bin_number: str):
         # 正规化处理数字
         return bin_number

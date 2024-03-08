@@ -19,19 +19,15 @@ def debug_convert_function_feature_to_train_data():
     # save_to_json_file(train_data_item.custom_serialize(), save_path)
 
 
+def train_model_1():
+    """
+    训练模型1
+    :return:
+    """
+    from main.models.function_confirm_model.model_training import run_train
+    data_file_path = r"TestCases/model_train/model_1/train_data/train_data.json"
+    run_train(data_file_path, epochs=3, batch_size=16)
+
+
 if __name__ == '__main__':
-    # debug_convert_function_feature_to_train_data()
-    from transformers import RobertaTokenizer, RobertaForSequenceClassification
-
-    # Load GraphCodeBERT tokenizer
-    tokenizer = RobertaTokenizer.from_pretrained('microsoft/graphcodebert-base')
-
-    # Load GraphCodeBERT model for sequence classification
-    # model = RobertaForSequenceClassification.from_pretrained('microsoft/graphcodebert-base')
-
-    vocab = set(tokenizer.get_vocab().keys())
-    print(len(vocab))
-
-    for special_token in ["[SRC_CODE]", "[SRC_STR]", "[SRC_NUM]", "[BIN_CODE]", "[BIN_STR]", "[BIN_NUM]"]:
-        print(special_token in vocab)
-    print("[SRC_CODE]" in vocab)
+    train_model_1()

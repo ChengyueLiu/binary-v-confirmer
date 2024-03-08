@@ -40,7 +40,7 @@ class FunctionConfirmDataset(Dataset):
 
 def create_datasets(train_data_json_file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(train_data_json_file_path)
-    train_data_items = [TrainDataItemForFunctionConfirmModel(item) for item in train_data_json]
+    train_data_items = [TrainDataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
 
     texts = []
     labels = []

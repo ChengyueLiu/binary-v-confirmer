@@ -1,4 +1,5 @@
 import torch
+from loguru import logger
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
 
 from main.interface import TrainDataItemForFunctionConfirmModel
@@ -92,12 +93,19 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 
 
 # 准备训练
-def run_train(filepath, epochs=3):
+def run_train(filepath, **kwargs):
+    batch_size = kwargs.get('batch_size', 32)
+    epochs = kwargs.get('epochs', 3)
+
     # 初始化训练
+    logger.info('init train...')
     device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(filepath,
+                                                                                                       batch_size=batch_size,
                                                                                                        epochs=epochs)
+    logger.info('inited, start train...')
     # train scheduler
     for epoch in range(epochs):
+        logger.info(f'Epoch {epoch + 1}/{epochs}')
         train_loss, train_acc = train_or_evaluate(model, train_loader, optimizer, scheduler, device, is_train=True)
         valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
         print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
@@ -106,8 +114,3 @@ def run_train(filepath, epochs=3):
     # 评估测试数据
     test_loss, test_acc = train_or_evaluate(model, test_loader, optimizer, scheduler, device, is_train=False)
     print(f'\t Test. Loss: {test_loss:.3f} |  Test. Acc: {test_acc * 100:.2f}%')
-
-
-if __name__ == '__main__':
-    data_file_path = r"C:\Users\liuchengyue\Desktop\projects\Wroks\v-conformer\TestCases\model_train\model_1\train_data\train_data.json"
-    run_train(data_file_path)
