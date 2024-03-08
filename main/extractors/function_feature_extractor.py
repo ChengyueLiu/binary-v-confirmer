@@ -79,7 +79,9 @@ def extract_src_feature(project_path) -> List[SrcFunctionFeature]:
             function_strings.extend(node_feature.must_compile_string_group)
             for string_group in node_feature.conditional_compile_string_groups:
                 function_strings.extend(string_group)
-
+            # for string in function_strings:
+            #     if len(string) <4:
+            #         print(node_feature.name,string)
             src_function_feature = SrcFunctionFeature(
                 name=node_feature.name,
                 file_path=file_feature.file_path,
@@ -87,7 +89,7 @@ def extract_src_feature(project_path) -> List[SrcFunctionFeature]:
                 line_end=node_feature.end_line,
                 original_lines=[line.rstrip() for line in node_feature.source_codes],
                 strings=function_strings,
-                numbers=[],
+                numbers=node_feature.numbers,
                 hash_value=node_feature.normalized_hash
             )
             src_function_features.append(src_function_feature)

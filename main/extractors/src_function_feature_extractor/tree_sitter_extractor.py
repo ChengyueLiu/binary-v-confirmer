@@ -431,8 +431,8 @@ class FileFeatureExtractor:
         # 分组保存
         for token in tokens:
             node_type, node_content = token
+            # print(node_type, node_content)
             if node_type in {"number_literal", "float_literal"}:
-                # print(node_type, node_content)
                 numbers.append(node_content)
         return list(set(numbers))
 

@@ -53,6 +53,9 @@ def debug_extract():
 
 
 if __name__ == '__main__':
+    """
+    这些是提取源代码和二进制的函数特征的，主要是训练第一个模型用的
+    """
     # debug_extract_src_function_feature()
     # debug_extract_asm_function_feature()
     debug_extract()
