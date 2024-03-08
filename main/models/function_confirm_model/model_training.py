@@ -1,5 +1,6 @@
 import torch
 from loguru import logger
+from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
 
 from main.interface import TrainDataItemForFunctionConfirmModel
@@ -37,7 +38,10 @@ def init_train(filepath,
     model.resize_token_embeddings(len(tokenizer))
 
     # datasets
-    train_dataset, val_dataset, test_dataset = create_datasets(filepath, tokenizer, max_len=token_max_length)
+    train_dataset, val_dataset, test_dataset = create_datasets(filepath,
+                                                               tokenizer,
+                                                               max_len=token_max_length,
+                                                               n_to_p_ratio=3.0)
 
     # dataloader
     train_loader, val_loader, test_loader = create_dataloaders(train_dataset,
@@ -63,7 +67,7 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
     epoch_loss = 0
     total_correct = 0
     total_instances = 0
-    for batch in iterator:
+    for batch in tqdm(iterator, desc="train_or_evaluate"):
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
         labels = batch['labels'].to(device)
@@ -93,7 +97,7 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 
 
 # 准备训练
-def run_train(filepath, **kwargs):
+def run_train(filepath, model_save_path="model_weights.pth", **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
 
@@ -102,7 +106,7 @@ def run_train(filepath, **kwargs):
     device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(filepath,
                                                                                                        batch_size=batch_size,
                                                                                                        epochs=epochs)
-    logger.info('inited, start train...')
+    logger.info('inited, start train, epochs: 3, batch_size: 32...')
     # train scheduler
     for epoch in range(epochs):
         logger.info(f'Epoch {epoch + 1}/{epochs}')
@@ -110,7 +114,13 @@ def run_train(filepath, **kwargs):
         valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
         print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
         print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
+    logger.info('train done, save model...')
+    torch.save(model.state_dict(), model_save_path)
 
-    # 评估测试数据
+    logger.info('model saved, start test, load model from model_weights.pth...')
+    model.load_state_dict(torch.load(model_save_path))
+
+    logger.info('model loaded, start test...')
     test_loss, test_acc = train_or_evaluate(model, test_loader, optimizer, scheduler, device, is_train=False)
     print(f'\t Test. Loss: {test_loss:.3f} |  Test. Acc: {test_acc * 100:.2f}%')
+    logger.info('test done, all done.')

@@ -30,4 +30,5 @@ def train_model_1():
 
 
 if __name__ == '__main__':
-    train_model_1()
+    debug_convert_function_feature_to_train_data()
+    # train_model_1()
