@@ -23,11 +23,14 @@ class MayOOMException(Exception):
 
 class NodeFeature:
     def __init__(self, node_name, node_type, start_line, end_line, normalized_hash, must_compile_string_group,
-                 conditional_compile_string_groups,source_codes:List[str]):
+                 conditional_compile_string_groups,
+                 numbers,
+                 source_codes: List[str]):
         self.name = node_name
         self.type = node_type
         self.start_line = start_line
         self.end_line = end_line
+        self.numbers = numbers
         self.normalized_hash = normalized_hash
         self.commit_time: datetime = None
         self.must_compile_string_group: List[str] = must_compile_string_group
@@ -44,6 +47,7 @@ class NodeFeature:
                 "normalized_hash": self.normalized_hash,
                 "commit_time": self.commit_time.strftime('%Y-%m-%d %H:%M:%S') if self.commit_time else None,
                 "source_codes": self.source_codes,
+                "numbers": self.numbers,
                 "strings": {
                     "must_compile_string_group": self.must_compile_string_group,
                     "conditional_compile_string_groups": self.conditional_compile_string_groups
@@ -57,6 +61,7 @@ class NodeFeature:
                 "end_line": self.end_line,
                 "normalized_hash": self.normalized_hash,
                 "commit_time": self.commit_time.strftime('%Y-%m-%d %H:%M:%S') if self.commit_time else None,
+                "numbers": self.numbers,
                 "source_codes": self.source_codes,
             }
         return json_data

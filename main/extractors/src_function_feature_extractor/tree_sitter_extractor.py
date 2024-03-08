@@ -259,7 +259,7 @@ class FileFeatureExtractor:
         must_compile_string_group, conditional_compile_string_groups = self.parse_node_strings_with_group(value_node)
         if not must_compile_string_group and not conditional_compile_string_groups:
             return
-
+        numbers = self.parse_node_numbers(value_node)
         # 保存
         start_line = node.start_point[0] + 1
         end_line = node.end_point[0] + 1
@@ -267,11 +267,12 @@ class FileFeatureExtractor:
         self.node_features.append(
             NodeFeature(node_name=node_name,
                         node_type=node_type,
-                        start_line=start_line,
+                        start_line=start_line - 1,
                         end_line=end_line,
                         normalized_hash=normalized_hash,
                         must_compile_string_group=must_compile_string_group,
                         conditional_compile_string_groups=conditional_compile_string_groups,
+                        numbers=numbers,
                         source_codes=self.src_lines[start_line - 1:end_line]))
 
     def parse_function_definition_node(self, node):
@@ -292,7 +293,7 @@ class FileFeatureExtractor:
 
         # 没有string，中止
         must_compile_string_group, conditional_compile_string_groups = self.parse_node_strings_with_group(body_node)
-
+        numbers = self.parse_node_numbers(body_node)
         # 保存
         start_line = node.start_point[0] + 1
         end_line = node.end_point[0] + 1
@@ -300,11 +301,12 @@ class FileFeatureExtractor:
         self.node_features.append(
             NodeFeature(node_name=node_name,
                         node_type=node_type,
-                        start_line=start_line,
+                        start_line=start_line - 1,
                         end_line=end_line,
                         normalized_hash=normalized_hash,
                         must_compile_string_group=must_compile_string_group,
                         conditional_compile_string_groups=conditional_compile_string_groups,
+                        numbers=numbers,
                         source_codes=self.src_lines[start_line - 1:end_line]))
 
     def parse_node_content(self, node):
@@ -422,6 +424,17 @@ class FileFeatureExtractor:
             conditional_compile_groups.append(tmp_compile_group)
 
         return must_compile_group, conditional_compile_groups
+
+    def parse_node_numbers(self, node: Node):
+        tokens = self.parse_node_tokens(node)
+        numbers = []
+        # 分组保存
+        for token in tokens:
+            node_type, node_content = token
+            if node_type in {"number_literal", "float_literal"}:
+                # print(node_type, node_content)
+                numbers.append(node_content)
+        return list(set(numbers))
 
 
 def extract_file_feature(path):
