@@ -41,8 +41,7 @@ def init_train(filepath,
     # datasets
     train_dataset, val_dataset, test_dataset = create_datasets(filepath,
                                                                tokenizer,
-                                                               max_len=token_max_length,
-                                                               n_to_p_ratio=3.0)
+                                                               max_len=token_max_length)
 
     # dataloader
     train_loader, val_loader, test_loader = create_dataloaders(train_dataset,

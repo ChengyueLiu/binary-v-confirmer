@@ -67,7 +67,7 @@ def generate_negative_examples(texts, labels, ratio=1.0):
     return augmented_texts, augmented_labels
 
 
-def create_datasets(train_data_json_file_path, tokenizer, max_len=512, n_to_p_ratio=3.0):
+def create_datasets(train_data_json_file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(train_data_json_file_path)
     train_data_items = [TrainDataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
 
@@ -78,10 +78,8 @@ def create_datasets(train_data_json_file_path, tokenizer, max_len=512, n_to_p_ra
         texts.append(train_data_item.get_train_text())
         labels.append(train_data_item.label)
 
-    # 增加反例
-    texts, labels = generate_negative_examples(texts, labels, ratio=n_to_p_ratio)
-    logger.info(f"Total number of training examples: {len(texts)}, ratio of negative to positive: {n_to_p_ratio}")
-
+    print("原始数据数量: ", len(texts))
+    print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
     dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
 
     # random split

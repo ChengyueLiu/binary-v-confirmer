@@ -119,7 +119,8 @@ class TrainDataItemForFunctionConfirmModel:
                  src_numbers: List,
                  asm_codes: List[str],
                  bin_strings: List[str],
-                 bin_numbers: List):
+                 bin_numbers: List,
+                 label=1):
         """
         从原始特征中初始化训练数据
         :param function_feature:
@@ -131,7 +132,7 @@ class TrainDataItemForFunctionConfirmModel:
         self.asm_codes: List[str] = asm_codes
         self.bin_strings: List[str] = bin_strings
         self.bin_numbers: List[str] = [str(num) for num in bin_numbers]
-        self.label = 1
+        self.label = label
 
         self._normalize()
 
@@ -143,7 +144,8 @@ class TrainDataItemForFunctionConfirmModel:
             "src_numbers": self.src_numbers,
             "asm_codes": self.asm_codes,
             "bin_strings": self.bin_strings,
-            "bin_numbers": self.bin_numbers
+            "bin_numbers": self.bin_numbers,
+            "label": self.label
         }
 
     @classmethod
@@ -155,11 +157,12 @@ class TrainDataItemForFunctionConfirmModel:
             json_data_item['src_numbers'],
             json_data_item['asm_codes'],
             json_data_item['bin_strings'],
-            json_data_item['bin_numbers']
+            json_data_item['bin_numbers'],
+            label=json_data_item['label']
         )
 
     @classmethod
-    def init_from_function_feature(cls, function_feature: FunctionFeature):
+    def init_from_function_feature(cls, function_feature: FunctionFeature, label=1):
         return cls(
             function_feature.function_name,
             function_feature.src_function_features[0].original_lines,
@@ -167,7 +170,8 @@ class TrainDataItemForFunctionConfirmModel:
             function_feature.src_function_features[0].numbers,
             function_feature.bin_function_feature.asm_codes,
             function_feature.bin_function_feature.strings,
-            function_feature.bin_function_feature.numbers
+            function_feature.bin_function_feature.numbers,
+            label=label
         )
 
     @classmethod
