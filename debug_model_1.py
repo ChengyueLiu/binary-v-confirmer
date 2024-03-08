@@ -10,7 +10,7 @@ def debug_convert_function_feature_to_train_data():
     """
     function_feature_path = r"TestCases/feature_extraction/function_features.json"
     save_path = r"TestCases/model_train/model_1/train_data/train_data.json"
-    convert_function_feature_to_train_data(function_feature_path, save_path)
+    convert_function_feature_to_train_data(function_feature_path, save_path, negative_ratio=3)
 
     # data = load_from_json_file(function_feature_path)
     #
