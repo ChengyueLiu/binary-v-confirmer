@@ -78,6 +78,9 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
         outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
 
         loss = outputs[0]
+        # 下面两行是为了适配多GPU训练
+        if loss.dim() > 0:  # 如果损失不是标量
+            loss = loss.mean()  # 计算所有损失的平均值确保是标量
         logits = outputs[1]
 
         if is_train:
