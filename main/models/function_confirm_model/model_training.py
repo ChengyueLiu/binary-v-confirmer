@@ -3,8 +3,8 @@ from loguru import logger
 from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
 
-from main.interface import TrainDataItemForFunctionConfirmModel
-from main.models.function_confirm_model.dataset_and_data_provider import create_datasets, create_dataloaders
+from main.interface import DataItemForFunctionConfirmModel
+from main.models.function_confirm_model.dataset_and_data_provider import create_datasets_from_json_file, create_dataloaders
 
 
 def init_train(filepath,
@@ -30,7 +30,7 @@ def init_train(filepath,
 
     # tokenizer
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    for special_token in TrainDataItemForFunctionConfirmModel.get_special_tokens():
+    for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
     # model
@@ -39,9 +39,9 @@ def init_train(filepath,
     model = torch.nn.DataParallel(model).to(device)
 
     # datasets
-    train_dataset, val_dataset, test_dataset = create_datasets(filepath,
-                                                               tokenizer,
-                                                               max_len=token_max_length)
+    train_dataset, val_dataset, test_dataset = create_datasets_from_json_file(filepath,
+                                                                              tokenizer,
+                                                                              max_len=token_max_length)
 
     # dataloader
     train_loader, val_loader, test_loader = create_dataloaders(train_dataset,

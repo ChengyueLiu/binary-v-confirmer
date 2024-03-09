@@ -140,7 +140,7 @@ class FunctionFeature:
         return [cls.init_from_dict(item) for item in data]
 
 
-class TrainDataItemForFunctionConfirmModel:
+class DataItemForFunctionConfirmModel:
     src_code_separator = "[SRC_CODE]"
     src_string_separator = "[SRC_STR]"
     src_number_separator = "[SRC_NUM]"

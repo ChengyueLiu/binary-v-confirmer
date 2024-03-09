@@ -6,7 +6,7 @@ from loguru import logger
 from torch.utils.data import Dataset, random_split, DataLoader
 
 from bintools.general.file_tool import load_from_json_file
-from main.interface import TrainDataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel
 
 
 class FunctionConfirmDataset(Dataset):
@@ -40,36 +40,21 @@ class FunctionConfirmDataset(Dataset):
         }
 
 
-def generate_negative_examples(texts, labels, ratio=1.0):
-    # ratio表示生成反例的比例
-    negative_texts = []
-    negative_labels = []
+def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmModel], tokenizer, max_len=512):
+    texts = []
+    labels = []
 
-    num_negatives = int(len(texts) * ratio)
-    indices = list(range(len(texts)))
-    random.shuffle(indices)  # 打乱索引
+    for data_item in data_items:
+        texts.append(data_item.get_train_text())
+        labels.append(data_item.label)
 
-    for i in range(num_negatives):
-        idx = indices[i]
-        negative_texts.append(texts[idx])
-        # 假设原始标签为1，反例标签为0
-        negative_labels.append(0)  # 或者是 1-labels[idx] 如果标签是二元的
-
-    # 将反例添加到原数据中
-    augmented_texts = texts + negative_texts
-    augmented_labels = labels + negative_labels
-
-    # 再次打乱数据以混合正例和反例
-    combined = list(zip(augmented_texts, augmented_labels))
-    random.shuffle(combined)
-    augmented_texts, augmented_labels = zip(*combined)
-
-    return augmented_texts, augmented_labels
+    dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
+    return dataset
 
 
-def create_datasets(train_data_json_file_path, tokenizer, max_len=512):
+def create_datasets_from_json_file(train_data_json_file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(train_data_json_file_path)
-    train_data_items = [TrainDataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
+    train_data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
 
     texts = []
     labels = []

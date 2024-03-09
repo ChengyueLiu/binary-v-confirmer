@@ -1,6 +1,7 @@
+from loguru import logger
 
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
-from main.models.function_confirm_model.model_application import find_similar_functions
+from main.models.function_confirm_model.model_application import find_similar_functions, VulFunctionFinder
 
 
 def debug_convert_function_feature_to_train_data():
@@ -26,17 +27,30 @@ def debug_model_application():
     :return:
     """
     # src file
-    vul_function_file_path = r"C:\Users\liuchengyue\Desktop\projects\GithubProjects\openssl\crypto\pkcs12\p12_add.c"
-    vul_function_name = "*PKCS12_unpack_p7data"
-    # binary file
-    openssl = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\TestCases\feature_extraction/binaries/openssl"
-    libcrypto = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\TestCases\feature_extraction/binaries/libcrypto.so.3"
-    libssl = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\TestCases/feature_extraction/binaries/libssl.so.3"
+    vul_function_file_path = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/p12_add.c"
 
-    find_similar_functions(src_file_path=vul_function_file_path,
-                           vul_function_name=vul_function_name,
-                           binary_file_abs_path=openssl)
-    pass
+    # vul function name
+    vul_function_name = "*PKCS12_unpack_p7data"
+
+    # binary file
+    openssl = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/openssl"
+    libcrypto = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/libcrypto.so.3"
+    libssl = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/libssl.so.3"
+
+    # model init
+    model_save_path = r"/home/chengyue/projects/binary-v-confirmer/model_weights.pth"
+    batch_size = 64
+
+    vul_function_finder = VulFunctionFinder(
+        model_save_path=model_save_path,
+        batch_size=batch_size
+    )
+    for binary in [openssl, libcrypto, libssl]:
+        logger.info(f"Finding similar functions for {vul_function_name} in {binary}")
+        vul_function_finder.find_similar_functions(src_file_path=vul_function_file_path,
+                                                   vul_function_name=vul_function_name,
+                                                   binary_file_abs_path=binary)
+    logger.info(f"Done")
 
 
 def train_model_1():
