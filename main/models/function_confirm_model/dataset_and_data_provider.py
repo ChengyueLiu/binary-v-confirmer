@@ -45,7 +45,7 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
     labels = []
 
     for data_item in data_items:
-        texts.append(data_item.get_train_text())
+        texts.append(data_item.get_train_text(tokenizer.sep_token))
         labels.append(data_item.label)
 
     dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
@@ -60,7 +60,7 @@ def create_datasets_from_json_file(train_data_json_file_path, tokenizer, max_len
     labels = []
 
     for train_data_item in train_data_items:
-        texts.append(train_data_item.get_train_text())
+        texts.append(train_data_item.get_train_text(tokenizer.sep_token))
         labels.append(train_data_item.label)
 
     print("原始数据数量: ", len(texts))
