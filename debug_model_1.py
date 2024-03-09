@@ -34,7 +34,7 @@ def debug_model_application():
 
     # linux
     root_dir = r"/home/chengyue/projects/binary-v-confirmer/"
-    batch_size = 256
+    batch_size = 64
 
     # windows
     # root_dir = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer"
@@ -92,7 +92,7 @@ def train_model_1():
     """
     from main.models.function_confirm_model.model_training import run_train
     data_file_path = r"TestCases/model_train/model_1/train_data/train_data.json"
-    run_train(data_file_path, epochs=3, batch_size=64)
+    run_train(data_file_path, epochs=3, batch_size=16)
 
 
 if __name__ == '__main__':
