@@ -1,7 +1,11 @@
+import os
+import subprocess
+
 from loguru import logger
 
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
 from main.models.function_confirm_model.model_application import VulFunctionFinder
+from setting.paths import IDA_PRO_PATH, IDA_PRO_SCRIPT_PATH
 
 
 def debug_convert_function_feature_to_train_data():
@@ -26,30 +30,41 @@ def debug_model_application():
 
     :return:
     """
+
+    root_dir = r"/home/chengyue/projects/binary-v-confirmer/"
+    root_dir = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer"
+    import os
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+    test_data_dir = os.path.join(root_dir, "TestCases/model_train/model_1/test_data")
     # src file
-    vul_function_file_path = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/p12_add.c"
+    vul_function_file_path = os.path.join(test_data_dir, "p12_add.c")
 
     # vul function name
     vul_function_name = "*PKCS12_unpack_p7data"
 
     # binary file
-    openssl = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/openssl"
-    libcrypto = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/libcrypto.so.3"
-    libssl = r"/home/chengyue/projects/binary-v-confirmer/TestCases/model_train/model_1/test_data/libssl.so.3"
+    openssl = os.path.join(test_data_dir, "openssl")
+    libcrypto = os.path.join(test_data_dir, "libcrypto.so.3")
+    libssl = os.path.join(test_data_dir, "libssl.so.3")
 
     # model init
-    model_save_path = r"/home/chengyue/projects/binary-v-confirmer/model_weights.pth"
-    batch_size = 64
+    model_save_path = os.path.join(root_dir, "model_weights.pth")
+
+    batch_size = 16
 
     vul_function_finder = VulFunctionFinder(
         model_save_path=model_save_path,
         batch_size=batch_size
     )
+    similar_functions_dict = {}
     for binary in [openssl, libcrypto, libssl]:
         logger.info(f"Finding similar functions for {vul_function_name} in {binary}")
-        vul_function_finder.find_similar_functions(src_file_path=vul_function_file_path,
+        similar_functions = vul_function_finder.find_similar_functions(src_file_path=vul_function_file_path,
                                                    vul_function_name=vul_function_name,
                                                    binary_file_abs_path=binary)
+        similar_functions.sort(key=lambda x: x[1], reverse=True)
+        similar_functions_dict[binary] = similar_functions
     logger.info(f"Done")
 
 

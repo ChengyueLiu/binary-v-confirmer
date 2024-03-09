@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 import torch
@@ -6,7 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
-from bintools.general.file_tool import check_file_path
+from bintools.general.file_tool import check_file_path, load_from_json_file
 from main.extractors.function_feature_extractor import extract_bin_feature, extract_src_feature_for_specific_function
 from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
@@ -60,7 +61,22 @@ class VulFunctionFinder:
         logger.info(f"Feature extracted for {src_file_path}")
         # step 2 提取二进制文件特征
         logger.info(f"Extracting feature for {binary_file_abs_path}")
-        bin_function_features = extract_bin_feature(binary_file_abs_path)
+        # TODO linux下使用IDA Pro提取特征？
+        # bin_function_features = extract_bin_feature(binary_file_abs_path)
+        # 临时使用已经提取好的特征，以下是临时代码
+        bin_file_name = os.path.basename(binary_file_abs_path)
+        if bin_file_name == "openssl":
+            IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/openssl.json"
+        elif bin_file_name == "libcrypto.so.3":
+            IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/libcrypto.json"
+        elif bin_file_name == "libssl.so.3":
+            IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/libssl.json"
+
+        results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
+        # 转换成外部的数据结构
+        bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
+                                                           for json_item in results]
+        # 以上是临时代码
         logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
 
         # step 3 使用模型遍历比较源代码函数和二进制文件函数
@@ -112,7 +128,7 @@ class VulFunctionFinder:
         similar_functions = []
         for bin_function_feature, (pred, prob) in zip(bin_function_features, predictions):
             if pred.item() == 1:
-                print(bin_function_feature.function_name, pred.item(), prob.item())
-                similar_functions.append(bin_function_feature)
+                print(bin_function_feature.name, pred.item(), prob.item())
+                similar_functions.append((pred, prob, bin_function_feature))
 
         return similar_functions

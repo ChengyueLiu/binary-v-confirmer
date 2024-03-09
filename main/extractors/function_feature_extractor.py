@@ -125,8 +125,8 @@ def extract_bin_feature(binary_file) -> List[BinFunctionFeature]:
     bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
                                                        for json_item in results]
 
-    function_name_list = [f.name for f in bin_function_features]
-    function_nam_set = set(function_name_list)
+    # function_name_list = [f.name for f in bin_function_features]
+    # function_nam_set = set(function_name_list)
     # print(f"function_name_list num: {len(function_name_list)}\n"
     #       f"function_nam_set num: {len(function_nam_set)}")
     return bin_function_features
