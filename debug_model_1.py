@@ -1,7 +1,7 @@
 from loguru import logger
 
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
-from main.models.function_confirm_model.model_application import find_similar_functions, VulFunctionFinder
+from main.models.function_confirm_model.model_application import VulFunctionFinder
 
 
 def debug_convert_function_feature_to_train_data():
