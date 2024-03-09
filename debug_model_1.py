@@ -32,7 +32,7 @@ def debug_model_application():
     """
 
     root_dir = r"/home/chengyue/projects/binary-v-confirmer/"
-    root_dir = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer"
+    # root_dir = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer"
     import os
     os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
