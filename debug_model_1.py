@@ -3,6 +3,7 @@ import subprocess
 
 from loguru import logger
 
+from bintools.general.file_tool import save_to_json_file
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
 from main.models.function_confirm_model.model_application import VulFunctionFinder
 from setting.paths import IDA_PRO_PATH, IDA_PRO_SCRIPT_PATH
@@ -41,7 +42,6 @@ def debug_model_application():
     # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
     # batch_size = 16
 
-
     test_data_dir = os.path.join(root_dir, "TestCases/model_train/model_1/test_data")
     # src file
     vul_function_file_path = os.path.join(test_data_dir, "p12_add.c")
@@ -57,20 +57,29 @@ def debug_model_application():
     # model init
     model_save_path = os.path.join(root_dir, "model_weights.pth")
 
-
-
     vul_function_finder = VulFunctionFinder(
         model_save_path=model_save_path,
         batch_size=batch_size
     )
     similar_functions_dict = {}
-    for binary in [openssl, libcrypto, libssl]:
-        logger.info(f"Finding similar functions for {vul_function_name} in {binary}")
-        similar_functions = vul_function_finder.find_similar_functions(src_file_path=vul_function_file_path,
-                                                   vul_function_name=vul_function_name,
-                                                   binary_file_abs_path=binary)
-        similar_functions.sort(key=lambda x: x[1], reverse=True)
-        similar_functions_dict[binary] = similar_functions
+    # 三个漏洞，三个二进制文件
+    for vul_function_name in ["*PKCS12_unpack_p7data", "*PKCS12_unpack_p7encdata", "*PKCS12_unpack_authsafes"]:
+        for binary in [openssl, libcrypto, libssl]:
+            logger.info(f"Finding similar functions for {vul_function_name} in {binary}")
+            bin_function_num, similar_functions = vul_function_finder.find_similar_functions(
+                src_file_path=vul_function_file_path,
+                vul_function_name=vul_function_name,
+                binary_file_abs_path=binary)
+
+            similar_functions_dict[binary] = {
+                "vul_function_name": vul_function_name,
+                "all_function_num": bin_function_num,
+                "similar_function_num": len(similar_functions),
+                "similar_functions": similar_functions
+            }
+    result_path = os.path.join(test_data_dir, "similar_functions.json")
+    save_to_json_file(similar_functions_dict, result_path)
+    logger.info(f"Result saved to {result_path}")
     logger.info(f"Done")
 
 

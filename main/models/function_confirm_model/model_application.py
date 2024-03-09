@@ -111,8 +111,7 @@ class VulFunctionFinder:
                 predictions.append((pred, prob))
         return predictions
 
-    def find_similar_functions(self, src_file_path: str, vul_function_name: str, binary_file_abs_path: str) -> List[
-        BinFunctionFeature]:
+    def find_similar_functions(self, src_file_path: str, vul_function_name: str, binary_file_abs_path: str):
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
@@ -128,7 +127,8 @@ class VulFunctionFinder:
         similar_functions = []
         for bin_function_feature, (pred, prob) in zip(bin_function_features, predictions):
             if pred.item() == 1:
-                print(bin_function_feature.name, pred.item(), prob.item())
-                similar_functions.append((pred, prob, bin_function_feature))
-
-        return similar_functions
+                result = (bin_function_feature.name, pred.item(), prob.item())
+                print(result)
+                similar_functions.append(result)
+        similar_functions.sort(key=lambda x: x[2], reverse=True)
+        return len(bin_function_features), similar_functions
