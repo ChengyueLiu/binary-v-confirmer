@@ -106,7 +106,7 @@ def train_model_1():
     run_train(train_data_file_path,
               val_data_file_path,
               test_data_file_path,
-              epochs=3, batch_size=16)
+              epochs=3, batch_size=64)
 
 
 def debug_token_length():
