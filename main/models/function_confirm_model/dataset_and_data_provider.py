@@ -65,7 +65,7 @@ def create_dataset(file_path, tokenizer, max_len=512):
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
     dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
-
+    return dataset
 
 
 
