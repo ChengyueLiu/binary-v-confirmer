@@ -7,14 +7,23 @@ from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file, check_file_path, save_to_json_file
 from main.extractors.src_function_feature_extractor.entities import ProjectFeature, NodeType
-from main.extractors.src_function_feature_extractor.tree_sitter_extractor import ProjectFeatureExtractor
+from main.extractors.src_function_feature_extractor.tree_sitter_extractor import ProjectFeatureExtractor, \
+    FileFeatureExtractor
 from main.interface import SrcFunctionFeature, BinFunctionFeature, FunctionFeature
 from setting.paths import IDA_PRO_PATH, IDA_PRO_SCRIPT_PATH, IDA_PRO_OUTPUT_PATH
 
 
-def extract_function_feature(project_path: str, binary_file_paths: List[str], save_path: str):
+def extract_matched_function_feature(project_path: str, binary_file_paths: List[str], save_path: str):
+    """
+    同时提取源码和二进制文件的特征，并把相同函数的特征，保存到指定路径，后续可以用于训练模型
+
+    :param project_path:
+    :param binary_file_paths:
+    :param save_path:
+    :return:
+    """
     # 提取源码特征
-    src_function_features = extract_src_feature(project_path)
+    src_function_features = extract_src_feature_for_project(project_path)
 
     # 提取二进制特征
     bin_function_features = []
@@ -58,7 +67,7 @@ def extract_function_feature(project_path: str, binary_file_paths: List[str], sa
     save_to_json_file(save_data, save_path)
 
 
-def extract_src_feature(project_path) -> List[SrcFunctionFeature]:
+def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
     """
     使用tree-sitter提取项目的特征，转换成外部的数据结构
 
@@ -75,23 +84,8 @@ def extract_src_feature(project_path) -> List[SrcFunctionFeature]:
         for node_feature in file_feature.node_features:
             if node_feature.type not in [NodeType.function_declarator.value, NodeType.function_definition.value]:
                 continue
-            function_strings = []
-            function_strings.extend(node_feature.must_compile_string_group)
-            for string_group in node_feature.conditional_compile_string_groups:
-                function_strings.extend(string_group)
-            # for string in function_strings:
-            #     if len(string) <4:
-            #         print(node_feature.name,string)
-            src_function_feature = SrcFunctionFeature(
-                name=node_feature.name,
-                file_path=file_feature.file_path,
-                line_start=node_feature.start_line,
-                line_end=node_feature.end_line,
-                original_lines=[line.rstrip() for line in node_feature.source_codes],
-                strings=function_strings,
-                numbers=node_feature.numbers,
-                hash_value=node_feature.normalized_hash
-            )
+            src_function_feature = SrcFunctionFeature.init_from_node_feature(file_path=file_feature.file_path,
+                                                                             node_feature=node_feature)
             src_function_features.append(src_function_feature)
 
     return src_function_features
@@ -124,7 +118,7 @@ def extract_bin_feature(binary_file) -> List[BinFunctionFeature]:
         raise Exception(f"Error during IDA Pro analysis: {e}")
 
     # 读取IDA Pro输出的结果
-    check_file_path(IDA_PRO_OUTPUT_PATH)
+    check_file_path(IDA_PRO_OUTPUT_PATH, '.json')
     results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
 
     # 转换成外部的数据结构
@@ -133,6 +127,25 @@ def extract_bin_feature(binary_file) -> List[BinFunctionFeature]:
 
     function_name_list = [f.name for f in bin_function_features]
     function_nam_set = set(function_name_list)
-    print(f"function_name_list num: {len(function_name_list)}\n"
-          f"function_nam_set num: {len(function_nam_set)}")
+    # print(f"function_name_list num: {len(function_name_list)}\n"
+    #       f"function_nam_set num: {len(function_nam_set)}")
     return bin_function_features
+
+
+def extract_src_feature_for_specific_function(file_path: str, vul_function_name: str) -> SrcFunctionFeature | None:
+    """
+    提取源代码函数的特征, 并转换成FunctionFeature对象
+
+    """
+    extractor = FileFeatureExtractor(file_path)
+    extractor.extract()
+    file_feature = extractor.result
+    # 这个是提取器的结果，是原始的对象，需要转换成现在程序中的对象。
+    for node_feature in file_feature.node_features:
+        if node_feature.name == vul_function_name:
+            # 这个是转换成现在程序中的对象
+            src_function_feature = SrcFunctionFeature.init_from_node_feature(file_path=file_feature.file_path,
+                                                                             node_feature=node_feature)
+            return src_function_feature
+
+    return None

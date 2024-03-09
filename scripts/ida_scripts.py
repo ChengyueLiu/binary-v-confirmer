@@ -4,7 +4,7 @@ import idc
 import ida_auto  # 导入ida_auto模块
 import json
 
-SAVE_PATH = r"C:\Users\liuchengyue\Desktop\projects\Wroks\v-conformer\TestCases\feature_extraction\ida_pro_result.json"  # 请根据需要修改路径
+SAVE_PATH = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\TestCases\feature_extraction\ida_pro_result.json"  # 请根据需要修改路径
 
 
 def get_functions_info():

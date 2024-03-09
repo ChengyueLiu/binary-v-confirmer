@@ -1,7 +1,7 @@
 from typing import List
 
 from bintools.general.file_tool import save_to_json_file
-from main.extractors.function_feature_extractor import extract_function_feature, extract_src_feature, \
+from main.extractors.function_feature_extractor import extract_matched_function_feature, extract_src_feature_for_project, \
     extract_bin_feature
 from main.interface import SrcFunctionFeature
 
@@ -23,7 +23,7 @@ def debug_extract_src_function_feature():
     :return:
     """
 
-    src_function_features: List[SrcFunctionFeature] = extract_src_feature(openssl_src_path)
+    src_function_features: List[SrcFunctionFeature] = extract_src_feature_for_project(openssl_src_path)
 
     save_data = [f.custom_serialize() for f in src_function_features]
     save_to_json_file(save_data, openssl_src_feature)
@@ -47,9 +47,9 @@ def debug_extract():
     :return:
     """
 
-    extract_function_feature(project_path=openssl_src_path,
-                             binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
-                             save_path=function_features_path)
+    extract_matched_function_feature(project_path=openssl_src_path,
+                                     binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
+                                     save_path=function_features_path)
 
 
 if __name__ == '__main__':

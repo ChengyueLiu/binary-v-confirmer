@@ -4,6 +4,7 @@ from typing import List
 from loguru import logger
 
 from bintools.general.file_tool import load_from_json_file
+from main.extractors.src_function_feature_extractor.entities import NodeFeature
 
 
 @dataclass
@@ -18,7 +19,36 @@ class SrcFunctionFeature:
     hash_value: str
 
     @classmethod
+    def init_from_node_feature(cls, file_path, node_feature: NodeFeature):
+        """
+        从NodeFeature对象初始化SrcFunctionFeature对象
+        :param file_path:
+        :param node_feature:
+        :return:
+        """
+        function_strings = []
+        function_strings.extend(node_feature.must_compile_string_group)
+        for string_group in node_feature.conditional_compile_string_groups:
+            function_strings.extend(string_group)
+        src_function_feature = SrcFunctionFeature(
+            name=node_feature.name,
+            file_path=file_path,
+            line_start=node_feature.start_line,
+            line_end=node_feature.end_line,
+            original_lines=[line.rstrip() for line in node_feature.source_codes],
+            strings=function_strings,
+            numbers=node_feature.numbers,
+            hash_value=node_feature.normalized_hash
+        )
+        return src_function_feature
+
+    @classmethod
     def init_from_dict(cls, data: dict):
+        """
+        从字典初始化SrcFunctionFeature对象
+        :param data:
+        :return:
+        """
         return cls(
             name=data['name'],
             file_path=data['file_path'],
@@ -32,6 +62,11 @@ class SrcFunctionFeature:
 
     @classmethod
     def init_from_json_file(cls, file_path: str):
+        """
+        从json文件初始化SrcFunctionFeature对象
+        :param file_path:
+        :return:
+        """
         data = load_from_json_file(file_path)
         return [cls.init_from_dict(item) for item in data]
 

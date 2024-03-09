@@ -58,14 +58,17 @@ def calculate_file_md5(file_path):
 
 class FileFeatureExtractor:
 
-    def __init__(self, file_path):
+    def __init__(self, file_path, contents: List[str] = None):
         # 最终结果
         self.result: FileFeature
         self.can_decode = True
         self.file_path = file_path
 
         # 初始化根节点
-        self.root_node: Node = self.init_root_node()
+        if contents:
+            self.root_node: Node = self.init_root_node_from_content(contents)
+        else:
+            self.root_node: Node = self.init_root_node_from_file()
 
         # 用于提取所有字符串时，判断字符串是否需要合并的一个标志
         self.all_string_merge_flag = False
@@ -77,7 +80,22 @@ class FileFeatureExtractor:
         self.node_features: List[NodeFeature] = []
         self.all_raw_strings = []
 
-    def init_root_node(self):
+    def init_root_node_from_content(self, contents: List[str]):
+        parser = Parser()
+        if self.file_path.endswith(tuple(C_EXTENSION_SET)):
+            parser.set_language(C_LANGUAGE)
+        elif self.file_path.endswith(tuple(CPP_EXTENSION_SET)):
+            parser.set_language(CPP_LANGUAGE)
+        else:
+            raise Exception(f"Unrecognized File Extension in Path: {self.file_path}")
+
+        # 加载文件
+
+        self.src_lines = contents
+        self.tree = parser.parse(self.read_src_lines)
+        return self.tree.root_node
+
+    def init_root_node_from_file(self):
         parser = Parser()
         if self.file_path.endswith(tuple(C_EXTENSION_SET)):
             parser.set_language(C_LANGUAGE)

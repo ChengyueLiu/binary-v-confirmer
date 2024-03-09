@@ -87,8 +87,12 @@ class FileFeature:
         self.file_path = file_path
         self.can_decode = can_decode
         self.file_name = os.path.basename(file_path)
-        self.file_size = os.path.getsize(file_path)
-        self.file_md5 = calculate_file_md5(file_path)
+        if os.path.exists(file_path):
+            self.file_size = os.path.getsize(file_path)
+            self.file_md5 = calculate_file_md5(file_path)
+        else:
+            self.file_size = None
+            self.file_md5 = None
 
         # features
         self.parse_error_line_number_list = list(parse_error_line_numer_set)
