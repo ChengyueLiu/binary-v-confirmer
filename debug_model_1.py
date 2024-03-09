@@ -31,10 +31,16 @@ def debug_model_application():
     :return:
     """
 
+    # linux
     root_dir = r"/home/chengyue/projects/binary-v-confirmer/"
+    batch_size = 64
+
+    # windows
     # root_dir = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer"
-    import os
-    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # import os
+    # os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+    # batch_size = 16
+
 
     test_data_dir = os.path.join(root_dir, "TestCases/model_train/model_1/test_data")
     # src file
@@ -51,7 +57,7 @@ def debug_model_application():
     # model init
     model_save_path = os.path.join(root_dir, "model_weights.pth")
 
-    batch_size = 16
+
 
     vul_function_finder = VulFunctionFinder(
         model_save_path=model_save_path,
