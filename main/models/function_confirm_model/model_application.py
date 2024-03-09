@@ -125,6 +125,7 @@ class VulFunctionFinder:
 
         # 输出结果
         similar_functions = []
+        logger.info(f"Result: Similar functions for {vul_function_name} in {binary_file_abs_path}:")
         for bin_function_feature, (pred, prob) in zip(bin_function_features, predictions):
             if pred.item() == 1:
                 result = (bin_function_feature.name, pred.item(), prob.item())
