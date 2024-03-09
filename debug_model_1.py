@@ -18,8 +18,14 @@ def debug_convert_function_feature_to_train_data():
     :return:
     """
     function_feature_path = r"TestCases/feature_extraction/function_features.json"
-    save_path = r"TestCases/model_train/model_1/train_data/train_data.json"
-    convert_function_feature_to_train_data(function_feature_path, save_path, negative_ratio=3)
+    train_data_save_path = r"TestCases/model_train/model_1/train_data/train_data.json"
+    val_data_save_path = r"TestCases/model_train/model_1/train_data/val_data.json"
+    test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
+    convert_function_feature_to_train_data(function_feature_path,
+                                           train_data_save_path,
+                                           val_data_save_path,
+                                           test_data_save_path,
+                                           negative_ratio=3)
 
     # data = load_from_json_file(function_feature_path)
     #
@@ -133,7 +139,7 @@ def debug_token_length():
 
 if __name__ == '__main__':
     # debug_convert_function_feature_to_train_data()
-    # train_model_1()
+    train_model_1()
     # debug_model_application()
 
-    debug_token_length()
+    # debug_token_length()

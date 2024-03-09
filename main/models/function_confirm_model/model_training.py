@@ -4,10 +4,13 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
 
 from main.interface import DataItemForFunctionConfirmModel
-from main.models.function_confirm_model.dataset_and_data_provider import create_datasets_from_json_file, create_dataloaders
+from main.models.function_confirm_model.dataset_and_data_provider import create_datasets_from_json_file, \
+    create_dataloaders, create_dataset
 
 
-def init_train(filepath,
+def init_train(train_data_json_file_path,
+               val_data_json_file_path,
+               test_data_json_file_path,
                num_labels=2,
                model_name='microsoft/graphcodebert-base',
                token_max_length=512,
@@ -39,9 +42,9 @@ def init_train(filepath,
     model = torch.nn.DataParallel(model).to(device)
 
     # datasets
-    train_dataset, val_dataset, test_dataset = create_datasets_from_json_file(filepath,
-                                                                              tokenizer,
-                                                                              max_len=token_max_length)
+    train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length)
+    val_dataset = create_dataset(val_data_json_file_path, tokenizer, token_max_length)
+    test_dataset = create_dataset(test_data_json_file_path, tokenizer, token_max_length)
 
     # dataloader
     train_loader, val_loader, test_loader = create_dataloaders(train_dataset,
@@ -100,15 +103,21 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 
 
 # 准备训练
-def run_train(filepath, model_save_path="model_weights.pth", **kwargs):
+def run_train(train_data_json_file_path,
+              val_data_json_file_path,
+              test_data_json_file_path,
+              model_save_path="model_weights.pth", **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
 
     # 初始化训练
     logger.info('init train...')
-    device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(filepath,
-                                                                                                       batch_size=batch_size,
-                                                                                                       epochs=epochs)
+    device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(
+        train_data_json_file_path,
+        val_data_json_file_path,
+        test_data_json_file_path,
+        batch_size=batch_size,
+        epochs=epochs)
     logger.info('inited, start train, epochs: 3, batch_size: 32...')
     # train scheduler
     for epoch in range(epochs):

@@ -52,13 +52,12 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
     return dataset
 
 
-def create_datasets_from_json_file(train_data_json_file_path, tokenizer, max_len=512):
-    train_data_json = load_from_json_file(train_data_json_file_path)
+def create_dataset(file_path, tokenizer, max_len=512):
+    train_data_json = load_from_json_file(file_path)
     train_data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
 
     texts = []
     labels = []
-
     for train_data_item in train_data_items:
         texts.append(train_data_item.get_train_text(tokenizer.sep_token))
         labels.append(train_data_item.label)
@@ -67,13 +66,7 @@ def create_datasets_from_json_file(train_data_json_file_path, tokenizer, max_len
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
     dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
 
-    # random split
-    train_size = int(0.8 * len(dataset))
-    val_size = int(0.1 * len(dataset))
-    test_size = len(dataset) - train_size - val_size
-    train_dataset, val_dataset, test_dataset = random_split(dataset, [train_size, val_size, test_size])
 
-    return train_dataset, val_dataset, test_dataset
 
 
 def create_dataloaders(train_dataset, val_dataset, test_dataset, batch_size=16):
