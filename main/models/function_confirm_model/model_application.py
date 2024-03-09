@@ -84,7 +84,7 @@ class VulFunctionFinder:
         # convert data
         data_items = convert_function_feature_to_model_input(src_function_feature, bin_function_features)
         dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
-        dataloader = DataLoader(dataset, batch_size=16, shuffle=False)
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
 
         return dataloader, bin_function_features
 
