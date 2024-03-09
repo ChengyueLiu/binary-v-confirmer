@@ -100,8 +100,13 @@ def train_model_1():
     :return:
     """
     from main.models.function_confirm_model.model_training import run_train
-    data_file_path = r"TestCases/model_train/model_1/train_data/train_data.json"
-    run_train(data_file_path, epochs=3, batch_size=16)
+    train_data_file_path = r"TestCases/model_train/model_1/train_data/train_data.json"
+    val_data_file_path = r"TestCases/model_train/model_1/train_data/val_data.json"
+    test_data_file_path = r"TestCases/model_train/model_1/train_data/test_data.json"
+    run_train(train_data_file_path,
+              val_data_file_path,
+              test_data_file_path,
+              epochs=3, batch_size=16)
 
 
 def debug_token_length():

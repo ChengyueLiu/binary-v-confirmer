@@ -4,8 +4,7 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
 
 from main.interface import DataItemForFunctionConfirmModel
-from main.models.function_confirm_model.dataset_and_data_provider import create_datasets_from_json_file, \
-    create_dataloaders, create_dataset
+from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
 
 
 def init_train(train_data_json_file_path,
@@ -19,7 +18,9 @@ def init_train(train_data_json_file_path,
                epochs=3):
     """
 
-    :param filepath: 训练数据json文件路径
+    :param test_data_json_file_path:
+    :param val_data_json_file_path:
+    :param train_data_json_file_path:
     :param num_labels: 标签类型数量
     :param model_name: 模型名称
     :param token_max_length: token最大长度
