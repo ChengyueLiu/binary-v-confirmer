@@ -34,7 +34,7 @@ def debug_model_application():
 
     # linux
     root_dir = r"/home/chengyue/projects/binary-v-confirmer/"
-    batch_size = 64
+    batch_size = 256
 
     # windows
     # root_dir = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer"
