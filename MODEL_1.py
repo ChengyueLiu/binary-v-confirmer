@@ -57,7 +57,7 @@ def train_model_1():
               batch_size=64)
 
 
-def test_model_1_by_real_vul_function():
+def test_model_1_by_openssl():
     """
     测试模型的应用
 
@@ -116,6 +116,13 @@ def test_model_1_by_real_vul_function():
     logger.info(f"Done")
 
 if __name__ == '__main__':
+    # Done
     # prepare_train_data_for_model_1()
+
+    # Done
     # train_model_1()
-    test_model_1_by_real_vul_function()
+
+    # Done
+    test_model_1_by_openssl()
+
+    # TODO test_model_1_by_more_test_cases()
