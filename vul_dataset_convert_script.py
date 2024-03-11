@@ -14,6 +14,24 @@ from bintools.general.file_tool import load_from_json_file, save_to_json_file
 from main.extractors.src_function_feature_extractor.constants import C_EXTENSION_SET, CPP_EXTENSION_SET
 from setting.settings import GITHUB_TOKEN
 
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+
+def fetch_table_column_values_and_headers(url):
+    # 发送请求获取HTML内容
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    texts = []
+    spans = soup.find_all('span', class_="bg-secondary-subtle bg-opacity-25 p-1 rounded")
+    for span in spans:
+        texts.extend(span.stripped_strings)  # 获取所有文本字段
+    return texts
+
 
 def parse_git_url(url):
     """
@@ -318,11 +336,13 @@ class RawVulInfo:
 class CVEInfo:
     cve_id: str
     cve_link: str
+
     cwe_id: str
     score: float
     publish_date: str
     update_date: str
     vulnerability_classification: str
+    affected_versions: str = None
 
     def normalize(self):
         self.cve_id = self.cve_id.strip()
@@ -667,15 +687,15 @@ def process_vul_info():
     vuls = [VulInfo.init_from_dict(v) for v in json_vuls]
 
     project_set = set()
-    for vul in vuls:
+    for vul in tqdm(vuls):
         # 过滤patch数据
         filtered_patches = []
         for patch in vul.repair_info.patches:
             if not patch.snippet_changes:
-                print(f"no patch.snippet_changes: {patch.file_name}")
+                # print(f"no patch.snippet_changes: {patch.file_name}")
                 continue
             if not patch.file_name.endswith((*C_EXTENSION_SET, *CPP_EXTENSION_SET)):
-                print(f"not .c file: {patch.file_name}")
+                # print(f"not .c file: {patch.file_name}")
                 continue
             filtered_patches.append(patch)
         if not filtered_patches:
@@ -683,7 +703,10 @@ def process_vul_info():
             continue
 
         vul.repair_info.patches = filtered_patches
-        vul.repair_info.patches = []  # 临时代码，方便查看
+        # 删除下面这一行。临时代码，方便查看
+        # vul.repair_info.patches = []
+        url = f"https://www.cvedetails.com/cve/{vul.cve_info.cve_id}"
+        vul.cve_info.affected_versions = " ".join(fetch_table_column_values_and_headers(url))
         project_set.add(vul.project_name)
 
     print(f"len(project_set): {len(project_set)}, len(vuls): {len(vuls)}")  # 247, 2915
@@ -695,8 +718,8 @@ def process_vul_info():
         project_name = v.project_name
         if project_name not in vul_dict:
             vul_dict[project_name] = {
-                "count":0,
-                "CVE_IDs":[]
+                "count": 0,
+                "CVE_IDs": []
             }
         vul_dict[project_name]["count"] += 1
         vul_dict[project_name]["CVE_IDs"].append(v.cve_info.cve_id)
@@ -707,3 +730,6 @@ if __name__ == '__main__':
     # filter_raw_vul_info() # 过滤数据，只保留github的数据
     # convert_raw_vul_info()  # 转换数据, 生成我自己需要的格式
     process_vul_info()  # 再次处理vul_info
+    # url = "https://www.cvedetails.com/cve/CVE-2019-12730"
+    # texts = fetch_table_column_values_and_headers(url)
+    # print(texts)
