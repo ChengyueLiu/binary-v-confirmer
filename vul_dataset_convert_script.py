@@ -11,6 +11,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file, save_to_json_file
+from main.extractors.src_function_feature_extractor.constants import C_EXTENSION_SET, CPP_EXTENSION_SET
 from setting.settings import GITHUB_TOKEN
 
 
@@ -343,6 +344,18 @@ class CVEInfo:
             "vulnerability_classification": self.vulnerability_classification
         }
 
+    @classmethod
+    def init_from_dict(cls, data):
+        return cls(
+            cve_id=data.get("cve_id"),
+            cve_link=data.get("cve_link"),
+            cwe_id=data.get("cwe_id"),
+            score=data.get("score"),
+            publish_date=data.get("publish_date"),
+            update_date=data.get("update_date"),
+            vulnerability_classification=data.get("vulnerability_classification")
+        )
+
 
 @dataclass
 class SnippetChange:
@@ -407,7 +420,7 @@ class Patch:
     snippet_changes: List[SnippetChange] = dataclasses.field(default_factory=list)
 
     @classmethod
-    def init_from_dict(cls, data):
+    def init_from_github_file_dict(cls, data):
         return cls(
             sha=data.get("sha"),
             file_name=data.get("filename"),
@@ -428,7 +441,7 @@ class Patch:
         files = commit_info.get("files", [])
         patches: List[Patch] = []
         for file in files:
-            patch = cls.init_from_dict(file)
+            patch = cls.init_from_github_file_dict(file)
             if patch.raw_patch_content is not None:
                 patch.parse_patch_content()
             patches.append(patch)
@@ -442,6 +455,22 @@ class Patch:
             logger.error(f"parse_patch_content error: {e}, error patch: {self.raw_patch_content}")
             logger.error(f"traceback: {traceback.format_exc()}")
             self.snippet_changes = []
+
+    @classmethod
+    def init_from_dict(cls, data):
+        return cls(
+            sha=data.get("sha"),
+            file_name=data.get("file_name"),
+            status=data.get("status"),
+            additions=data.get("additions"),
+            deletions=data.get("deletions"),
+            changes=data.get("changes"),
+            blob_url=data.get("blob_url"),
+            raw_url=data.get("raw_url"),
+            contents_url=data.get("contents_url"),
+            raw_patch_content=data.get("raw_patch_content"),
+            snippet_changes=[SnippetChange.init_from_dict(sc) for sc in data.get("snippet_changes")]
+        )
 
     def custom_serialize(self):
         return {
@@ -489,6 +518,19 @@ class RepairInfo:
             "commit_link": self.commit_link,
             "patches": [p.custom_serialize() for p in self.patches]
         }
+
+    @classmethod
+    def init_from_dict(cls, data):
+        return cls(
+            platform=data.get("platform"),
+            owner=data.get("owner"),
+            repo=data.get("repo"),
+            affected_since=data.get("affected_since"),
+            fixed_in=data.get("fixed_in"),
+            commit_id=data.get("commit_id"),
+            commit_link=data.get("commit_link"),
+            patches=[Patch.init_from_dict(p) for p in data.get("patches")]
+        )
 
 
 @dataclass
@@ -549,6 +591,14 @@ class VulInfo:
                 "repair_info": self.repair_info.custom_serialize()
             }
 
+    @classmethod
+    def init_from_dict(cls, data):
+        return cls(
+            project_name=data.get("project_name"),
+            cve_info=CVEInfo.init_from_dict(data.get("cve_info")),
+            repair_info=RepairInfo.init_from_dict(data.get("repair_info"))
+        )
+
 
 def filter_raw_vul_info():
     raw_json_path = "Resources/vuls/MSR_data_cleaned.json"
@@ -596,6 +646,64 @@ def convert_raw_vul_info():
     save_to_json_file([v.custom_serialize(i) for i, v in enumerate(vul_info_list, start=1)], processed_json_path)
 
 
+def process_vul_info():
+    """
+    再次处理vul_info
+        1. 过滤，没有成功解析patch的数据
+        2. 补充，受影响的版本
+        3. 补充，修复的版本
+        4. 二进制测试用例[修复前，修复后]
+        5. 合并openssl的漏洞信息？
+
+    :return:
+    """
+
+    converted_json_path = "Resources/vuls/MSR_data_converted.json"
+    processed_json_path = "Resources/vuls/MSR_data_processed.json"
+    processed_json_simplified_path = "Resources/vuls/MSR_data_processed_simplified.json"
+
+    # load
+    json_vuls = load_from_json_file(converted_json_path)
+    vuls = [VulInfo.init_from_dict(v) for v in json_vuls]
+
+    project_set = set()
+    for vul in vuls:
+        # 过滤patch数据
+        filtered_patches = []
+        for patch in vul.repair_info.patches:
+            if not patch.snippet_changes:
+                print(f"no patch.snippet_changes: {patch.file_name}")
+                continue
+            if not patch.file_name.endswith((*C_EXTENSION_SET, *CPP_EXTENSION_SET)):
+                print(f"not .c file: {patch.file_name}")
+                continue
+            filtered_patches.append(patch)
+        if not filtered_patches:
+            print(f"no filtered_patches: {vul.project_name}")
+            continue
+
+        vul.repair_info.patches = filtered_patches
+        vul.repair_info.patches = []  # 临时代码，方便查看
+        project_set.add(vul.project_name)
+
+    print(f"len(project_set): {len(project_set)}, len(vuls): {len(vuls)}")  # 247, 2915
+    save_to_json_file([v.custom_serialize(i) for i, v in enumerate(vuls, start=1)], processed_json_path)
+
+    # 简要版本
+    vul_dict = {}
+    for i, v in enumerate(vuls, start=1):
+        project_name = v.project_name
+        if project_name not in vul_dict:
+            vul_dict[project_name] = {
+                "count":0,
+                "CVE_IDs":[]
+            }
+        vul_dict[project_name]["count"] += 1
+        vul_dict[project_name]["CVE_IDs"].append(v.cve_info.cve_id)
+    save_to_json_file(vul_dict, processed_json_simplified_path)
+
+
 if __name__ == '__main__':
-    # filter_raw_vul_info()
-    convert_raw_vul_info()
+    # filter_raw_vul_info() # 过滤数据，只保留github的数据
+    # convert_raw_vul_info()  # 转换数据, 生成我自己需要的格式
+    process_vul_info()  # 再次处理vul_info
