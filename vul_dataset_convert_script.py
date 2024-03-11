@@ -358,6 +358,7 @@ class CVEInfo:
             "cve_id": self.cve_id,
             "cve_link": self.cve_link,
             "cwe_id": self.cwe_id,
+            "affected_versions": self.affected_versions,
             "score": self.score,
             "publish_date": self.publish_date,
             "update_date": self.update_date,
@@ -370,6 +371,7 @@ class CVEInfo:
             cve_id=data.get("cve_id"),
             cve_link=data.get("cve_link"),
             cwe_id=data.get("cwe_id"),
+            affected_versions=data.get("affected_versions"),
             score=data.get("score"),
             publish_date=data.get("publish_date"),
             update_date=data.get("update_date"),
@@ -701,13 +703,13 @@ def process_vul_info():
         if not filtered_patches:
             print(f"no filtered_patches: {vul.project_name}")
             continue
-
         vul.repair_info.patches = filtered_patches
         # 删除下面这一行。临时代码，方便查看
         # vul.repair_info.patches = []
         url = f"https://www.cvedetails.com/cve/{vul.cve_info.cve_id}"
         vul.cve_info.affected_versions = " ".join(fetch_table_column_values_and_headers(url))
         project_set.add(vul.project_name)
+        break
 
     print(f"len(project_set): {len(project_set)}, len(vuls): {len(vuls)}")  # 247, 2915
     save_to_json_file([v.custom_serialize(i) for i, v in enumerate(vuls, start=1)], processed_json_path)
