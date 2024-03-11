@@ -1,5 +1,6 @@
 import dataclasses
 import json
+import traceback
 from dataclasses import dataclass
 from typing import Optional, List, Set
 
@@ -434,8 +435,13 @@ class Patch:
         return patches
 
     def parse_patch_content(self):
-        snippet_change_dict_list = parse_patch(self.raw_patch_content)
-        self.snippet_changes = [SnippetChange.init_from_dict(sc_dict) for sc_dict in snippet_change_dict_list]
+        try:
+            snippet_change_dict_list = parse_patch(self.raw_patch_content)
+            self.snippet_changes = [SnippetChange.init_from_dict(sc_dict) for sc_dict in snippet_change_dict_list]
+        except Exception as e:
+            logger.error(f"parse_patch_content error: {e}, error patch: {self.raw_patch_content}")
+            logger.error(f"traceback: {traceback.format_exc()}")
+            self.snippet_changes = []
 
     def custom_serialize(self):
         return {
