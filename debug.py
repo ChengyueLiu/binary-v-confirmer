@@ -40,7 +40,16 @@ def debug_token_length():
     save_to_json_file(token_count, "TestCases/model_train/model_1/train_data/token_count.json")
 
 
+def debug_get_commit_detail():
+    import requests
+
+    url = f"https://api.github.com/repos/fbb-git/yodl/commits/fd85f8c94182558ff1480d06a236d6fb927979a3"
+    response = requests.get(url)
+    print(response.status_code)
+    if response.status_code == 200:
+        save_to_json_file(response.json(), r'C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\commit_detail.json')
 
 
 if __name__ == '__main__':
-    debug_token_length()
+    # debug_token_length()
+    debug_get_commit_detail()
