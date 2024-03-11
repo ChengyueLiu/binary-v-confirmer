@@ -1,7 +1,7 @@
 import torch
 from loguru import logger
 from tqdm import tqdm
-from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
+from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering
 
 from main.interface import DataItemForFunctionConfirmModel
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
@@ -38,7 +38,7 @@ def init_train(train_data_json_file_path,
         tokenizer.add_tokens(special_token)
 
     # model
-    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+    model = RobertaForQuestionAnswering.from_pretrained(model_name)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 
@@ -61,6 +61,15 @@ def init_train(train_data_json_file_path,
     return device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler
 
 
+# 辅助函数：计算重叠和长度
+def calculate_overlap(true_start, true_end, pred_start, pred_end):
+    # 计算真实答案和预测答案的交集
+    overlap = max(0, min(true_end, pred_end) - max(true_start, pred_start) + 1)
+    true_length = true_end - true_start + 1
+    pred_length = pred_end - pred_start + 1
+    return overlap, true_length, pred_length
+
+
 # 定义训练和评估函数
 def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=True):
     if is_train:
@@ -69,38 +78,51 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
         model.eval()
 
     epoch_loss = 0
-    total_correct = 0
-    total_instances = 0
-    for batch in tqdm(iterator, desc="train_or_evaluate"):
+    total_overlap = 0
+    total_true_length = 0
+    total_pred_length = 0
+
+    for batch in tqdm(iterator, desc="Processing batches"):
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
-        labels = batch['labels'].to(device)
+        start_positions = batch['start_positions'].to(device)
+        end_positions = batch['end_positions'].to(device)
 
         if is_train:
             optimizer.zero_grad()
 
-        outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
+        with torch.set_grad_enabled(is_train):
+            outputs = model(input_ids, attention_mask=attention_mask,
+                            start_positions=start_positions, end_positions=end_positions)
+            loss = outputs.loss
+            start_logits, end_logits = outputs.start_logits, outputs.end_logits
 
-        loss = outputs[0]
-        # 下面两行是为了适配多GPU训练
-        if loss.dim() > 0:  # 如果损失不是标量
-            loss = loss.mean()  # 计算所有损失的平均值确保是标量
-        logits = outputs[1]
+            # 预测开始和结束位置
+            pred_start_positions = torch.argmax(start_logits, dim=-1)
+            pred_end_positions = torch.argmax(end_logits, dim=-1)
 
-        if is_train:
-            loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)  # 适用于BERT的梯度裁剪
-            optimizer.step()
-            scheduler.step()  # 调用scheduler
+            if is_train:
+                loss.backward()
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                optimizer.step()
+                scheduler.step()
 
         epoch_loss += loss.item()
-        _, predicted_classes = torch.max(logits, dim=1)
-        correct_predictions = (predicted_classes == labels).float()
-        total_correct += correct_predictions.sum().item()
-        total_instances += labels.size(0)
 
-    epoch_acc = total_correct / total_instances
-    return epoch_loss / len(iterator), epoch_acc
+        # 计算重叠和长度
+        for true_start, true_end, pred_start, pred_end in zip(start_positions, end_positions, pred_start_positions,
+                                                              pred_end_positions):
+            overlap, true_length, pred_length = calculate_overlap(true_start.item(), true_end.item(), pred_start.item(),
+                                                                  pred_end.item())
+            total_overlap += overlap
+            total_true_length += true_length
+            total_pred_length += pred_length
+
+    precision = total_overlap / total_pred_length if total_pred_length > 0 else 0
+    recall = total_overlap / total_true_length if total_true_length > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if (precision + recall) > 0 else 0
+
+    return epoch_loss / len(iterator), precision, recall, f1
 
 
 # 准备训练
@@ -112,28 +134,36 @@ def run_train(train_data_json_file_path,
     epochs = kwargs.get('epochs', 3)
 
     # 初始化训练
-    logger.info('init train...')
+    logger.info('Init train...')
     device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(
         train_data_json_file_path,
         val_data_json_file_path,
         test_data_json_file_path,
-        batch_size=batch_size,
-        epochs=epochs)
-    logger.info('inited, start train, epochs: 3, batch_size: 32...')
-    # train scheduler
+        **kwargs)  # 确保其他参数也能被传递
+    logger.info('Initialized, start training, epochs: {}, batch_size: {}...'.format(epochs, batch_size))
+
+    # 训练和验证
     for epoch in range(epochs):
         logger.info(f'Epoch {epoch + 1}/{epochs}')
-        train_loss, train_acc = train_or_evaluate(model, train_loader, optimizer, scheduler, device, is_train=True)
-        valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
-        print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
-        print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
-    logger.info('train done, save model...')
+        train_loss, train_precision, train_recall, train_f1 = train_or_evaluate(model, train_loader, optimizer,
+                                                                                scheduler, device, is_train=True)
+        valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer, scheduler,
+                                                                                device, is_train=False)
+        print(
+            f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
+        print(
+            f'\t Val. Loss: {valid_loss:.3f} |  Val Precision: {valid_precision:.2f} | Val Recall: {valid_recall:.2f} | Val F1: {valid_f1:.2f}')
+
+    logger.info('Training complete, saving model...')
     torch.save(model.state_dict(), model_save_path)
 
-    logger.info('model saved, start test, load model from model_weights.pth...')
+    # 测试
+    logger.info('Model saved, starting test, loading model from {}...'.format(model_save_path))
     model.load_state_dict(torch.load(model_save_path))
 
-    logger.info('model loaded, start test...')
-    test_loss, test_acc = train_or_evaluate(model, test_loader, optimizer, scheduler, device, is_train=False)
-    print(f'\t Test. Loss: {test_loss:.3f} |  Test. Acc: {test_acc * 100:.2f}%')
-    logger.info('test done, all done.')
+    logger.info('Model loaded, starting test...')
+    test_loss, test_precision, test_recall, test_f1 = train_or_evaluate(model, test_loader, optimizer, scheduler,
+                                                                        device, is_train=False)
+    print(
+        f'\t Test. Loss: {test_loss:.3f} | Test Precision: {test_precision:.2f} | Test Recall: {test_recall:.2f} | Test F1: {test_f1:.2f}')
+    logger.info('Testing complete, all done.')
