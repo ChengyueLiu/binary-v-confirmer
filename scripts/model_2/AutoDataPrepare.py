@@ -9,35 +9,97 @@ from tqdm import tqdm
 import re
 
 
+def is_function_start_flag(line):
+    pattern = r'^[0-9a-f]+\s+<[^>]+>:'
+    return bool(re.match(pattern, line))
+
+
+def split_snippets(lines, path_start="/home/chengyue/"):
+    snippets = []
+    line_position = ""
+    current_snippet_lines = []
+    for i, line in enumerate(lines):
+        if line.startswith(path_start) or line.startswith("/usr/"):
+            if line_position and current_snippet_lines:
+                snippets.append({
+                    "line_position": line_position,
+                    **split_src_asm_lines(current_snippet_lines)
+                })
+                current_snippet_lines = []
+            line_position = line
+            continue
+        current_snippet_lines.append(line)
+    if line_position and current_snippet_lines:
+        snippets.append({
+            "line_position": line_position,
+            **split_src_asm_lines(current_snippet_lines)
+        })
+
+    return snippets
+
+
+def split_src_asm_lines(lines):
+    for i, line in enumerate(lines):
+        if is_assembly_line(line):
+            return {
+                "src_lines": lines[:i],
+                "asm_lines": lines[i:]
+            }
+
+
+def is_assembly_line(line):
+    # 去除前后空格
+    trimmed_line = line.strip()
+
+    # 检查行中是否包含冒号
+    if ':' not in trimmed_line:
+        return False
+
+    # 获取冒号之前的部分
+    address_part = trimmed_line.split(':')[0]
+
+    # 尝试解释为地址值
+    try:
+        int(address_part, 16)
+        return True
+    except ValueError:
+        return False
+
+
 class NewMappingParser:
-    def __init__(self, mapping_file_path):
-        self.mapping_file_path = mapping_file_path
-        with open(mapping_file_path, 'r', encoding='utf-8') as f:
-            self.raw_lines = [line.strip() for line in f.readlines() if line.strip()]
+    def __init__(self):
+        self.raw_lines = []
         self.file_path = ""
         self.file_type = ""
         self._sections = {}
         self._functions = []
         self.functions = []
+        self.path_start = "/home/chengyue/"
 
-    def parse(self):
-        try:
-            if not self.raw_lines:
-                logger.info("No content in the mapping file. remove this file")
-                os.remove(self.mapping_file_path)
-                return
-            file_path, _, _, self.file_type = self.raw_lines[0].split()
-            self.file_path = file_path[:-1]
-        except Exception as e:
-            logger.error(f"Failed to parse file path and file type from the first line of the mapping file. "
-                         f"Error: {e}")
-            self.file_path = self.raw_lines[0]
+    def parse(self, mapping_file_path):
+        # parse lines
+        with open(mapping_file_path, 'r', encoding='utf-8') as f:
+            self.raw_lines = [line.rstrip() for line in f.readlines()]
+        for line in self.raw_lines:
+            if line.strip():
+                file_path, _, _, self.file_type = line.split()
+                self.file_path = file_path[:-1]
+                break
+
         # 拆分节
         self._split_sections()
         # 拆分函数
         self._split_functions()
         # 解析函数
         self._parse_functions()
+
+    def reset(self):
+        self.raw_lines = []
+        self.file_path = ""
+        self.file_type = ""
+        self._sections = {}
+        self._functions = []
+        self.functions = []
 
     def dump(self, json_file_path):
         import json
@@ -94,9 +156,9 @@ class NewMappingParser:
         text_section_lines = self._sections.get('.text')[1:]
         functions = []
         current_function_lines = []
-        for line in text_section_lines:
+        for line in text_section_lines[1:]:
             if is_function_start_flag(line):
-                if current_function_lines:
+                if len(current_function_lines) > 1:
                     functions.append(current_function_lines)
                     current_function_lines = []
             current_function_lines.append(line)
@@ -109,92 +171,34 @@ class NewMappingParser:
         for function_lines in self._functions:
             # 函数地址行
             address_line = function_lines[0]
+            # 函数名
+            function_name = address_line.split()[1][1:-2]
 
-            # 拆分出子函数
-            sub_function_lines_dict = {}
-            current_sub_function = ""
+            sub_functions = []
+            current_sub_function_name = ""
+            current_sub_function_lines = []
             for line in function_lines[1:]:
                 if line.endswith('():'):
-                    current_sub_function = line[:-3]
+                    if current_sub_function_name and current_sub_function_lines:
+                        sub_functions.append({
+                            "function_name": current_sub_function_name,
+                            "snippets": split_snippets(current_sub_function_lines, self.path_start)
+                        })
+                    current_sub_function_lines = []
+                    current_sub_function_name = line[:-3]
                     continue
-                if current_sub_function:
-                    if (current_sub_function_lines := sub_function_lines_dict.get(current_sub_function)) is None:
-                        sub_function_lines_dict[current_sub_function] = current_sub_function_lines = []
-                    current_sub_function_lines.append(line)
-                    continue
+                current_sub_function_lines.append(line)
 
-            # 拆分出代码片段
-            sub_function_snippet_dict = {}
-            for function_name, sub_function_lines in sub_function_lines_dict.items():
-                snippets = []
-                current_snippet_lines = []
-                for line in sub_function_lines:
-                    if line.startswith('/home/chengyue') and current_snippet_lines:
-                        snippets.append(current_snippet_lines)
-                        current_snippet_lines = []
-                    current_snippet_lines.append(line)
-                if current_snippet_lines:
-                    snippets.append(current_snippet_lines)
-                sub_function_snippet_dict[function_name] = snippets
-
-            # 拆分出位置，源码，汇编
-            sub_functions = []
-            for function_name, snippet_lines_list in sub_function_snippet_dict.items():
-                snippets = []
-                for snippet_lines in snippet_lines_list:
-                    position = snippet_lines[0]
-                    if not position.startswith('/home/chengyue'):
-                        continue
-                    snippet = {
-                        "position": snippet_lines[0],
-                        "source_codes": [],
-                        "assembly_codes": []
-                    }
-                    for line in snippet_lines:
-                        if is_assembly_line(line):
-                            snippet["assembly_codes"].append(line)
-                        else:
-                            snippet["source_codes"].append(line)
-                    # 添加代码片段
-                    snippets.append(snippet)
-                # 添加子函数
+            if current_sub_function_name and current_sub_function_lines:
                 sub_functions.append({
-                    'function_name': function_name,
-                    'snippets': snippets
+                    "function_name": current_sub_function_name,
+                    "snippets": split_snippets(current_sub_function_lines, self.path_start)
                 })
 
-            # 添加函数
-            address, function_name = address_line.split(maxsplit=1)
-            function_name = function_name[1:-2]
             self.functions.append({
-                'address': address,
-                'function_name': function_name,
-                'sub_functions': sub_functions
+                "function_name": function_name,
+                "sub_functions": sub_functions
             })
-
-
-def is_function_start_flag(line):
-    pattern = r'^[0-9a-f]+\s+<[^>]+>:'
-    return bool(re.match(pattern, line))
-
-
-def is_assembly_line(line):
-    # 去除前后空格
-    trimmed_line = line.strip()
-
-    # 检查行中是否包含冒号
-    if ':' not in trimmed_line:
-        return False
-
-    # 获取冒号之前的部分
-    address_part = trimmed_line.split(':')[0]
-
-    # 尝试解释为地址值
-    try:
-        int(address_part, 16)
-        return True
-    except ValueError:
-        return False
 
 
 class AutoDataPreparer:
@@ -213,11 +217,11 @@ class AutoDataPreparer:
         self.project_name = project_name
         self.target_tags = target_tags
 
-    def prepare(self, compile=True, objdump=True, parse=True, merge=True):
+    def prepare(self, run_compile=True, objdump=True, parse=True, merge=True):
         # 第一层进度条：处理target_tags
         for tag in tqdm(self.target_tags, desc="Processing tags"):
             logger.info(f"Processing tag {tag}...")
-            if compile:
+            if run_compile:
                 success, output = self.run_auto_compile_script(tag)
                 if not success:
                     logger.error(f"Failed to compile the project with tag {tag}. Error: {output}")
@@ -300,6 +304,7 @@ class AutoDataPreparer:
         - A tuple (success: bool, message: str) indicating whether the command ran successfully
           and the command's output or error message.
         """
+        # objdump -d <source_path> --source --line-numbers -M intel > <target_path>
         command = [
             'objdump',
             '-d',
@@ -361,7 +366,8 @@ class AutoDataPreparer:
                         and os.path.getsize(path) > 100:
                     elf_files.append(path)
         else:
-            logger.warning(f"Directory not found: {directory}")
+            # logger.warning(f"Directory not found: {directory}")
+            pass
         return elf_files
 
     def merge_mapping_jsons(self):
@@ -383,11 +389,43 @@ if __name__ == '__main__':
     base_output_dir = "/home/chengyue/test_cases/binary_sca_vul_confirmation/compiled_projects"
     mapping_output_dir = "/home/chengyue/test_cases/binary_sca_vul_confirmation/src_asm_mappings"
     parsed_mapping_file_dir = "/home/chengyue/test_cases/binary_sca_vul_confirmation/parsed_mappings"
-    target_tags = ['OpenSSL_0_9_6', 'OpenSSL_0_9_6a', 'OpenSSL_0_9_6c', 'OpenSSL_0_9_6d', 'OpenSSL_0_9_6e', 'OpenSSL_0_9_6f', 'OpenSSL_0_9_6i', 'OpenSSL_0_9_6j', 'OpenSSL_0_9_6k', 'OpenSSL_0_9_6l', 'OpenSSL_0_9_6m', 'OpenSSL_0_9_7', 'OpenSSL_0_9_7-beta3', 'OpenSSL_0_9_7a', 'OpenSSL_0_9_7b', 'OpenSSL_0_9_7c', 'OpenSSL_0_9_7d', 'OpenSSL_0_9_7f', 'OpenSSL_0_9_7h', 'OpenSSL_0_9_7k', 'OpenSSL_0_9_7l', 'OpenSSL_0_9_8', 'OpenSSL_0_9_8a', 'OpenSSL_0_9_8c', 'OpenSSL_0_9_8d', 'OpenSSL_0_9_8f', 'OpenSSL_0_9_8g', 'OpenSSL_0_9_8h', 'OpenSSL_0_9_8i', 'OpenSSL_0_9_8j', 'OpenSSL_0_9_8k', 'OpenSSL_0_9_8m', 'OpenSSL_0_9_8n', 'OpenSSL_0_9_8o', 'OpenSSL_0_9_8p', 'OpenSSL_0_9_8q', 'OpenSSL_0_9_8r', 'OpenSSL_0_9_8s', 'OpenSSL_0_9_8t', 'OpenSSL_0_9_8u', 'OpenSSL_0_9_8v', 'OpenSSL_0_9_8w', 'OpenSSL_0_9_8x', 'OpenSSL_0_9_8y', 'OpenSSL_0_9_8za', 'OpenSSL_0_9_8zb', 'OpenSSL_0_9_8zc', 'OpenSSL_0_9_8zd', 'OpenSSL_0_9_8zf', 'OpenSSL_0_9_8zg', 'OpenSSL_0_9_8zh', 'OpenSSL_1_0_0', 'OpenSSL_1_0_0a', 'OpenSSL_1_0_0b', 'OpenSSL_1_0_0c', 'OpenSSL_1_0_0d', 'OpenSSL_1_0_0e', 'OpenSSL_1_0_0f', 'OpenSSL_1_0_0g', 'OpenSSL_1_0_0h', 'OpenSSL_1_0_0i', 'OpenSSL_1_0_0j', 'OpenSSL_1_0_0k', 'OpenSSL_1_0_0l', 'OpenSSL_1_0_0m', 'OpenSSL_1_0_0n', 'OpenSSL_1_0_0o', 'OpenSSL_1_0_0p', 'OpenSSL_1_0_0r', 'OpenSSL_1_0_0s', 'OpenSSL_1_0_0t', 'OpenSSL_1_0_1', 'OpenSSL_1_0_1a', 'OpenSSL_1_0_1c', 'OpenSSL_1_0_1d', 'OpenSSL_1_0_1f', 'OpenSSL_1_0_1g', 'OpenSSL_1_0_1h', 'OpenSSL_1_0_1i', 'OpenSSL_1_0_1j', 'OpenSSL_1_0_1k', 'OpenSSL_1_0_1m', 'OpenSSL_1_0_1n', 'OpenSSL_1_0_1o', 'OpenSSL_1_0_1p', 'OpenSSL_1_0_1q', 'OpenSSL_1_0_1r', 'OpenSSL_1_0_1s', 'OpenSSL_1_0_1t', 'OpenSSL_1_0_1u', 'OpenSSL_1_0_2', 'OpenSSL_1_0_2a', 'OpenSSL_1_0_2b', 'OpenSSL_1_0_2c', 'OpenSSL_1_0_2d', 'OpenSSL_1_0_2e', 'OpenSSL_1_0_2f', 'OpenSSL_1_0_2g', 'OpenSSL_1_0_2h', 'OpenSSL_1_0_2i', 'OpenSSL_1_0_2j', 'OpenSSL_1_0_2k', 'OpenSSL_1_0_2m', 'OpenSSL_1_0_2n', 'OpenSSL_1_0_2o', 'OpenSSL_1_0_2p', 'OpenSSL_1_0_2q', 'OpenSSL_1_0_2r', 'OpenSSL_1_0_2s', 'OpenSSL_1_0_2t', 'OpenSSL_1_0_2u', 'OpenSSL_1_1_0', 'OpenSSL_1_1_0a', 'OpenSSL_1_1_0b', 'OpenSSL_1_1_0c', 'OpenSSL_1_1_0d', 'OpenSSL_1_1_0e', 'OpenSSL_1_1_0g', 'OpenSSL_1_1_0h', 'OpenSSL_1_1_0i', 'OpenSSL_1_1_0j', 'OpenSSL_1_1_0k', 'OpenSSL_1_1_0l', 'OpenSSL_1_1_1', 'OpenSSL_1_1_1a', 'OpenSSL_1_1_1c', 'OpenSSL_1_1_1d', 'OpenSSL_1_1_1e', 'OpenSSL_1_1_1g', 'OpenSSL_1_1_1h', 'OpenSSL_1_1_1i', 'OpenSSL_1_1_1j', 'OpenSSL_1_1_1k', 'OpenSSL_1_1_1l', 'OpenSSL_1_1_1m', 'OpenSSL_1_1_1n', 'OpenSSL_1_1_1o', 'OpenSSL_1_1_1p', 'OpenSSL_1_1_1q', 'OpenSSL_1_1_1t', 'OpenSSL_1_1_1u', 'OpenSSL_1_1_1v', 'OpenSSL_1_1_1w', 'openssl-3.0.0', 'openssl-3.0.1', 'openssl-3.0.10', 'openssl-3.0.11', 'openssl-3.0.12', 'openssl-3.0.13', 'openssl-3.0.2', 'openssl-3.0.3', 'openssl-3.0.4', 'openssl-3.0.5', 'openssl-3.0.6', 'openssl-3.0.7', 'openssl-3.0.8', 'openssl-3.0.9', 'openssl-3.1.0', 'openssl-3.1.1', 'openssl-3.1.2', 'openssl-3.1.3', 'openssl-3.1.4', 'openssl-3.1.5', 'openssl-3.2.0', 'openssl-3.2.1']
+    target_tags = ['OpenSSL_0_9_6', 'OpenSSL_0_9_6a', 'OpenSSL_0_9_6c', 'OpenSSL_0_9_6d', 'OpenSSL_0_9_6e',
+                   'OpenSSL_0_9_6f', 'OpenSSL_0_9_6i', 'OpenSSL_0_9_6j', 'OpenSSL_0_9_6k', 'OpenSSL_0_9_6l',
+                   'OpenSSL_0_9_6m', 'OpenSSL_0_9_7', 'OpenSSL_0_9_7-beta3', 'OpenSSL_0_9_7a', 'OpenSSL_0_9_7b',
+                   'OpenSSL_0_9_7c', 'OpenSSL_0_9_7d', 'OpenSSL_0_9_7f', 'OpenSSL_0_9_7h', 'OpenSSL_0_9_7k',
+                   'OpenSSL_0_9_7l', 'OpenSSL_0_9_8', 'OpenSSL_0_9_8a', 'OpenSSL_0_9_8c', 'OpenSSL_0_9_8d',
+                   'OpenSSL_0_9_8f', 'OpenSSL_0_9_8g', 'OpenSSL_0_9_8h', 'OpenSSL_0_9_8i', 'OpenSSL_0_9_8j',
+                   'OpenSSL_0_9_8k', 'OpenSSL_0_9_8m', 'OpenSSL_0_9_8n', 'OpenSSL_0_9_8o', 'OpenSSL_0_9_8p',
+                   'OpenSSL_0_9_8q', 'OpenSSL_0_9_8r', 'OpenSSL_0_9_8s', 'OpenSSL_0_9_8t', 'OpenSSL_0_9_8u',
+                   'OpenSSL_0_9_8v', 'OpenSSL_0_9_8w', 'OpenSSL_0_9_8x', 'OpenSSL_0_9_8y', 'OpenSSL_0_9_8za',
+                   'OpenSSL_0_9_8zb', 'OpenSSL_0_9_8zc', 'OpenSSL_0_9_8zd', 'OpenSSL_0_9_8zf', 'OpenSSL_0_9_8zg',
+                   'OpenSSL_0_9_8zh', 'OpenSSL_1_0_0', 'OpenSSL_1_0_0a', 'OpenSSL_1_0_0b', 'OpenSSL_1_0_0c',
+                   'OpenSSL_1_0_0d', 'OpenSSL_1_0_0e', 'OpenSSL_1_0_0f', 'OpenSSL_1_0_0g', 'OpenSSL_1_0_0h',
+                   'OpenSSL_1_0_0i', 'OpenSSL_1_0_0j', 'OpenSSL_1_0_0k', 'OpenSSL_1_0_0l', 'OpenSSL_1_0_0m',
+                   'OpenSSL_1_0_0n', 'OpenSSL_1_0_0o', 'OpenSSL_1_0_0p', 'OpenSSL_1_0_0r', 'OpenSSL_1_0_0s',
+                   'OpenSSL_1_0_0t', 'OpenSSL_1_0_1', 'OpenSSL_1_0_1a', 'OpenSSL_1_0_1c', 'OpenSSL_1_0_1d',
+                   'OpenSSL_1_0_1f', 'OpenSSL_1_0_1g', 'OpenSSL_1_0_1h', 'OpenSSL_1_0_1i', 'OpenSSL_1_0_1j',
+                   'OpenSSL_1_0_1k', 'OpenSSL_1_0_1m', 'OpenSSL_1_0_1n', 'OpenSSL_1_0_1o', 'OpenSSL_1_0_1p',
+                   'OpenSSL_1_0_1q', 'OpenSSL_1_0_1r', 'OpenSSL_1_0_1s', 'OpenSSL_1_0_1t', 'OpenSSL_1_0_1u',
+                   'OpenSSL_1_0_2', 'OpenSSL_1_0_2a', 'OpenSSL_1_0_2b', 'OpenSSL_1_0_2c', 'OpenSSL_1_0_2d',
+                   'OpenSSL_1_0_2e', 'OpenSSL_1_0_2f', 'OpenSSL_1_0_2g', 'OpenSSL_1_0_2h', 'OpenSSL_1_0_2i',
+                   'OpenSSL_1_0_2j', 'OpenSSL_1_0_2k', 'OpenSSL_1_0_2m', 'OpenSSL_1_0_2n', 'OpenSSL_1_0_2o',
+                   'OpenSSL_1_0_2p', 'OpenSSL_1_0_2q', 'OpenSSL_1_0_2r', 'OpenSSL_1_0_2s', 'OpenSSL_1_0_2t',
+                   'OpenSSL_1_0_2u', 'OpenSSL_1_1_0', 'OpenSSL_1_1_0a', 'OpenSSL_1_1_0b', 'OpenSSL_1_1_0c',
+                   'OpenSSL_1_1_0d', 'OpenSSL_1_1_0e', 'OpenSSL_1_1_0g', 'OpenSSL_1_1_0h', 'OpenSSL_1_1_0i',
+                   'OpenSSL_1_1_0j', 'OpenSSL_1_1_0k', 'OpenSSL_1_1_0l', 'OpenSSL_1_1_1', 'OpenSSL_1_1_1a',
+                   'OpenSSL_1_1_1c', 'OpenSSL_1_1_1d', 'OpenSSL_1_1_1e', 'OpenSSL_1_1_1g', 'OpenSSL_1_1_1h',
+                   'OpenSSL_1_1_1i', 'OpenSSL_1_1_1j', 'OpenSSL_1_1_1k', 'OpenSSL_1_1_1l', 'OpenSSL_1_1_1m',
+                   'OpenSSL_1_1_1n', 'OpenSSL_1_1_1o', 'OpenSSL_1_1_1p', 'OpenSSL_1_1_1q', 'OpenSSL_1_1_1t',
+                   'OpenSSL_1_1_1u', 'OpenSSL_1_1_1v', 'OpenSSL_1_1_1w', 'openssl-3.0.0', 'openssl-3.0.1',
+                   'openssl-3.0.10', 'openssl-3.0.11', 'openssl-3.0.12', 'openssl-3.0.13', 'openssl-3.0.2',
+                   'openssl-3.0.3', 'openssl-3.0.4', 'openssl-3.0.5', 'openssl-3.0.6', 'openssl-3.0.7', 'openssl-3.0.8',
+                   'openssl-3.0.9', 'openssl-3.1.0', 'openssl-3.1.1', 'openssl-3.1.2', 'openssl-3.1.3', 'openssl-3.1.4',
+                   'openssl-3.1.5', 'openssl-3.2.0', 'openssl-3.2.1']
     preparer = AutoDataPreparer(script_path,
                                 base_output_dir,
                                 mapping_output_dir,
                                 parsed_mapping_file_dir,
                                 project_name,
                                 target_tags)
-    preparer.prepare(compile=False)
+    preparer.prepare(run_compile=False)
