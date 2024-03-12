@@ -254,8 +254,8 @@ class AutoDataPreparer:
                         file_dir, file_name = os.path.split(parsed_mapping_file_path)
                         os.makedirs(file_dir, exist_ok=True)
 
-                        parser = NewMappingParser(mapping_file_path)
-                        parser.parse()
+                        parser = NewMappingParser()
+                        parser.parse(mapping_file_path)
                         parser.dump(f"{parsed_mapping_file_path}.json")
                         pbar_parsing.update(1)
         if merge:
