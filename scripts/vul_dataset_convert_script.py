@@ -709,7 +709,6 @@ def process_vul_info():
         url = f"https://www.cvedetails.com/cve/{vul.cve_info.cve_id}"
         vul.cve_info.affected_versions = " ".join(fetch_table_column_values_and_headers(url))
         project_set.add(vul.project_name)
-        break
 
     print(f"len(project_set): {len(project_set)}, len(vuls): {len(vuls)}")  # 247, 2915
     save_to_json_file([v.custom_serialize(i) for i, v in enumerate(vuls, start=1)], processed_json_path)
@@ -730,8 +729,5 @@ def process_vul_info():
 
 if __name__ == '__main__':
     # filter_raw_vul_info() # 过滤数据，只保留github的数据
-    # convert_raw_vul_info()  # 转换数据, 生成我自己需要的格式
-    process_vul_info()  # 再次处理vul_info
-    # url = "https://www.cvedetails.com/cve/CVE-2019-12730"
-    # texts = fetch_table_column_values_and_headers(url)
-    # print(texts)
+    # convert_raw_vul_info()  # 转换数据, 挑选重要信息，获取github api信息，生成我自己需要的格式
+    process_vul_info()  # 再次处理vul_info, 增加版本号信息。

@@ -31,10 +31,11 @@ def prepare_train_data_for_model_1():
     2. 把函数特征转换成训练数据
     :return:
     """
+    # 提取原始特征
     extract_matched_function_feature(project_path=openssl_src_path,
                                      binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
                                      save_path=function_features_path)
-
+    # 转换成训练数据
     convert_function_feature_to_train_data(function_features_path,
                                            train_data_save_path,
                                            val_data_save_path,
@@ -108,12 +109,13 @@ def test_model_1_by_openssl():
                 "vul_function_name": vul_function_name,
                 "all_function_num": bin_function_num,
                 "similar_function_num": len(similar_functions),
-                "similar_functions": similar_functions
+                "similar_funct ions": similar_functions
             }
     result_path = os.path.join(test_data_dir, "similar_functions.json")
     save_to_json_file(similar_functions_dict, result_path)
     logger.info(f"Result saved to {result_path}")
     logger.info(f"Done")
+
 
 if __name__ == '__main__':
     # Done
