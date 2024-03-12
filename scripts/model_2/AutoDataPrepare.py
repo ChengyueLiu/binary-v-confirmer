@@ -229,32 +229,35 @@ class AutoDataPreparer:
                 logger.warning(f"No mapping files found for tag {tag}. Skipping...")
 
             # 第二层进度条：运行objdump命令
-            with tqdm(total=len(mapping_pairs), desc=f"Running objdump for {tag}") as pbar_objdump:
-                for bin_file_path, mapping_file_path in mapping_pairs:
-                    success, output = self.run_objdump_script(bin_file_path, mapping_file_path)
-                    if not success:
-                        logger.warning(f"Failed to run objdump on {bin_file_path}. Error: {output}")
-                    pbar_objdump.update(1)  # 即使失败也更新进度条
+            if objdump:
+                with tqdm(total=len(mapping_pairs), desc=f"Running objdump for {tag}") as pbar_objdump:
+                    for bin_file_path, mapping_file_path in mapping_pairs:
+                        success, output = self.run_objdump_script(bin_file_path, mapping_file_path)
+                        if not success:
+                            logger.warning(f"Failed to run objdump on {bin_file_path}. Error: {output}")
+                        pbar_objdump.update(1)  # 即使失败也更新进度条
 
             # 第三层进度条：解析mapping文件
-            with tqdm(total=len(mapping_pairs), desc=f"Parsing mappings for {tag}") as pbar_parsing:
-                for _, mapping_file_path in mapping_pairs:
-                    if not os.path.exists(mapping_file_path):
-                        logger.error(f"Mapping file not found: {mapping_file_path}")
-                        pbar_parsing.update(1)  # 文件不存在也更新进度条
-                        continue  # 跳过不存在的文件
-                    parsed_mapping_file_path = mapping_file_path.replace(self.mapping_output_dir,
-                                                                         self.parsed_mapping_file_dir)
-                    file_dir, file_name = os.path.split(parsed_mapping_file_path)
-                    os.makedirs(file_dir, exist_ok=True)
+            if parse:
+                with tqdm(total=len(mapping_pairs), desc=f"Parsing mappings for {tag}") as pbar_parsing:
+                    for _, mapping_file_path in mapping_pairs:
+                        if not os.path.exists(mapping_file_path):
+                            logger.error(f"Mapping file not found: {mapping_file_path}")
+                            pbar_parsing.update(1)  # 文件不存在也更新进度条
+                            continue  # 跳过不存在的文件
+                        parsed_mapping_file_path = mapping_file_path.replace(self.mapping_output_dir,
+                                                                             self.parsed_mapping_file_dir)
+                        file_dir, file_name = os.path.split(parsed_mapping_file_path)
+                        os.makedirs(file_dir, exist_ok=True)
 
-                    parser = NewMappingParser(mapping_file_path)
-                    parser.parse()
-                    parser.dump(f"{parsed_mapping_file_path}.json")
-                    pbar_parsing.update(1)
-        logger.info("All tags processed, merging mapping files...")
-        self.merge_mapping_jsons()
-        logger.info("Mapping files merged successfully.")
+                        parser = NewMappingParser(mapping_file_path)
+                        parser.parse()
+                        parser.dump(f"{parsed_mapping_file_path}.json")
+                        pbar_parsing.update(1)
+        if merge:
+            logger.info("All tags processed, merging mapping files...")
+            self.merge_mapping_jsons()
+            logger.info("Mapping files merged successfully.")
         logger.info("Data preparation completed.")
 
     def run_auto_compile_script(self, tag=None):
@@ -302,7 +305,8 @@ class AutoDataPreparer:
             '-d',
             source_path,
             '--source',
-            '--line-numbers'
+            '--line-numbers',
+            '-M', 'intel'  # 添加这行来指定Intel风格
         ]
 
         try:
