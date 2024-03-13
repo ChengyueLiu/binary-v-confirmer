@@ -8,6 +8,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from bintools.general.file_tool import find_files_in_dir, save_to_json_file, load_from_json_file
+from main.interface import DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_positioning_model.mapping_parser import MappingParser
 
 
@@ -196,10 +197,10 @@ def convert_raw_train_data_to_train_data(raw_train_data_json_dir,
     # valid_data = _convert_to_train_data(raw_valid_data, min_src_lines, max_asm_lines)
     # test_data = _convert_to_train_data(raw_test_data, min_src_lines, max_asm_lines)
 
-    save_to_json_file(train_data, train_data_json_file)
+    save_to_json_file([train_data_item.custom_serialize() for train_data_item  in train_data], train_data_json_file)
 
 
-def _convert_to_train_data(raw_train_data, min_src_lines, max_asm_lines,asm_src_ratio_limit = 7):
+def _convert_to_train_data(raw_train_data, min_src_lines, max_asm_lines, asm_src_ratio_limit=7):
     # 先找出来可能作为训练数据的函数源代码片段
     tmp_list = []
     for function_name, raw_train_data_items in raw_train_data.items():
@@ -218,8 +219,7 @@ def _convert_to_train_data(raw_train_data, min_src_lines, max_asm_lines,asm_src_
             count = 0
             start_left_border = 0
             start_right_border = start_left_border + src_line_num
-            while start_right_border < len(raw_train_data_items)- src_line_num and count < 10:
-
+            while start_right_border < len(raw_train_data_items) - src_line_num and count < 10:
                 start = random.randint(start_left_border, start_right_border)
                 end = start + src_line_num
                 current_raw_train_data_items = raw_train_data_items[start:end]
@@ -228,12 +228,12 @@ def _convert_to_train_data(raw_train_data, min_src_lines, max_asm_lines,asm_src_
                 count += 1
                 start_right_border = start_right_border + src_line_num
 
-
+    # 遍历这些片段，构成训练数据
     train_data_items = []
     biggest_ratio = 0
     ratio_lt_6 = 0
     ratio_lt_10 = 0
-    for function_name, all_asm_codes,current_raw_train_data_items in tmp_list:
+    for function_name, all_asm_codes, current_raw_train_data_items in tmp_list:
         # step 3: 构成训练数据
         current_asm_codes = []
         current_src_codes = []
@@ -275,29 +275,41 @@ def _convert_to_train_data(raw_train_data, min_src_lines, max_asm_lines,asm_src_
             continue
 
         if current_src_codes:
+            # 继续筛选
             ratio = len(current_asm_codes) / len(current_src_codes)
             if ratio > asm_src_ratio_limit:
                 continue
-            # 去掉汇编代码中无用的部分
-            current_asm_codes = [line.split("\t")[-1] for line in current_asm_codes if len(line.split("\t")) ==3]
-            all_asm_codes = [line.split("\t")[-1] for line in all_asm_codes if len(line.split("\t")) ==3]
-            train_data_items.append({
-                "function_name": function_name,
-                "sub_function_name": current_sub_function_names[0],
-                "has_in_line_code": has_in_line_code,
-                "src_line_num": current_src_line_num,
-                "src_codes": current_src_codes,
-                "asm_length": f"{len(all_asm_codes)} -> {len(current_asm_codes)}",
-                "asm_codes": current_asm_codes,
-                "all_asm_codes": all_asm_codes
-            })
 
-            if ratio< 6:
+            # 去掉汇编代码中无用的部分
+            current_asm_codes = [line.split("\t")[-1] for line in current_asm_codes if len(line.split("\t")) == 3]
+            all_asm_codes = [line.split("\t")[-1] for line in all_asm_codes if len(line.split("\t")) == 3]
+            # {
+            #     "function_name": function_name,
+            #     "sub_function_name": current_sub_function_names[0],
+            #     "has_in_line_code": has_in_line_code,
+            #     "src_line_num": current_src_line_num,
+            #     "src_codes": current_src_codes,
+            #     "asm_length": f"{len(all_asm_codes)} -> {len(current_asm_codes)}",
+            #     "asm_codes": current_asm_codes,
+            #     "all_asm_codes": all_asm_codes
+            # }
+            train_data_items.append(DataItemForCodeSnippetPositioningModel(
+                function_name=function_name,
+                sub_function_name=current_sub_function_names[0],
+                has_in_line_code=has_in_line_code,
+                src_line_nums=current_src_line_num,
+                src_codes=current_src_codes,
+                asm_length=f"{len(all_asm_codes)} -> {len(current_asm_codes)}",
+                asm_codes=current_asm_codes,
+                all_asm_codes=all_asm_codes
+            ))
+
+            if ratio < 6:
                 ratio_lt_6 += 1
-            if ratio< 10:
+            if ratio < 10:
                 ratio_lt_10 += 1
             if ratio > biggest_ratio:
                 biggest_ratio = ratio
-                print(function_name,ratio,len(current_asm_codes),len(current_src_codes),len(all_asm_codes))
-    print(len(train_data_items),ratio_lt_6,ratio_lt_10)
+                print(function_name, ratio, len(current_asm_codes), len(current_src_codes), len(all_asm_codes))
+    print(len(train_data_items), ratio_lt_6, ratio_lt_10)
     return train_data_items

@@ -4,7 +4,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 
 from bintools.general.file_tool import load_from_json_file
-from main.interface import DataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
 
 from torch.utils.data import Dataset
 import torch
@@ -125,17 +125,18 @@ class CodeSnippetPositioningDataset(Dataset):
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    train_data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
+    train_data_items = [DataItemForCodeSnippetPositioningModel.init_from_dict(item) for item in train_data_json]
 
-    texts = []
-    labels = []
+    questions = []
+    contexts = []
+    answers = []
     for train_data_item in train_data_items:
-        texts.append(train_data_item.get_train_text(tokenizer.sep_token))
-        labels.append(train_data_item.label)
+        questions.append(train_data_item.get_question())
+        contexts.append(train_data_item.get_context())
+        answers.append(train_data_item.get_answer())
 
-    print("原始数据数量: ", len(texts))
-    print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
-    dataset = CodeSnippetPositioningDataset(texts, labels, tokenizer, max_len)
+    print("原始数据数量: ", len(questions))
+    dataset = CodeSnippetPositioningDataset(questions, contexts, answers, tokenizer, max_len)
     return dataset
 
 

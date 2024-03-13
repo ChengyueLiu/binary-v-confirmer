@@ -1,9 +1,11 @@
 import re
 from dataclasses import dataclass
+from enum import Enum
 from typing import List
 
 from loguru import logger
 
+from bintools.general.bin_tool import normalize_ams_code
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import remove_comments
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
@@ -142,20 +144,23 @@ class FunctionFeature:
         return [cls.init_from_dict(item) for item in data]
 
 
+class SpecialToken(Enum):
+    # for DataItemForFunctionConfirmModel
+    SRC_CODE_SEPARATOR = "[SRC_CODE]"
+    SRC_STRING_SEPARATOR = "[SRC_STR]"
+    SRC_NUMBER_SEPARATOR = "[SRC_NUM]"
+    ASM_CODE_SEPARATOR = "[ASM_CODE]"
+    BIN_STRING_SEPARATOR = "[BIN_STR]"
+    BIN_NUMBER_SEPARATOR = "[BIN_NUM]"
+
+    # for normalizing assembly code
+    ASM_REG = "<REG>"
+    ASM_NUM = "<NUM>"
+    JUMP_LABEL = "<JUMP>"
+    LOC_LABEL = "<LOC>"
+
+
 class DataItemForFunctionConfirmModel:
-    src_code_separator = "[SRC_CODE]"
-    src_string_separator = "[SRC_STR]"
-    src_number_separator = "[SRC_NUM]"
-    asm_code_separator = "[ASM_CODE]"
-    bin_string_separator = "[BIN_STR]"
-    bin_number_separator = "[BIN_NUM]"
-
-    # asm special tokens
-    asm_reg = "<REG>"
-    asm_num = "<NUM>"
-    jump_label = "<JUMP>"
-    loc_label = "<LOC>"
-
     def __init__(self, function_name: str,
                  src_codes: List[str],
                  src_strings: List[str],
@@ -219,16 +224,7 @@ class DataItemForFunctionConfirmModel:
 
     @classmethod
     def get_special_tokens(cls):
-        return [cls.src_code_separator,
-                cls.src_string_separator,
-                cls.src_number_separator,
-                cls.asm_code_separator,
-                cls.bin_string_separator,
-                cls.bin_number_separator,
-                cls.asm_reg,
-                cls.asm_num,
-                cls.jump_label,
-                cls.loc_label]
+        return [token.value for token in SpecialToken]
 
     def get_train_text(self, separator=None):
         """
@@ -237,28 +233,28 @@ class DataItemForFunctionConfirmModel:
         :param separator:
         :return:
         """
-        src_code_text = remove_comments(" ".join(self.src_codes[:15]))  # 限制最多15行源代码
+        src_code_text = " ".join(self.src_codes[:15])  # 限制最多15行源代码
         src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)  #
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][
                           :10]  # 过长过短的字符串不要,限制最多10个字符串，取长度最长的
         src_strings = " ".join([self.function_name, *src_string_list])
         src_numbers = " ".join(
             sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])  # 保留最长的10个数字
-        src_text = f"{self.src_code_separator} {src_code_text}"
+        src_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {src_code_text}"
         if src_strings:
-            src_text += f" {self.src_string_separator} {src_strings}"
+            src_text += f" {SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings}"
         if src_numbers:
-            src_text += f" {self.src_number_separator} {src_numbers}"
+            src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
 
         asm_code_text = " ".join(self.asm_codes[:20])  # 限制最多20条汇编指令
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]  # 限制最多10个字符串，取长度最长的
         bin_strings = " ".join(bin_string_list)
         bin_numbers = " ".join(sorted([str(num) for num in self.bin_numbers], key=lambda x: len(x), reverse=True)[:10])
-        bin_text = f"{self.asm_code_separator} {asm_code_text}"
+        bin_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {asm_code_text}"
         if bin_strings:
-            bin_text += f" {self.bin_string_separator} {bin_strings}"
+            bin_text += f" {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings}"
         if bin_numbers:
-            bin_text += f" {self.bin_number_separator} {bin_numbers}"
+            bin_text += f" {SpecialToken.BIN_NUMBER_SEPARATOR.value} {bin_numbers}"
         if separator:
             merged_text = f"{src_text} {separator} {bin_text}"
         else:
@@ -267,8 +263,8 @@ class DataItemForFunctionConfirmModel:
 
     def _normalize(self):
         # 正规化处理源代码
-        self.src_codes = [normalized_line for line in self.src_codes
-                          if (normalized_line := self._normalize_src_code(line))]
+        self.src_codes = remove_comments([normalized_line for line in self.src_codes
+                                          if (normalized_line := self._normalize_src_code(line))])
 
         # 正规化处理字符串
         self.src_strings = [normalized_string for string in self.src_strings
@@ -279,7 +275,7 @@ class DataItemForFunctionConfirmModel:
 
         # 正规化处理汇编代码
         self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := self._normalize_bin_code(code))]
+                          if (normalized_code := self._normalize_asm_code(code))]
         # 正规化处理字符串
         self.bin_strings = [normalized_string for string in self.bin_strings
                             if (normalized_string := self._normalize_bin_string(string))]
@@ -298,19 +294,12 @@ class DataItemForFunctionConfirmModel:
         # 正规化处理数字
         return src_number
 
-    def _normalize_bin_code(self, asm_code: str):
-        # 正规化处理汇编代码
-        # 替换连续的空格为单个空格
-        asm_code = re.sub(r"\s+", " ", asm_code).strip()
-        # 移除注释
-        asm_code = re.sub(r";.*", "", asm_code)
-        # 替换寄存器和立即数
-        asm_code = re.sub(r"\br[\w\d]+\b", self.asm_reg, asm_code)
-        asm_code = re.sub(r"\b\d+\b", self.asm_num, asm_code)
-        # 简化控制流指令
-        asm_code = re.sub(r"\bj(mp|e|z|nz|ne|g|ge|l|le)\b", self.jump_label, asm_code)
-        # 简化跳转标签和地址
-        asm_code = re.sub(r"\bloc(ret)?_[\w\d]+\b", self.loc_label, asm_code)
+    def _normalize_asm_code(self, asm_code: str):
+        asm_code = normalize_ams_code(asm_code,
+                                      reg_token=SpecialToken.ASM_REG.value,
+                                      num_token=SpecialToken.ASM_NUM.value,
+                                      jump_token=SpecialToken.JUMP_LABEL.value,
+                                      loc_token=SpecialToken.LOC_LABEL.value)
         return asm_code
 
     def _normalize_bin_string(self, bin_string: str):
@@ -324,24 +313,86 @@ class DataItemForFunctionConfirmModel:
 
 @dataclass
 class DataItemForCodeSnippetPositioningModel:
-    src_code_snippet: List[str]
-    asm_code_snippet: List[str]
-    asm_code_snippet_context: List[str]
+    function_name: str
+    sub_function_name: str
+    has_in_line_code: bool
+    src_line_nums: List[int]
+    src_codes: List[str]
+    asm_length: str
+    asm_codes: List[str]
+    all_asm_codes: List[str]
+
+    def __init__(self, function_name: str,
+                 sub_function_name: str,
+                 has_in_line_code: bool,
+                 src_line_nums: List[int],
+                 src_codes: List[str],
+                 asm_length: str,
+                 asm_codes: List[str],
+                 all_asm_codes: List[str]):
+        self.function_name = function_name
+        self.sub_function_name = sub_function_name
+        self.has_in_line_code = has_in_line_code
+        self.src_line_nums = src_line_nums
+        self.src_codes = src_codes
+        self.asm_length = asm_length
+        self.asm_codes = asm_codes
+        self.all_asm_codes = all_asm_codes
 
     def custom_serialize(self):
         return {
-            "src_code_snippet": self.src_code_snippet,
-            "asm_code_snippet": self.asm_code_snippet,
-            "asm_code_snippet_context": self.asm_code_snippet_context
+            "function_name": self.function_name,
+            "sub_function_name": self.sub_function_name,
+            "has_in_line_code": self.has_in_line_code,
+            "src_line_nums": self.src_line_nums,
+            "src_codes": self.src_codes,
+            "asm_length": self.asm_length,
+            "asm_codes": self.asm_codes,
+            "all_asm_codes": self.all_asm_codes
         }
 
     @classmethod
     def init_from_dict(cls, data: dict):
         return cls(
-            src_code_snippet=data['src_code_snippet'],
-            asm_code_snippet=data['asm_code_snippet'],
-            asm_code_snippet_context=data['asm_code_snippet_context']
+            function_name=data['function_name'],
+            sub_function_name=data['sub_function_name'],
+            has_in_line_code=data['has_in_line_code'],
+            src_line_nums=data['src_line_nums'],
+            src_codes=data['src_codes'],
+            asm_length=data['asm_length'],
+            asm_codes=data['asm_codes'],
+            all_asm_codes=data['all_asm_codes']
         )
 
-    def normalize(self):
+    def get_question_text(self):
         pass
+
+    def get_context_text(self):
+        pass
+
+    def get_answer_text(self):
+        pass
+
+    def _normalize(self):
+        self.src_codes = remove_comments([normalized_line for line in self.src_codes
+                                          if (normalized_line := self._normalize_src_code(line))])
+
+        self.asm_codes = [normalized_code for code in self.asm_codes
+                          if (normalized_code := self._normalize_asm_code(code))]
+
+        self.all_asm_codes = [normalized_code for code in self.all_asm_codes
+                              if (normalized_code := self._normalize_asm_code(code))]
+
+        pass
+
+    def _normalize_src_code(self, src_code):
+        # 正规化处理源代码
+        return src_code.strip()
+
+    def _normalize_asm_code(self, asm_code):
+        asm_code = normalize_ams_code(asm_code,
+                                      reg_token=SpecialToken.ASM_REG.value,
+                                      num_token=SpecialToken.ASM_NUM.value,
+                                      jump_token=SpecialToken.JUMP_LABEL.value,
+                                      loc_token=SpecialToken.LOC_LABEL.value)
+        return asm_code

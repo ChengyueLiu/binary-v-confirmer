@@ -32,7 +32,6 @@ def prepare_data():
     convert_raw_train_data_to_train_data(test_raw_train_data_items_dir, train_data_json)
 
 
-
 def train_model():
     pass
 

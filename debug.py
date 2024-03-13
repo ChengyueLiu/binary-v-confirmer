@@ -5,9 +5,10 @@ from transformers import RobertaTokenizer
 
 from bintools.general.file_tool import save_to_json_file
 from main.interface import DataItemForFunctionConfirmModel, FunctionFeature
+from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset
 
 
-def debug_token_length():
+def debug_model_1_token_length():
     function_features = FunctionFeature.init_from_json_file(
         "TestCases/feature_extraction/openssl_feature/function_features.json")
 
@@ -41,6 +42,12 @@ def debug_token_length():
     save_to_json_file(token_count, "TestCases/model_train/model_1/train_data/openssl/token_count.json")
 
 
+def debug_model_2_token_length():
+    tokenizer = RobertaTokenizer.from_pretrained('microsoft/graphcodebert-base')
+    dataset = create_dataset("TestCases/model_train/model_2/final_train_data_items/train_data.json", tokenizer, 512)
+
+
+
 def debug_get_commit_detail():
     import requests
 
@@ -48,7 +55,8 @@ def debug_get_commit_detail():
     response = requests.get(url)
     print(response.status_code)
     if response.status_code == 200:
-        save_to_json_file(response.json(), r'C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\commit_detail.json')
+        save_to_json_file(response.json(),
+                          r'C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\commit_detail.json')
 
 
 if __name__ == '__main__':
