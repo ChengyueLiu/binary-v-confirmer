@@ -16,25 +16,43 @@ libcrypto_bin_path = r"TestCases/feature_extraction/binaries/libcrypto.so.3"
 openssl_bin_path = r"TestCases/feature_extraction/binaries/openssl"
 libssl_bin_path = r"TestCases/feature_extraction/binaries/libssl.so.3"
 
-# matched_function_feature
-function_features_path = r"TestCases/feature_extraction/function_features.json"
+# openssl matched_function_feature
+function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
 
-# train data items
-train_data_save_path = r"TestCases/model_train/model_1/train_data/train_data.json"
-val_data_save_path = r"TestCases/model_train/model_1/train_data/val_data.json"
-test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
+# openssl train data items
+train_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/train_data.json"
+val_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/val_data.json"
+test_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/test_data.json"
 
+# libpng train data items
+# src
+libpng_src_path = r"C:\Users\liuchengyue\Desktop\projects\GithubProjects\libpng"
+
+# bin
+libpng_bin_path = r"TestCases/feature_extraction/binaries/libpng16.so.16.44.0"
+png_fix_itxt_bin_path = r"TestCases/feature_extraction/binaries/png-fix-itxt"
+pngfix_bin_path = r"TestCases/feature_extraction/binaries/pngfix"
+
+function_features_path = r"TestCases/feature_extraction/libpng_feature/function_features.json"
+
+# train_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/train_data.json"
+# val_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/val_data.json"
+# test_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/test_data.json"
+test_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/train_data.json"
 
 def prepare_train_data_for_model_1():
     """
-    1. 从源代码和二进制文件中提取函数特征
+    1. 从源代码和二进制文件中提取函数特征: 需要准备源代码和对应的二进制文件，需要保持版本一致。
     2. 把函数特征转换成训练数据
     :return:
     """
     # 提取原始特征
-    extract_matched_function_feature(project_path=openssl_src_path,
-                                     binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
-                                     save_path=function_features_path)
+    extract_matched_function_feature(
+        #    project_path=openssl_src_path,
+        # binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
+        project_path=libpng_src_path,
+        binary_file_paths=[libpng_bin_path, png_fix_itxt_bin_path, pngfix_bin_path],
+        save_path=function_features_path)
     # 转换成训练数据
     convert_function_feature_to_train_data(function_features_path,
                                            train_data_save_path,
@@ -122,9 +140,9 @@ if __name__ == '__main__':
     # prepare_train_data_for_model_1()
 
     # Done
-    # train_model_1()
+    train_model_1()
 
     # Done
-    test_model_1_by_openssl()
+    # test_model_1_by_openssl()
 
     # TODO test_model_1_by_more_test_cases()

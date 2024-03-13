@@ -242,7 +242,8 @@ class DataItemForFunctionConfirmModel:
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][
                           :10]  # 过长过短的字符串不要,限制最多10个字符串，取长度最长的
         src_strings = " ".join([self.function_name, *src_string_list])
-        src_numbers = " ".join(sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10]) # 保留最长的10个数字
+        src_numbers = " ".join(
+            sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])  # 保留最长的10个数字
         src_text = f"{self.src_code_separator} {src_code_text}"
         if src_strings:
             src_text += f" {self.src_string_separator} {src_strings}"
@@ -319,3 +320,28 @@ class DataItemForFunctionConfirmModel:
     def _normalize_bin_number(self, bin_number: str):
         # 正规化处理数字
         return bin_number
+
+
+@dataclass
+class DataItemForCodeSnippetPositioningModel:
+    src_code_snippet: List[str]
+    asm_code_snippet: List[str]
+    asm_code_snippet_context: List[str]
+
+    def custom_serialize(self):
+        return {
+            "src_code_snippet": self.src_code_snippet,
+            "asm_code_snippet": self.asm_code_snippet,
+            "asm_code_snippet_context": self.asm_code_snippet_context
+        }
+
+    @classmethod
+    def init_from_dict(cls, data: dict):
+        return cls(
+            src_code_snippet=data['src_code_snippet'],
+            asm_code_snippet=data['asm_code_snippet'],
+            asm_code_snippet_context=data['asm_code_snippet_context']
+        )
+
+    def normalize(self):
+        pass

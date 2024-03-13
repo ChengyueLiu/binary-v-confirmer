@@ -107,7 +107,9 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 def run_train(train_data_json_file_path,
               val_data_json_file_path,
               test_data_json_file_path,
-              model_save_path="model_weights.pth", **kwargs):
+              model_save_path="model_weights.pth",
+              test_only=False,
+              **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
 
@@ -119,18 +121,20 @@ def run_train(train_data_json_file_path,
         test_data_json_file_path,
         batch_size=batch_size,
         epochs=epochs)
-    logger.info('inited, start train, epochs: 3, batch_size: 32...')
-    # train scheduler
-    for epoch in range(epochs):
-        logger.info(f'Epoch {epoch + 1}/{epochs}')
-        train_loss, train_acc = train_or_evaluate(model, train_loader, optimizer, scheduler, device, is_train=True)
-        valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
-        print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
-        print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
-    logger.info('train done, save model...')
-    torch.save(model.state_dict(), model_save_path)
+    if not test_only:
+        logger.info('inited, start train, epochs: 3, batch_size: 32...')
+        # train scheduler
+        for epoch in range(epochs):
+            logger.info(f'Epoch {epoch + 1}/{epochs}')
+            train_loss, train_acc = train_or_evaluate(model, train_loader, optimizer, scheduler, device, is_train=True)
+            valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
+            print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
+            print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
+        logger.info('train done, save model...')
+        torch.save(model.state_dict(), model_save_path)
+        logger.info('model saved, start test')
 
-    logger.info('model saved, start test, load model from model_weights.pth...')
+    logger.info('load model from model_weights.pth...')
     model.load_state_dict(torch.load(model_save_path))
 
     logger.info('model loaded, start test...')

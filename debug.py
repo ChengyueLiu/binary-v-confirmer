@@ -8,7 +8,8 @@ from main.interface import DataItemForFunctionConfirmModel, FunctionFeature
 
 
 def debug_token_length():
-    function_features = FunctionFeature.init_from_json_file("TestCases/feature_extraction/function_features.json")
+    function_features = FunctionFeature.init_from_json_file(
+        "TestCases/feature_extraction/openssl_feature/function_features.json")
 
     # positive examples
     positive_train_data_items = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1) for ff in
@@ -37,7 +38,7 @@ def debug_token_length():
             # "asm_codes": data_item.asm_codes if len(tokens) <= 512 else None,
         })
     token_count.sort(key=lambda x: x["token_count"], reverse=True)
-    save_to_json_file(token_count, "TestCases/model_train/model_1/train_data/token_count.json")
+    save_to_json_file(token_count, "TestCases/model_train/model_1/train_data/openssl/token_count.json")
 
 
 def debug_get_commit_detail():

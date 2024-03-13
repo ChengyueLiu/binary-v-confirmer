@@ -238,7 +238,8 @@ class AutoDataPreparer:
                     for bin_file_path, mapping_file_path in mapping_pairs:
                         success, output = self.run_objdump_script(bin_file_path, mapping_file_path)
                         if not success:
-                            logger.warning(f"Failed to run objdump on {bin_file_path}. Error: {output}")
+                            # logger.warning(f"Failed to run objdump on {bin_file_path}. Error: {output}")
+                            pass
                         pbar_objdump.update(1)  # 即使失败也更新进度条
 
             # 第三层进度条：解析mapping文件
@@ -428,4 +429,4 @@ if __name__ == '__main__':
                                 parsed_mapping_file_dir,
                                 project_name,
                                 target_tags)
-    preparer.prepare(run_compile=False)
+    preparer.prepare(run_compile=False, objdump=True, parse=False, merge=False)
