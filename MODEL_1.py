@@ -73,7 +73,8 @@ def train_model_1():
               val_data_save_path,
               test_data_save_path,
               epochs=3,
-              batch_size=64)
+              batch_size=64,
+              test_only=True)
 
 
 def test_model_1_by_openssl():
