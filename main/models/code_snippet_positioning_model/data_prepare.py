@@ -185,18 +185,22 @@ def convert_json_to_raw_train_data(original_mapping_file_dir, raw_train_data_jso
 
 
 def convert_raw_train_data_to_train_data(raw_train_data_json_dir,
-                                         train_data_json_file):
+                                         train_data_json_file,
+                                         valid_data_json_file,
+                                         test_data_json_file):
     # openssl, libcrypto, libssl
     test_path, train_path, valid_path = find_files_in_dir(raw_train_data_json_dir, ".json")
     raw_train_data = load_from_json_file(train_path)
-    # raw_valid_data = load_from_json_file(valid_path)
-    # raw_test_data = load_from_json_file(test_path)
+    raw_valid_data = load_from_json_file(valid_path)
+    raw_test_data = load_from_json_file(test_path)
 
     train_data = _convert_to_train_data(raw_train_data)
-    # valid_data = _convert_to_train_data(raw_valid_data, min_src_lines, max_asm_lines)
-    # test_data = _convert_to_train_data(raw_test_data, min_src_lines, max_asm_lines)
+    valid_data = _convert_to_train_data(raw_valid_data)
+    test_data = _convert_to_train_data(raw_test_data)
 
     save_to_json_file([train_data_item.custom_serialize() for train_data_item in train_data], train_data_json_file)
+    save_to_json_file([valid_data_item.custom_serialize() for valid_data_item in valid_data], valid_data_json_file)
+    save_to_json_file([test_data_item.custom_serialize() for test_data_item in test_data], test_data_json_file)
 
 
 def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):

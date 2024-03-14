@@ -133,7 +133,8 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 def run_train(train_data_json_file_path,
               val_data_json_file_path,
               test_data_json_file_path,
-              model_save_path="model_weights.pth", **kwargs):
+              model_save_path="model_weights.pth",
+              **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
 
