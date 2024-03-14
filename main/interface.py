@@ -5,7 +5,7 @@ from typing import List
 
 from loguru import logger
 
-from bintools.general.bin_tool import normalize_ams_code
+from bintools.general.bin_tool import normalize_asm_code
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import remove_comments
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
@@ -156,8 +156,17 @@ class SpecialToken(Enum):
     # for normalizing assembly code
     ASM_REG = "<REG>"
     ASM_NUM = "<NUM>"
-    JUMP_LABEL = "<JUMP>"
-    LOC_LABEL = "<LOC>"
+    ASM_JUMP = "<JUMP>"
+    ASM_LOC = "<LOC>"
+    ASM_MEM = "<MEM>"
+
+    @classmethod
+    def get_all_special_tokens(cls):
+        return [token.value for token in cls]
+
+    @classmethod
+    def get_asm_special_tokens(cls):
+        return [token.value for token in cls if token.name.startswith("ASM")]
 
 
 class DataItemForFunctionConfirmModel:
@@ -224,7 +233,7 @@ class DataItemForFunctionConfirmModel:
 
     @classmethod
     def get_special_tokens(cls):
-        return [token.value for token in SpecialToken]
+        return SpecialToken.get_all_special_tokens()
 
     def get_train_text(self, separator=None):
         """
@@ -233,28 +242,42 @@ class DataItemForFunctionConfirmModel:
         :param separator:
         :return:
         """
-        src_code_text = " ".join(self.src_codes[:15])  # 限制最多15行源代码
+        # 限制最多15行源代码
+        src_code_text = remove_comments(" ".join(self.src_codes[:15]))
+
+        # 过长过短的字符串不要,限制最多10个字符串，取长度最长的
         src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)  #
-        src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][
-                          :10]  # 过长过短的字符串不要,限制最多10个字符串，取长度最长的
+        src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join([self.function_name, *src_string_list])
-        src_numbers = " ".join(
-            sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])  # 保留最长的10个数字
+
+        # 保留最长的10个数字
+        src_numbers = " ".join(sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])
+
+        # 构成源码text
         src_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {src_code_text}"
         if src_strings:
             src_text += f" {SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings}"
         if src_numbers:
             src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
 
-        asm_code_text = " ".join(self.asm_codes[:20])  # 限制最多20条汇编指令
-        bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]  # 限制最多10个字符串，取长度最长的
+        # 限制最多20条汇编指令
+        asm_code_text = " ".join(self.asm_codes[:20])
+
+        # 限制最多10个字符串，取长度最长的
+        bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
         bin_strings = " ".join(bin_string_list)
+
+        # 保留最长的10个数字
         bin_numbers = " ".join(sorted([str(num) for num in self.bin_numbers], key=lambda x: len(x), reverse=True)[:10])
+
+        # 构成汇编码text
         bin_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {asm_code_text}"
         if bin_strings:
             bin_text += f" {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings}"
         if bin_numbers:
             bin_text += f" {SpecialToken.BIN_NUMBER_SEPARATOR.value} {bin_numbers}"
+
+        # 合并源码和汇编码
         if separator:
             merged_text = f"{src_text} {separator} {bin_text}"
         else:
@@ -263,8 +286,8 @@ class DataItemForFunctionConfirmModel:
 
     def _normalize(self):
         # 正规化处理源代码
-        self.src_codes = remove_comments([normalized_line for line in self.src_codes
-                                          if (normalized_line := self._normalize_src_code(line))])
+        self.src_codes = [normalized_line for line in self.src_codes
+                          if (normalized_line := self._normalize_src_code(line))]
 
         # 正规化处理字符串
         self.src_strings = [normalized_string for string in self.src_strings
@@ -295,11 +318,12 @@ class DataItemForFunctionConfirmModel:
         return src_number
 
     def _normalize_asm_code(self, asm_code: str):
-        asm_code = normalize_ams_code(asm_code,
+        asm_code = normalize_asm_code(asm_code,
                                       reg_token=SpecialToken.ASM_REG.value,
                                       num_token=SpecialToken.ASM_NUM.value,
-                                      jump_token=SpecialToken.JUMP_LABEL.value,
-                                      loc_token=SpecialToken.LOC_LABEL.value)
+                                      jump_token=SpecialToken.ASM_JUMP.value,
+                                      loc_token=SpecialToken.ASM_LOC.value,
+                                      mem_token=SpecialToken.ASM_MEM.value)
         return asm_code
 
     def _normalize_bin_string(self, bin_string: str):
@@ -313,86 +337,78 @@ class DataItemForFunctionConfirmModel:
 
 @dataclass
 class DataItemForCodeSnippetPositioningModel:
-    function_name: str
-    sub_function_name: str
-    has_in_line_code: bool
-    src_line_nums: List[int]
-    src_codes: List[str]
-    asm_length: str
-    asm_codes: List[str]
-    all_asm_codes: List[str]
-
     def __init__(self, function_name: str,
-                 sub_function_name: str,
-                 has_in_line_code: bool,
-                 src_line_nums: List[int],
                  src_codes: List[str],
-                 asm_length: str,
                  asm_codes: List[str],
-                 all_asm_codes: List[str]):
+                 answer_start_index: int,
+                 answer_end_index: int):
         self.function_name = function_name
-        self.sub_function_name = sub_function_name
-        self.has_in_line_code = has_in_line_code
-        self.src_line_nums = src_line_nums
         self.src_codes = src_codes
-        self.asm_length = asm_length
         self.asm_codes = asm_codes
-        self.all_asm_codes = all_asm_codes
+        self.answer_start_index = answer_start_index
+        self.answer_end_index = answer_end_index
+        self.answer_length = len(self.asm_codes[self.answer_start_index:self.answer_end_index + 1])  # 结束位置的索引是闭区间
+        self.src_length = len(self.src_codes)
+        self.asm_length = len(self.asm_codes)
+        self._normalize()
 
     def custom_serialize(self):
         return {
             "function_name": self.function_name,
-            "sub_function_name": self.sub_function_name,
-            "has_in_line_code": self.has_in_line_code,
-            "src_line_nums": self.src_line_nums,
-            "src_codes": self.src_codes,
+            "src_length": self.src_length,
             "asm_length": self.asm_length,
+            "answer_length": self.answer_length,
+            "answer_start_index": self.answer_start_index,
+            "answer_end_index": self.answer_end_index,
+            "src_codes": self.src_codes,
             "asm_codes": self.asm_codes,
-            "all_asm_codes": self.all_asm_codes
         }
 
     @classmethod
     def init_from_dict(cls, data: dict):
         return cls(
             function_name=data['function_name'],
-            sub_function_name=data['sub_function_name'],
-            has_in_line_code=data['has_in_line_code'],
-            src_line_nums=data['src_line_nums'],
             src_codes=data['src_codes'],
-            asm_length=data['asm_length'],
             asm_codes=data['asm_codes'],
-            all_asm_codes=data['all_asm_codes']
+            answer_start_index=data['answer_start_index'],
+            answer_end_index=data['answer_end_index']
         )
 
+    @classmethod
+    def get_special_tokens(cls):
+        return SpecialToken.get_asm_special_tokens()
+
     def get_question_text(self):
-        pass
+        return remove_comments(" ".join(self.src_codes))
 
     def get_context_text(self):
-        pass
+        return " ".join(self.asm_codes)
 
     def get_answer_text(self):
-        pass
+        return " ".join(self.asm_codes[self.answer_start_index:self.answer_end_index])
 
     def _normalize(self):
-        self.src_codes = remove_comments([normalized_line for line in self.src_codes
-                                          if (normalized_line := self._normalize_src_code(line))])
+        self.src_codes = [normalized_line for line in self.src_codes
+                          if (normalized_line := self._normalize_src_code(line))]
 
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := self._normalize_asm_code(code))]
-
-        self.all_asm_codes = [normalized_code for code in self.all_asm_codes
-                              if (normalized_code := self._normalize_asm_code(code))]
-
-        pass
 
     def _normalize_src_code(self, src_code):
         # 正规化处理源代码
         return src_code.strip()
 
     def _normalize_asm_code(self, asm_code):
-        asm_code = normalize_ams_code(asm_code,
+        # 如果输入的是原始的行信息，要先分割一下
+        if "\t" in asm_code:
+            asm_line_parts = asm_code.split("\t")
+            if len(asm_line_parts) != 3:
+                return None
+            asm_code = asm_line_parts[-1]
+        asm_code = normalize_asm_code(asm_code,
                                       reg_token=SpecialToken.ASM_REG.value,
                                       num_token=SpecialToken.ASM_NUM.value,
-                                      jump_token=SpecialToken.JUMP_LABEL.value,
-                                      loc_token=SpecialToken.LOC_LABEL.value)
+                                      jump_token=SpecialToken.ASM_JUMP.value,
+                                      loc_token=SpecialToken.ASM_LOC.value,
+                                      mem_token=SpecialToken.ASM_MEM.value)
         return asm_code

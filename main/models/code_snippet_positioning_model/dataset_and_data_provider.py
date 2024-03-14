@@ -11,7 +11,7 @@ import torch
 
 
 class CodeSnippetPositioningDataset(Dataset):
-    def __init__(self, contexts, questions, answers, tokenizer, max_len=512):
+    def __init__(self, contexts, questions, answer_starts, answer_ends, tokenizer, max_len=512):
         """
         初始化问答数据集
         :param contexts: 上下文列表，每个上下文是一段文本（答案所在的文本）
@@ -21,22 +21,23 @@ class CodeSnippetPositioningDataset(Dataset):
         """
         self.contexts = contexts
         self.questions = questions
-        self.answers = answers
+        self.answer_starts = answer_starts
+        self.answer_ends = answer_ends
         self.tokenizer = tokenizer
         self.max_len = max_len
 
     def __len__(self):
         return len(self.contexts)
 
-    def find_answer_positions(self, context, question, answer):
+    def find_answer_positions(self, context, question, answer_start_index, answer_end_index):
         """
         根据上下文、问题和答案，找到答案的开始和结束token位置。
 
         参数:
         - context: 上下文文本
         - question: 问题文本
-        - answer: 答案文本
-        - tokenizer: 使用的tokenizer
+        - answer_start_index: 答案的开始字符位置
+        - answer_end_index: 答案的结束字符位置
 
         返回:
         - start_position: 答案的开始token位置
@@ -48,10 +49,6 @@ class CodeSnippetPositioningDataset(Dataset):
                                             return_tensors='pt',
                                             return_offsets_mapping=True)
         offsets = inputs['offset_mapping'].squeeze().tolist()  # 获取每个token的字符级别位置
-
-        # 查找答案的开始和结束字符位置
-        answer_start_index = context.index(answer)
-        answer_end_index = answer_start_index + len(answer) - 1
 
         # 将答案的字符位置转换为token位置
         start_position = end_position = None
@@ -67,7 +64,9 @@ class CodeSnippetPositioningDataset(Dataset):
     def __getitem__(self, idx):
         context = self.contexts[idx]
         question = self.questions[idx]
-        start_position, end_position = self.find_answer_positions(context, question, self.answers[idx])
+        start_position = self.answer_starts[idx]
+        end_position = self.answer_ends[idx]
+        # start_position, end_position = self.find_answer_positions(context, question, answer)
 
         # Tokenize context and question
         encoding = self.tokenizer.encode_plus(
