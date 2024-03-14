@@ -1,7 +1,8 @@
 import torch
 from loguru import logger
 from tqdm import tqdm
-from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering
+from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering, \
+    AutoTokenizer
 
 from main.interface import DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset, create_dataloaders
@@ -11,7 +12,6 @@ from main.models.code_snippet_positioning_model.dataset_and_data_provider import
 def init_train(train_data_json_file_path,
                val_data_json_file_path,
                test_data_json_file_path,
-               num_labels=2,
                model_name='microsoft/graphcodebert-base',
                token_max_length=512,
                batch_size=512,
@@ -34,7 +34,7 @@ def init_train(train_data_json_file_path,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # tokenizer
-    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
     for special_token in DataItemForCodeSnippetPositioningModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
