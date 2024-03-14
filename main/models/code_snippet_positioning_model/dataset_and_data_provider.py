@@ -1,10 +1,8 @@
-from typing import List
 
-import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import DataLoader
 
 from bintools.general.file_tool import load_from_json_file
-from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
+from main.interface import DataItemForCodeSnippetPositioningModel
 
 from torch.utils.data import Dataset
 import torch
@@ -111,8 +109,8 @@ def create_dataset(file_path, tokenizer, max_len=512):
     answer_start_indexes = []
     answer_end_indexes = []
     for train_data_item in train_data_items:
-        questions.append(train_data_item.get_question())
-        contexts.append(train_data_item.get_context())
+        questions.append(train_data_item.get_question_text())
+        contexts.append(train_data_item.get_context_text())
         answer_start_index, answer_end_index = train_data_item.get_answer_position()
         answer_start_indexes.append(answer_start_index)
         answer_end_indexes.append(answer_end_index)

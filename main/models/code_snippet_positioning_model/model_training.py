@@ -4,8 +4,7 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering
 
 from main.interface import DataItemForCodeSnippetPositioningModel
-from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset, \
-    create_dataset, create_dataloaders
+from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset, create_dataloaders
 
 
 
