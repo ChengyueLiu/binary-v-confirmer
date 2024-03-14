@@ -341,16 +341,19 @@ class DataItemForCodeSnippetPositioningModel:
                  src_codes: List[str],
                  asm_codes: List[str],
                  answer_start_index: int,
-                 answer_end_index: int):
+                 answer_end_index: int,
+                 normalized=True):
         self.function_name = function_name
         self.src_codes = src_codes
         self.asm_codes = asm_codes
         self.answer_start_index = answer_start_index
         self.answer_end_index = answer_end_index
+
         self.answer_length = len(self.asm_codes[self.answer_start_index:self.answer_end_index + 1])  # 结束位置的索引是闭区间
         self.src_length = len(self.src_codes)
         self.asm_length = len(self.asm_codes)
-        self._normalize()
+        if normalized:
+            self._normalize()
 
     def custom_serialize(self):
         return {
@@ -371,7 +374,8 @@ class DataItemForCodeSnippetPositioningModel:
             src_codes=data['src_codes'],
             asm_codes=data['asm_codes'],
             answer_start_index=data['answer_start_index'],
-            answer_end_index=data['answer_end_index']
+            answer_end_index=data['answer_end_index'],
+            normalized=False
         )
 
     @classmethod
@@ -389,8 +393,8 @@ class DataItemForCodeSnippetPositioningModel:
 
     def get_answer_position(self):
         # 这里要重新计算，换成字符的位置
-        start_index = len(" ".join(self.asm_codes[:self.answer_start_index])) + 1
-        end_index = len(" ".join(self.asm_codes[:self.answer_end_index + 1]))
+        start_index = self.get_context_text().find(self.get_answer_text())
+        end_index = start_index + len(self.get_answer_text()) - 1
         return start_index, end_index
 
     def _normalize(self):
