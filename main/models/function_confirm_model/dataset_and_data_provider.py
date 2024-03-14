@@ -6,7 +6,7 @@ from loguru import logger
 from torch.utils.data import Dataset, random_split, DataLoader
 
 from bintools.general.file_tool import load_from_json_file
-from main.interface import DataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
 
 
 class FunctionConfirmDataset(Dataset):
@@ -54,7 +54,7 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    train_data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
+    train_data_items = [DataItemForCodeSnippetPositioningModel.init_from_dict(item) for item in train_data_json]
 
     texts = []
     labels = []
