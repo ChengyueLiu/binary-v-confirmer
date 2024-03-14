@@ -98,6 +98,9 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
                             start_positions=start_positions,
                             end_positions=end_positions)
             loss = outputs.loss
+            # 下面两行是为了适配多GPU训练
+            if loss.dim() > 0:  # 如果损失不是标量
+                loss = loss.mean()  # 计算所有损失的平均值确保是标量
             predict_answer_tokens_start_indices = outputs.start_logits.argmax(dim=1)
             predict_answer_tokens_end_indices = outputs.end_logits.argmax(dim=1)
 

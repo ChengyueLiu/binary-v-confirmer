@@ -91,13 +91,13 @@ class CodeSnippetPositioningDataset(Dataset):
         if not answer_tokens_end_index:
             answer_tokens_end_index = len(encoding['input_ids']) - 1
 
-        print(f"question: {self.questions[idx]}, "
-              f"context: {self.contexts[idx]}, "
-              f"answer: {self.contexts[idx][self.answer_start_indexes[idx]:self.answer_end_indexes[idx]]}, "
-              f"answer_start: {self.answer_start_indexes[idx]}, "
-              f"answer_end: {self.answer_end_indexes[idx]}, "
-              f"answer_tokens_start_index: {answer_tokens_start_index}, "
-              f"answer_tokens_end_index: {answer_tokens_end_index}")
+        # print(f"question: {self.questions[idx]}, "
+        #       f"context: {self.contexts[idx]}, "
+        #       f"answer: {self.contexts[idx][self.answer_start_indexes[idx]:self.answer_end_indexes[idx]]}, "
+        #       f"answer_start: {self.answer_start_indexes[idx]}, "
+        #       f"answer_end: {self.answer_end_indexes[idx]}, "
+        #       f"answer_tokens_start_index: {answer_tokens_start_index}, "
+        #       f"answer_tokens_end_index: {answer_tokens_end_index}")
         # 将答案的token级别的开始和结束位置转换为tensor
         answer_tokens_start_index_tensor = torch.tensor([answer_tokens_start_index])
         answer_tokens_end_index_tensor = torch.tensor([answer_tokens_end_index])
