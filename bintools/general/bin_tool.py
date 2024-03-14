@@ -9,7 +9,7 @@ def normalize_asm_code(asm_code: str,
                        jump_token: str = "<JUMP>",  # 跳转指令统一替换标记
                        loc_token: str = "<LOC>",  # 位置（标签）统一替换标记
                        mem_token: str = "<MEM>",  # 内存访问统一替换标记
-                       special_reg_token: str = "<SREG>"):  # 特殊寄存器标记
+                       ):
     """
     正规化汇编代码。
     :param asm_code: 待处理的汇编代码字符串。

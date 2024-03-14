@@ -321,11 +321,16 @@ def cal_answer_position(asm_codes, left_raw_data_items, max_asm_lines, right_raw
 
 
 def check_effective(src_codes, asm_codes):
+    # 源代码
     effective_src_codes_num = 0
     for src_code in src_codes:
         if len(src_code.split()) > 1:
             effective_src_codes_num += 1
     if effective_src_codes_num < 3:
+        return False
+
+    # 汇编代码
+    if len(asm_codes) > 60:
         return False
 
     return True

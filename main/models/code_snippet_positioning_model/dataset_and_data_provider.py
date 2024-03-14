@@ -10,8 +10,49 @@ from torch.utils.data import Dataset
 import torch
 
 
+def get_answer_tokens_index(answer_start_char, answer_end_char, offset_mapping):
+    """
+    根据答案的字符级别的开始和结束位置，找到对应的token级别的开始和结束位置
+
+    :param answer_start_char: answer在context中的开始位置
+    :param answer_end_char: answer在context中的结束位置
+    :param offset_mapping: tokenizer 的返回值，表示每个token在原始文本中的开始和结束位置
+    :return:
+    """
+    # step 1, 找到答案部分的tokens
+    # 找到第三个(0, 0)的下一个位置，因为token的顺序是：<s> question </s> </s> context </s>
+    context_start_index = None
+    zero_count = 0
+    for i, (start, end) in enumerate(offset_mapping):
+        if start.item() == 0 and end.item() == 0:  # 非特殊token
+            zero_count += 1
+            if zero_count == 3:
+                context_start_index = i + 1
+                break
+
+    # 初始化答案的token位置
+    answer_start_token_index, answer_end_token_index = None, None
+
+    # 遍历每个token的偏移量
+    for i, (start, end) in enumerate(offset_mapping[context_start_index:],
+                                     # 遍历context的token
+                                     start=context_start_index):
+        # print(i, tokens[i], start, end, answer_start_char, answer_end_char)
+        # 确定答案开始token的索引
+        if (answer_start_token_index is None) and (start <= answer_start_char < end):
+            answer_start_token_index = i
+        # 确定答案结束token的索引
+        if (answer_end_token_index is None) and (start < answer_end_char <= end):
+            answer_end_token_index = i
+
+        if answer_start_token_index is not None and answer_end_token_index is not None:
+            break
+
+    return answer_start_token_index, answer_end_token_index
+
+
 class CodeSnippetPositioningDataset(Dataset):
-    def __init__(self, contexts, questions, answer_starts, answer_ends, tokenizer, max_len=512):
+    def __init__(self, questions, contexts, answer_start_indexes, answer_end_indexes, tokenizer, max_len=512):
         """
         初始化问答数据集
         :param contexts: 上下文列表，每个上下文是一段文本（答案所在的文本）
@@ -21,57 +62,19 @@ class CodeSnippetPositioningDataset(Dataset):
         """
         self.contexts = contexts
         self.questions = questions
-        self.answer_starts = answer_starts
-        self.answer_ends = answer_ends
+        self.answer_start_indexes = answer_start_indexes
+        self.answer_end_indexes = answer_end_indexes
         self.tokenizer = tokenizer
         self.max_len = max_len
 
     def __len__(self):
         return len(self.contexts)
 
-    def find_answer_positions(self, context, question, answer_start_index, answer_end_index):
-        """
-        根据上下文、问题和答案，找到答案的开始和结束token位置。
-
-        参数:
-        - context: 上下文文本
-        - question: 问题文本
-        - answer_start_index: 答案的开始字符位置
-        - answer_end_index: 答案的结束字符位置
-
-        返回:
-        - start_position: 答案的开始token位置
-        - end_position: 答案的结束token位置
-        """
-        # 对上下文和问题进行tokenize处理
-        inputs = self.tokenizer.encode_plus(question, context,
-                                            add_special_tokens=True,
-                                            return_tensors='pt',
-                                            return_offsets_mapping=True)
-        offsets = inputs['offset_mapping'].squeeze().tolist()  # 获取每个token的字符级别位置
-
-        # 将答案的字符位置转换为token位置
-        start_position = end_position = None
-        for idx, (start, end) in enumerate(offsets):
-            if (start_position is None) and (start <= answer_start_index < end):
-                start_position = idx
-            if (end_position is None) and (start < answer_end_index <= end):
-                end_position = idx
-                break
-
-        return start_position, end_position
-
     def __getitem__(self, idx):
-        context = self.contexts[idx]
-        question = self.questions[idx]
-        start_position = self.answer_starts[idx]
-        end_position = self.answer_ends[idx]
-        # start_position, end_position = self.find_answer_positions(context, question, answer)
-
         # Tokenize context and question
         encoding = self.tokenizer.encode_plus(
-            question,
-            context,
+            self.questions[idx],
+            self.contexts[idx],
             add_special_tokens=True,
             max_length=self.max_len,
             padding='max_length',
@@ -81,45 +84,22 @@ class CodeSnippetPositioningDataset(Dataset):
             return_tensors='pt',
         )
 
-        # Your tokenizer needs to support return_offsets_mapping
-        offsets = encoding['offset_mapping'].squeeze()  # Batch size 为 1
+        # 根据答案的字符级别的开始和结束位置，找到对应的token级别的开始和结束位置
+        answer_tokens_start_index, answer_tokens_end_index = get_answer_tokens_index(
+            self.answer_start_indexes[idx],
+            self.answer_end_indexes[idx],
+            encoding['offset_mapping'].squeeze())
 
-        # 我们需要将start_position和end_position从字符位置转换为token位置
-        cls_index = torch.where(encoding['input_ids'] == self.tokenizer.cls_token_id)[1]
-        sequence_ids = encoding.sequence_ids()
-
-        # 如果答案不能在当前的编码中找到，我们将答案标记为CLS标记的位置
-        if start_position is not None and end_position is not None:
-            start_position, end_position = self.adjust_positions(start_position, end_position, offsets, sequence_ids,
-                                                                 cls_index)
+        # 将答案的token级别的开始和结束位置转换为tensor
+        answer_tokens_start_index_tensor = torch.tensor([answer_tokens_start_index])
+        answer_tokens_end_index_tensor = torch.tensor([answer_tokens_end_index])
 
         return {
             'input_ids': encoding['input_ids'].flatten(),
             'attention_mask': encoding['attention_mask'].flatten(),
-            'start_positions': torch.tensor(start_position, dtype=torch.long),
-            'end_positions': torch.tensor(end_position, dtype=torch.long),
+            'start_positions': answer_tokens_start_index_tensor,
+            'end_positions': answer_tokens_end_index_tensor,
         }
-
-    def adjust_positions(self, start_char, end_char, offsets, sequence_ids, cls_index):
-        """
-        调整字符位置到token位置
-        """
-        start_token = None
-        end_token = None
-
-        for i, (offset, seq_id) in enumerate(zip(offsets, sequence_ids)):
-            if seq_id is None or seq_id == 0:  # 属于question的部分或者特殊token
-                continue
-            if start_token is None and offset[0] <= start_char < offset[1]:
-                start_token = i
-            if offset[0] <= end_char < offset[1]:
-                end_token = i
-
-        # 如果找不到合适的token位置，就把答案标记为CLS的位置
-        start_token = start_token if start_token is not None else cls_index
-        end_token = end_token if end_token is not None else cls_index
-
-        return start_token, end_token
 
 
 def create_dataset(file_path, tokenizer, max_len=512):
@@ -128,14 +108,22 @@ def create_dataset(file_path, tokenizer, max_len=512):
 
     questions = []
     contexts = []
-    answers = []
+    answer_start_indexes = []
+    answer_end_indexes = []
     for train_data_item in train_data_items:
         questions.append(train_data_item.get_question())
         contexts.append(train_data_item.get_context())
-        answers.append(train_data_item.get_answer())
+        answer_start_index, answer_end_index = train_data_item.get_answer_position()
+        answer_start_indexes.append(answer_start_index)
+        answer_end_indexes.append(answer_end_index)
 
     print("原始数据数量: ", len(questions))
-    dataset = CodeSnippetPositioningDataset(questions, contexts, answers, tokenizer, max_len)
+    dataset = CodeSnippetPositioningDataset(questions,
+                                            contexts,
+                                            answer_start_indexes,
+                                            answer_end_indexes,
+                                            tokenizer,
+                                            max_len=max_len)
     return dataset
 
 

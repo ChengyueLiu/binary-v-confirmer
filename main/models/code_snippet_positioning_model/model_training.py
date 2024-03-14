@@ -3,7 +3,8 @@ from loguru import logger
 from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering
 
-from main.interface import DataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
+from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
 
 
@@ -34,7 +35,7 @@ def init_train(train_data_json_file_path,
 
     # tokenizer
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
+    for special_token in DataItemForCodeSnippetPositioningModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
     # model
@@ -92,14 +93,13 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
             optimizer.zero_grad()
 
         with torch.set_grad_enabled(is_train):
-            outputs = model(input_ids, attention_mask=attention_mask,
-                            start_positions=start_positions, end_positions=end_positions)
+            outputs = model(input_ids=input_ids,
+                            attention_mask=attention_mask,
+                            start_positions=start_positions,
+                            end_positions=end_positions)
             loss = outputs.loss
-            start_logits, end_logits = outputs.start_logits, outputs.end_logits
-
-            # 预测开始和结束位置
-            pred_start_positions = torch.argmax(start_logits, dim=-1)
-            pred_end_positions = torch.argmax(end_logits, dim=-1)
+            predict_answer_tokens_start_indices = outputs.start_logits.argmax(dim=1)
+            predict_answer_tokens_end_indices = outputs.end_logits.argmax(dim=1)
 
             if is_train:
                 loss.backward()
@@ -110,9 +110,13 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
         epoch_loss += loss.item()
 
         # 计算重叠和长度
-        for true_start, true_end, pred_start, pred_end in zip(start_positions, end_positions, pred_start_positions,
-                                                              pred_end_positions):
-            overlap, true_length, pred_length = calculate_overlap(true_start.item(), true_end.item(), pred_start.item(),
+        for true_start, true_end, pred_start, pred_end in zip(start_positions,
+                                                              end_positions,
+                                                              predict_answer_tokens_start_indices,
+                                                              predict_answer_tokens_end_indices):
+            overlap, true_length, pred_length = calculate_overlap(true_start.item(),
+                                                                  true_end.item(),
+                                                                  pred_start.item(),
                                                                   pred_end.item())
             total_overlap += overlap
             total_true_length += true_length

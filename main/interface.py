@@ -387,6 +387,8 @@ class DataItemForCodeSnippetPositioningModel:
     def get_answer_text(self):
         return " ".join(self.asm_codes[self.answer_start_index:self.answer_end_index])
 
+    def get_answer_position(self):
+        return self.answer_start_index, self.answer_end_index
     def _normalize(self):
         self.src_codes = [normalized_line for line in self.src_codes
                           if (normalized_line := self._normalize_src_code(line))]
