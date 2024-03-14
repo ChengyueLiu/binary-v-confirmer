@@ -389,7 +389,7 @@ class DataItemForCodeSnippetPositioningModel:
 
     def get_answer_position(self):
         # 这里要重新计算，换成字符的位置
-        start_index = len(" ".join(self.asm_codes[:self.answer_start_index]))
+        start_index = len(" ".join(self.asm_codes[:self.answer_start_index])) + 1
         end_index = len(" ".join(self.asm_codes[:self.answer_end_index + 1]))
         return start_index, end_index
 
