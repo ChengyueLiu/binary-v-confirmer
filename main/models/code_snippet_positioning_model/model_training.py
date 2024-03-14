@@ -3,9 +3,10 @@ from loguru import logger
 from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering
 
-from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
-from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset
-from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
+from main.interface import DataItemForCodeSnippetPositioningModel
+from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset, \
+    create_dataset, create_dataloaders
+
 
 
 def init_train(train_data_json_file_path,
