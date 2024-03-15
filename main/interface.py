@@ -422,3 +422,13 @@ class DataItemForCodeSnippetPositioningModel:
                                       loc_token=SpecialToken.ASM_LOC.value,
                                       mem_token=SpecialToken.ASM_MEM.value)
         return asm_code
+
+
+@dataclass
+class RepairInfo:
+    project_name: str = ""
+    file_path: str = ""
+    function_name: str = ""
+    function_codes: List[str] = None
+    patch_code_start_index: int = 0
+    patch_code_end_index: int = 0

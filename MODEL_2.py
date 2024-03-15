@@ -1,5 +1,6 @@
 from main.models.code_snippet_positioning_model.data_prepare import convert_mapping_to_json, \
     convert_json_to_raw_train_data, convert_raw_train_data_to_train_data
+from main.models.code_snippet_positioning_model.model_application import CodeSnippetPositioner
 from main.models.code_snippet_positioning_model.model_training import run_train
 
 
@@ -52,9 +53,71 @@ def train_model():
 
 
 def test_model():
-    pass
+    src_codes = [
+            "while (len >= AES_BLOCK_SIZE) {",
+            "memcpy(tmp, out, AES_BLOCK_SIZE);",
+            "memcpy(tmp2, out, AES_BLOCK_SIZE);",
+            "for (n = 0; n < AES_BLOCK_SIZE; ++n)",
+            "tmp[n] ^= iv2[n];"
+        ]
+    asm_codes = [
+            "sub <MEM>,<NUM>",
+            "cmp <MEM>,<NUM>",
+            "<JUMP> bfa8b <aes_bi_ige_encrypt+<NUM>>",
+            "mov <REG>,<MEM>",
+            "mov <MEM>,<REG>",
+            "mov <REG>,<MEM>",
+            "add <REG>,<NUM>",
+            "mov <MEM>,<REG>",
+            "mov <REG>,<MEM>",
+            "mov <MEM>,<REG>",
+            "<JUMP> bfc9d <aes_bi_ige_encrypt+<NUM>>",
+            "mov <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "mov <MEM>,<REG>",
+            "mov <MEM>,<REG>",
+            "mov <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "mov <MEM>,<REG>",
+            "mov <MEM>,<REG>",
+            "mov <MEM>,<NUM>",
+            "<JUMP> bfc0d <aes_bi_ige_encrypt+<NUM>>",
+            "lea <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "add <REG>,<REG>",
+            "movzx ecx,<MEM>",
+            "mov <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "add <REG>,<REG>",
+            "movzx eax,<MEM>",
+            "xor ecx,eax",
+            "lea <REG>,<MEM>",
+            "mov <REG>,<MEM>",
+            "add <REG>,<REG>",
+            "mov <MEM>,cl",
+            "add <MEM>,<NUM>",
+            "cmp <MEM>,<NUM>",
+            "<JUMP> bfbdd <aes_bi_ige_encrypt+<NUM>>",
+            "add <MEM>,<NUM>",
+            "cmp <MEM>,<NUM>",
+            "<JUMP> bfbdd <aes_bi_ige_encrypt+<NUM>>",
+            "add <MEM>,<NUM>",
+            "cmp <MEM>,<NUM>",
+            "<JUMP> bfbdd <aes_bi_ige_encrypt+<NUM>>",
+            "add <MEM>,<NUM>",
+            "cmp <MEM>,<NUM>",
+            "<JUMP> bfbdd <aes_bi_ige_encrypt+<NUM>>",
+            "add <MEM>,<NUM>",
+            "cmp <MEM>,<NUM>",
+            "<JUMP> bfbdd <aes_bi_ige_encrypt+<NUM>>"
+        ]
+    code_snippet_positioner = CodeSnippetPositioner(model_save_path="Resources/model_weights/model_2_weights.pth")
+    code_snippet_positioner.position("vul_function_name", src_codes, asm_codes)
 
 
 if __name__ == '__main__':
     # prepare_data()
-    train_model()
+    # train_model()
+    test_model()
