@@ -287,52 +287,23 @@ class DataItemForFunctionConfirmModel:
     def _normalize(self):
         # 正规化处理源代码
         self.src_codes = [normalized_line for line in self.src_codes
-                          if (normalized_line := self._normalize_src_code(line))]
+                          if (normalized_line := line.strip())]
 
         # 正规化处理字符串
         self.src_strings = [normalized_string for string in self.src_strings
-                            if (normalized_string := self._normalize_src_string(string))]
-        # 正规化处理数字
-        self.src_numbers = [normalized_number for number in self.src_numbers
-                            if (normalized_number := self._normalize_src_number(number))]
+                            if (normalized_string := string.strip())]
 
         # 正规化处理汇编代码
         self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := self._normalize_asm_code(code))]
+                          if (normalized_code := normalize_asm_code(code,
+                                                                    reg_token=SpecialToken.ASM_REG.value,
+                                                                    num_token=SpecialToken.ASM_NUM.value,
+                                                                    jump_token=SpecialToken.ASM_JUMP.value,
+                                                                    loc_token=SpecialToken.ASM_LOC.value,
+                                                                    mem_token=SpecialToken.ASM_MEM.value))]
         # 正规化处理字符串
         self.bin_strings = [normalized_string for string in self.bin_strings
-                            if (normalized_string := self._normalize_bin_string(string))]
-        # 正规化处理数字
-        self.bin_numbers = [normalized_number for number in self.bin_numbers
-                            if (normalized_number := self._normalize_bin_number(number))]
-
-    def _normalize_src_code(self, src_code: str):
-        # 正规化处理源代码
-        return src_code.strip()
-
-    def _normalize_src_string(self, src_string: str):
-        return src_string
-
-    def _normalize_src_number(self, src_number: str):
-        # 正规化处理数字
-        return src_number
-
-    def _normalize_asm_code(self, asm_code: str):
-        asm_code = normalize_asm_code(asm_code,
-                                      reg_token=SpecialToken.ASM_REG.value,
-                                      num_token=SpecialToken.ASM_NUM.value,
-                                      jump_token=SpecialToken.ASM_JUMP.value,
-                                      loc_token=SpecialToken.ASM_LOC.value,
-                                      mem_token=SpecialToken.ASM_MEM.value)
-        return asm_code
-
-    def _normalize_bin_string(self, bin_string: str):
-        # 正规化处理字符串
-        return bin_string
-
-    def _normalize_bin_number(self, bin_number: str):
-        # 正规化处理数字
-        return bin_number
+                            if (normalized_string := string.strip())]
 
 
 @dataclass
@@ -399,14 +370,67 @@ class DataItemForCodeSnippetPositioningModel:
 
     def _normalize(self):
         self.src_codes = [normalized_line for line in self.src_codes
-                          if (normalized_line := self._normalize_src_code(line))]
+                          if (normalized_line := line.strip())]
 
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := self._normalize_asm_code(code))]
 
-    def _normalize_src_code(self, src_code):
-        # 正规化处理源代码
-        return src_code.strip()
+    def _normalize_asm_code(self, asm_code):
+        # 如果输入的是原始的行信息，要先分割一下
+        if "\t" in asm_code:
+            asm_line_parts = asm_code.split("\t")
+            if len(asm_line_parts) != 3:
+                return None
+            asm_code = asm_line_parts[-1]
+        asm_code = normalize_asm_code(asm_code,
+                                      reg_token=SpecialToken.ASM_REG.value,
+                                      num_token=SpecialToken.ASM_NUM.value,
+                                      jump_token=SpecialToken.ASM_JUMP.value,
+                                      loc_token=SpecialToken.ASM_LOC.value,
+                                      mem_token=SpecialToken.ASM_MEM.value)
+        return asm_code
+
+
+class DataItemForCodeSnippetConfirmModel:
+
+    def __init__(self, src_codes: List[str],
+                 asm_codes: List[str],
+                 label=1,
+                 normalize=True):
+        self.src_codes = src_codes
+        self.asm_codes = asm_codes
+        self.label = label
+        if normalize:
+            self.normalize()
+
+    def custom_serialize(self):
+        return {
+            "src_codes": self.src_codes,
+            "asm_codes": self.asm_codes,
+            "label": self.label
+        }
+
+    @classmethod
+    def init_from_dict(cls, data: dict):
+        return cls(
+            src_codes=data['src_codes'],
+            asm_codes=data['asm_codes'],
+            label=data['label'],
+            normalize=False
+        )
+
+    def get_text(self):
+        return remove_comments(" ".join(self.src_codes)) + " " + " ".join(self.asm_codes)
+
+    def get_label(self):
+        return self.label
+
+    def normalize(self):
+        self.src_codes = [normalized_line for line in self.src_codes
+                          if (normalized_line := line.strip())]
+
+        self.asm_codes = [normalized_code for code in self.asm_codes
+                          if (normalized_code := self._normalize_asm_code(code))]
 
     def _normalize_asm_code(self, asm_code):
         # 如果输入的是原始的行信息，要先分割一下

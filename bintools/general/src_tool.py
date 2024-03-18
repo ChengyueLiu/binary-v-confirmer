@@ -1,6 +1,7 @@
 import re
 
 
+
 def remove_comments(text):
     """ remove c-style comments.
         text: blob of text with comments (can include newlines)
