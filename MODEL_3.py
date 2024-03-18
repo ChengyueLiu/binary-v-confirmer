@@ -1,3 +1,4 @@
+from main.models.code_snippet_confirm_model.data_prepare import generate_data_items
 
 
 def prepare_data():
@@ -7,7 +8,20 @@ def prepare_data():
 
     :return:
     """
+    # train
+    input_file_path = "TestCases/model_train/model_2/final_train_data_items/train_data.json"
+    save_file_path = "TestCases/model_train/model_3/data_items/train_data.json"
+    generate_data_items(input_file_path, save_file_path)
 
+    # valid
+    input_file_path = "TestCases/model_train/model_2/final_train_data_items/valid_data.json"
+    save_file_path = "TestCases/model_train/model_3/data_items/valid_data.json"
+    generate_data_items(input_file_path, save_file_path)
+
+    # test
+    input_file_path = "TestCases/model_train/model_2/final_train_data_items/test_data.json"
+    save_file_path = "TestCases/model_train/model_3/data_items/test_data.json"
+    generate_data_items(input_file_path, save_file_path)
 
 
 def train_model():
@@ -27,7 +41,8 @@ def train_model():
 def test_model():
     pass
 
+
 if __name__ == '__main__':
-    # prepare_data()
+    prepare_data()
     # train_model()
-    test_model()
+    # test_model()

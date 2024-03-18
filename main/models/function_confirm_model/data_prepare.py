@@ -25,8 +25,8 @@ def split_dataset(function_features: List[FunctionFeature], ratios=(0.8, 0.1, 0.
 
 def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3):
     # positive examples
-    positive_train_data_items = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1) for ff in
-                                 function_features]
+    positive_train_data_items = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
+                                 for ff in function_features]
 
     # negative examples
     wrong_match_function_features = []
