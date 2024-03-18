@@ -419,8 +419,10 @@ class DataItemForCodeSnippetConfirmModel:
             normalize=False
         )
 
-    def get_text(self):
-        return remove_comments(" ".join(self.src_codes)) + " " + " ".join(self.asm_codes)
+    def get_text(self, separator=None):
+        src_text = remove_comments(" ".join(self.src_codes))
+        asm_text = " ".join(self.asm_codes)
+        return f"{src_text} {separator} {asm_text}" if separator else f"{src_text} {asm_text}"
 
     def get_label(self):
         return self.label
