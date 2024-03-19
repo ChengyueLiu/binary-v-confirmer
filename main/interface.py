@@ -472,6 +472,6 @@ class Result:
     function_match_possibility: float
     src_codes: List[str]
     asm_codes: List[str]
-    src_codes_text: str
-    asm_codes_texts: List[str]
+    src_codes_text: str = None
+    asm_codes_texts: List[str] = None
     snippet_match_possibilities: List = None

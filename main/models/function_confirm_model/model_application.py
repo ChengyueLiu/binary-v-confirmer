@@ -132,8 +132,8 @@ class FunctionFinder:
                 possible_bin_function = Result(
                     function_name=vul_function_name,
                     function_match_possibility=prob.item(),
-                    src_codes=data_item.src_function_features[0].codes,
-                    asm_codes=data_item.bin_function_feature.codes
+                    src_codes=data_item.src_codes,
+                    asm_codes=data_item.asm_codes,
                 )
                 result.append(possible_bin_function)
         result.sort(key=lambda x: x.function_match_possibility, reverse=True)
