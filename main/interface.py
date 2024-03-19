@@ -1,3 +1,4 @@
+import dataclasses
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -456,13 +457,13 @@ class DataItemForCodeSnippetConfirmModel:
 
 @dataclass
 class Vulnerability:
-    project: str
+    project_name: str
     file_path: str
-    line_start: int
-    line_end: int
     function_name: str
-    function_codes: List[str]
-    snippet_codes: List[str]
+    line_start: int = 0
+    line_end: int = 0
+    function_codes: List[str] = dataclasses.field(default_factory=list)
+    snippet_codes: List[str] = dataclasses.field(default_factory=list)
 
 
 @dataclass
@@ -473,4 +474,4 @@ class Result:
     asm_codes: List[str]
     src_codes_text: str
     asm_codes_texts: List[str]
-    snippet_match_possibility: List = None
+    snippet_match_possibilities: List = None

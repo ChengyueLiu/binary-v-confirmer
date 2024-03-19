@@ -141,9 +141,9 @@ if __name__ == '__main__':
     # prepare_train_data_for_model_1()
 
     # Done
-    train_model_1()
+    # train_model_1()
 
     # Done
-    # test_model_1_by_openssl()
+    test_model_1_by_openssl()
 
     # TODO test_model_1_by_more_test_cases()

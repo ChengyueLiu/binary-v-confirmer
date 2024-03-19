@@ -45,7 +45,7 @@ class VulConfirmTeam:
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
                                                               asm_codes_texts)
-            result.snippet_match_possibility = predictions
+            result.snippet_match_possibilities = predictions
 
             # 4. 返回确认结果
             final_results.append(result)
