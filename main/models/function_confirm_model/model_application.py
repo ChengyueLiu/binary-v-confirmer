@@ -130,7 +130,7 @@ class FunctionFinder:
         for data_item, (pred, prob) in zip(data_items, predictions):
             if pred.item() == 1:
                 possible_bin_function = Result(
-                    function_name=data_item.bin_function_feature.function_name,
+                    function_name=vul_function_name,
                     function_match_possibility=prob.item(),
                     src_codes=data_item.src_function_features[0].codes,
                     asm_codes=data_item.bin_function_feature.codes
