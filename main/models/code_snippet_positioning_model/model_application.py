@@ -12,7 +12,30 @@ from main.models.code_snippet_positioning_model.dataset_and_data_provider import
     CodeSnippetPositioningDataset
 
 
-class CodeSnippetPositioner:
+def split_list_by_sliding_window(input_list, window_length=50, step=20):
+    # 初始化一个空列表来存放所有窗口
+    windows = []
+
+    # 如果输入列表长度小于等于窗口长度，直接返回
+    if len(input_list) <= window_length:
+        return [input_list]
+
+    # 滑动窗口
+    window_end = window_length
+    while True:
+        windows.append(input_list[window_end - window_length:window_end])
+        if window_end + step > len(input_list):
+            break
+        window_end += step
+
+    # 如果最后一个窗口的长度不足，补齐
+    if window_end < len(input_list):
+        windows.append(input_list[-window_length:])
+
+    return windows
+
+
+class SnippetPositioner:
 
     def __init__(self, model_save_path: str = 'model_weights.pth', batch_size: int = 16):
         self.model_name = 'microsoft/graphcodebert-base'
@@ -50,25 +73,27 @@ class CodeSnippetPositioner:
         :param asm_codes:
         :return:
         """
+        asm_codes_window_list = split_list_by_sliding_window(asm_codes, window_length=50, step=20)
+        data_items = []
         # step 1: 输入转换为DataItemForCodeSnippetPositioningModel
-        data_item = DataItemForCodeSnippetPositioningModel(function_name=vul_function_name,
-                                                           src_codes=src_codes,
-                                                           asm_codes=asm_codes,
-                                                           answer_start_index=0,
-                                                           answer_end_index=0,
-                                                           normalized=False)
-        # TODO 这个地方要根据具体的参数来处理，因为输入的src_code一般会超过5行，而输入的asm_code一般也会超过50行。但是预训练的模型，输入的长度是有限制的。一般接受5行源代码和50行汇编代码
-        train_data_items = [data_item]
+        for i, asm_codes_window in enumerate(asm_codes_window_list):
+            data_item = DataItemForCodeSnippetPositioningModel(function_name=vul_function_name,
+                                                               src_codes=src_codes,
+                                                               asm_codes=asm_codes_window,
+                                                               answer_start_index=0,
+                                                               answer_end_index=0,
+                                                               normalized=False)
+            data_items.append(data_item)
 
         # step 2: 创建dataset
         questions = []
         contexts = []
         answer_start_indexes = []
         answer_end_indexes = []
-        for train_data_item in train_data_items:
-            questions.append(train_data_item.get_question_text())
-            contexts.append(train_data_item.get_context_text())
-            answer_start_index, answer_end_index = train_data_item.get_answer_position()
+        for data_item in data_items:
+            questions.append(data_item.get_question_text())
+            contexts.append(data_item.get_context_text())
+            answer_start_index, answer_end_index = data_item.get_answer_position()
             answer_start_indexes.append(answer_start_index)
             answer_end_indexes.append(answer_end_index)
 
@@ -82,7 +107,7 @@ class CodeSnippetPositioner:
         # step 3: 创建dataloader
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
 
-        return dataloader
+        return dataloader, questions[0]
 
     def _predict(self, dataloader: DataLoader):
         predicted_answers = []
@@ -121,15 +146,20 @@ class CodeSnippetPositioner:
             2. 使用模型预测
 
 
+        :param vul_function_name:
         :param src_codes: 源代码中提取到的代码片段，代表了漏洞函数中的关键patch代码
         :param asm_codes: 使用IDA Pro提取到的汇编代码片段，代表了第一个模型找到的可能的漏洞函数
         :return:
         """
         # 预处理数据
-        dataloader = self._preprocess_data(vul_function_name, src_codes, asm_codes)
+        dataloader, question = self._preprocess_data(vul_function_name, src_codes, asm_codes)
 
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
 
-        print("predicted_answers: ", predicted_answers)
+        print(f"input asm codes: {" ".join(asm_codes)}")
         print("expected_answers: ", " ".join(asm_codes[17:27]))
+        for pa in predicted_answers:
+            print("predicted_answer: ", pa)
+
+        return question, predicted_answers

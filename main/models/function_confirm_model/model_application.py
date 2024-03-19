@@ -9,13 +9,13 @@ from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
 from bintools.general.file_tool import check_file_path, load_from_json_file
 from main.extractors.function_feature_extractor import extract_bin_feature, extract_src_feature_for_specific_function
-from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature
+from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, Result
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataset_from_model_input
 import torch.nn.functional as F
 
 
-class VulFunctionFinder:
+class FunctionFinder:
     def __init__(self, model_save_path: str = 'model_weights.pth', batch_size: int = 16):
         self.model_name = 'microsoft/graphcodebert-base'
         self.num_labels = 2
@@ -46,9 +46,7 @@ class VulFunctionFinder:
         return device, tokenizer, model
 
     def _preprocess_data(self, src_file_path, vul_function_name, binary_file_abs_path) -> (
-            DataLoader, List[BinFunctionFeature]):
-        src_file_path = check_file_path(src_file_path)
-        binary_file_abs_path = check_file_path(binary_file_abs_path)
+            DataLoader, List[DataItemForFunctionConfirmModel]):
 
         # step 1 提取源代码特征
         logger.info(f"Extracting feature for {src_file_path}")
@@ -86,7 +84,7 @@ class VulFunctionFinder:
         dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
 
-        return dataloader, bin_function_features
+        return dataloader, data_items
 
     def _predict(self, dataloader):
         """
@@ -111,25 +109,32 @@ class VulFunctionFinder:
                 predictions.append((pred, prob))
         return predictions
 
-    def find_similar_functions(self, src_file_path: str, vul_function_name: str, binary_file_abs_path: str):
+    def find_binary_functions(self, src_file_path: str,
+                              vul_function_name: str,
+                              binary_file_abs_path: str) -> List[Result]:
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
         """
         # 预处理数据
-        dataloader, bin_function_features = self._preprocess_data(src_file_path, vul_function_name,
-                                                                  binary_file_abs_path)
+        dataloader, data_items = self._preprocess_data(src_file_path,
+                                                       vul_function_name,
+                                                       binary_file_abs_path)
 
         # 预测
         predictions = self._predict(dataloader)
 
         # 输出结果
-        similar_functions = []
+        result: List[Result] = []
         logger.info(f"Result: Similar functions for {vul_function_name} in {binary_file_abs_path}:")
-        for bin_function_feature, (pred, prob) in zip(bin_function_features, predictions):
+        for data_item, (pred, prob) in zip(data_items, predictions):
             if pred.item() == 1:
-                result = (bin_function_feature.name, pred.item(), prob.item())
-                print(result)
-                similar_functions.append(result)
-        similar_functions.sort(key=lambda x: x[2], reverse=True)
-        return len(bin_function_features), similar_functions
+                possible_bin_function = Result(
+                    function_name=data_item.bin_function_feature.function_name,
+                    function_match_possibility=prob.item(),
+                    src_codes=data_item.src_function_features[0].codes,
+                    asm_codes=data_item.bin_function_feature.codes
+                )
+                result.append(possible_bin_function)
+        result.sort(key=lambda x: x.function_match_possibility, reverse=True)
+        return result

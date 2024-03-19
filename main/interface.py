@@ -455,10 +455,22 @@ class DataItemForCodeSnippetConfirmModel:
 
 
 @dataclass
-class RepairInfo:
-    project_name: str = ""
-    file_path: str = ""
-    function_name: str = ""
-    function_codes: List[str] = None
-    patch_code_start_index: int = 0
-    patch_code_end_index: int = 0
+class Vulnerability:
+    project: str
+    file_path: str
+    line_start: int
+    line_end: int
+    function_name: str
+    function_codes: List[str]
+    snippet_codes: List[str]
+
+
+@dataclass
+class Result:
+    function_name: str
+    function_match_possibility: float
+    src_codes: List[str]
+    asm_codes: List[str]
+    src_codes_text: str
+    asm_codes_texts: List[str]
+    snippet_match_possibility: List = None

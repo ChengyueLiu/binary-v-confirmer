@@ -5,7 +5,7 @@ from loguru import logger
 from bintools.general.file_tool import save_to_json_file
 from main.extractors.function_feature_extractor import extract_matched_function_feature
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
-from main.models.function_confirm_model.model_application import VulFunctionFinder
+from main.models.function_confirm_model.model_application import FunctionFinder
 
 # raw input
 # src
@@ -108,8 +108,8 @@ def test_model_1_by_openssl():
 
     # model init
     model_save_path = os.path.join(root_dir, "model_weights.pth")
-
-    vul_function_finder = VulFunctionFinder(
+    # model_save_path = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\Resources\model_weights\stable_model_1_weights.pth"
+    vul_function_finder = FunctionFinder(
         model_save_path=model_save_path,
         batch_size=batch_size
     )
@@ -119,7 +119,7 @@ def test_model_1_by_openssl():
         similar_functions_dict[binary] = binary_similar_functions_dict = {}
         for vul_function_name in ["*PKCS12_unpack_p7data", "*PKCS12_unpack_p7encdata", "*PKCS12_unpack_authsafes"]:
             logger.info(f"Finding similar functions for {vul_function_name} in {binary}")
-            bin_function_num, similar_functions = vul_function_finder.find_similar_functions(
+            bin_function_num, similar_functions = vul_function_finder.find_binary_functions(
                 src_file_path=vul_function_file_path,
                 vul_function_name=vul_function_name,
                 binary_file_abs_path=binary)

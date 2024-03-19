@@ -1,6 +1,6 @@
 from main.models.code_snippet_positioning_model.data_prepare import convert_mapping_to_json, \
     convert_json_to_raw_train_data, convert_raw_train_data_to_train_data
-from main.models.code_snippet_positioning_model.model_application import CodeSnippetPositioner
+from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.code_snippet_positioning_model.model_training import run_train
 
 
@@ -113,7 +113,7 @@ def test_model():
             "cmp <MEM>,<NUM>",
             "<JUMP> bfbdd <aes_bi_ige_encrypt+<NUM>>"
         ]
-    code_snippet_positioner = CodeSnippetPositioner(model_save_path="Resources/model_weights/model_2_weights.pth")
+    code_snippet_positioner = SnippetPositioner(model_save_path="Resources/model_weights/model_2_weights.pth")
     code_snippet_positioner.position("vul_function_name", src_codes, asm_codes)
 
 
