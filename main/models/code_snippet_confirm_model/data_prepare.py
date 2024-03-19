@@ -30,6 +30,7 @@ def generate_data_items(file_path: str, save_path: str):
                 if random_item.asm_codes != positive_item.asm_codes:
                     break
             # 创建负例数据项
+            # TODO 后续这里要增加那种commit 前后的代码变化的数据，就是那种微小的变化，目前都是大的变化
             negative_example = DataItemForCodeSnippetConfirmModel(
                 src_codes=positive_item.src_codes,  # 使用正例的 src_codes
                 asm_codes=random_item.asm_codes,  # 使用随机选择的不相关的 asm_codes

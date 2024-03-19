@@ -1,7 +1,7 @@
 from torch.utils.data import DataLoader
 
 from bintools.general.file_tool import load_from_json_file
-from main.interface import DataItemForCodeSnippetPositioningModel
+from main.interface import DataItemForCodeSnippetPositioningModel, DataItemForCodeSnippetConfirmModel
 
 from torch.utils.data import Dataset
 import torch
@@ -40,13 +40,14 @@ class CodeSnippetConfirmDataset(Dataset):
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    train_data_items = [DataItemForCodeSnippetPositioningModel.init_from_dict(item) for item in train_data_json]
+    train_data_items = [DataItemForCodeSnippetConfirmModel.init_from_dict(item)
+                        for item in train_data_json]
 
     texts = []
     labels = []
     for train_data_item in train_data_items:
-        texts.append(train_data_item.get_train_text(tokenizer.sep_token))
-        labels.append(train_data_item.label)
+        texts.append(train_data_item.get_text(tokenizer.sep_token))
+        labels.append(train_data_item.get_label())
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})

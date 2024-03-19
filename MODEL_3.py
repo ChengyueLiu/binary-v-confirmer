@@ -1,4 +1,5 @@
 from main.models.code_snippet_confirm_model.data_prepare import generate_data_items
+from main.models.code_snippet_confirm_model.model_training import run_train
 
 
 def prepare_data():
@@ -25,17 +26,16 @@ def prepare_data():
 
 
 def train_model():
-    pass
-    # train_data_save_path = "TestCases/model_train/model_2/final_train_data_items/train_data.json"
-    # val_data_save_path = "TestCases/model_train/model_2/final_train_data_items/valid_data.json"
-    # test_data_save_path = "TestCases/model_train/model_2/final_train_data_items/test_data.json"
-    # model_save_path = "model_weights/model_2_weights.pth"
-    # run_train(train_data_save_path,
-    #           val_data_save_path,
-    #           test_data_save_path,
-    #           model_save_path,
-    #           epochs=3,
-    #           batch_size=64)
+    train_data_save_path = "TestCases/model_train/model_3/data_items/train_data.json"
+    val_data_save_path = "TestCases/model_train/model_3/data_items/valid_data.json"
+    test_data_save_path = "TestCases/model_train/model_3/data_items/test_data.json"
+    model_save_path = "model_weights/model_3_weights.pth"
+    run_train(train_data_save_path,
+              val_data_save_path,
+              test_data_save_path,
+              model_save_path,
+              epochs=3,
+              batch_size=64)
 
 
 def test_model():

@@ -449,6 +449,10 @@ class DataItemForCodeSnippetConfirmModel:
                                       mem_token=SpecialToken.ASM_MEM.value)
         return asm_code
 
+    @classmethod
+    def get_special_tokens(cls):
+        return SpecialToken.get_asm_special_tokens()
+
 
 @dataclass
 class RepairInfo:
