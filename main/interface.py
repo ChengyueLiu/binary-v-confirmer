@@ -178,6 +178,7 @@ class DataItemForFunctionConfirmModel:
                  asm_codes: List[str],
                  bin_strings: List[str],
                  bin_numbers: List,
+                 bin_function_name="",
                  label=1):
         """
         从原始特征中初始化训练数据
@@ -191,7 +192,7 @@ class DataItemForFunctionConfirmModel:
         self.bin_strings: List[str] = bin_strings
         self.bin_numbers: List[str] = [str(num) for num in bin_numbers]
         self.label = label
-
+        self.bin_function_name = bin_function_name
         self._normalize()
 
     def custom_serialize(self):
@@ -229,6 +230,7 @@ class DataItemForFunctionConfirmModel:
             function_feature.bin_function_feature.asm_codes,
             function_feature.bin_function_feature.strings,
             function_feature.bin_function_feature.numbers,
+            bin_function_name=function_feature.bin_function_feature.name,
             label=label
         )
 
@@ -469,6 +471,7 @@ class Vulnerability:
 @dataclass
 class Result:
     function_name: str
+    bin_function_name: str
     function_match_possibility: float
     src_codes: List[str]
     asm_codes: List[str]

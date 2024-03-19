@@ -126,11 +126,11 @@ class FunctionFinder:
 
         # 输出结果
         result: List[Result] = []
-        logger.info(f"Result: Similar functions for {vul_function_name} in {binary_file_abs_path}:")
         for data_item, (pred, prob) in zip(data_items, predictions):
             if pred.item() == 1:
                 possible_bin_function = Result(
                     function_name=vul_function_name,
+                    bin_function_name=data_item.bin_function_name,
                     function_match_possibility=prob.item(),
                     src_codes=data_item.src_codes,
                     asm_codes=data_item.asm_codes,
