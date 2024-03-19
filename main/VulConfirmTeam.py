@@ -34,22 +34,22 @@ class VulConfirmTeam:
             binary_file_abs_path=os.path.abspath(binary_path))
 
         final_results = []
-        for result in results:
+        for result in results[:3]:
             print(
                 f"function：{result.function_name} ---> bin_function: {result.bin_function_name}, personality: {result.function_match_possibility}")
-            # # 2. 定位漏洞代码片段
-            # src_codes_text, asm_codes_texts = self.snippet_positioner.position(vul_function_name=vul.function_name,
-            #                                                                    src_codes=result.src_codes,
-            #                                                                    asm_codes=result.asm_codes)
-            # result.src_codes_text = src_codes_text
-            # result.asm_codes_texts = asm_codes_texts
-            #
-            # # 3. 确认漏洞代码片段
-            # predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
-            #                                                   asm_codes_texts)
-            # result.snippet_match_possibilities = predictions
-            #
-            # # 4. 返回确认结果
-            # final_results.append(result)
+            # 2. 定位漏洞代码片段
+            src_codes_text, asm_codes_texts = self.snippet_positioner.position(vul_function_name=vul.function_name,
+                                                                               src_codes=result.src_codes,
+                                                                               asm_codes=result.asm_codes)
+            result.src_codes_text = src_codes_text
+            result.asm_codes_texts = asm_codes_texts
+
+            # 3. 确认漏洞代码片段
+            predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
+                                                              asm_codes_texts)
+            result.snippet_match_possibilities = predictions
+            print(predictions)
+            # 4. 返回确认结果
+            final_results.append(result)
 
         return final_results
