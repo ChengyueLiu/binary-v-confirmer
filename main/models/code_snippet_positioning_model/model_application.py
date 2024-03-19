@@ -1,6 +1,7 @@
 from typing import List
 
 import torch
+from loguru import logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, RobertaForQuestionAnswering
@@ -157,9 +158,6 @@ class SnippetPositioner:
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
 
-        print(f"input asm codes: {" ".join(asm_codes)}")
-        print("expected_answers: ", " ".join(asm_codes[17:27]))
-        for pa in predicted_answers:
-            print("predicted_answer: ", pa)
+        logger.info(f"function: {vul_function_name}, predicted answers: {len(predicted_answers)}")
 
         return question, predicted_answers
