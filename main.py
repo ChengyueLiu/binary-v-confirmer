@@ -5,6 +5,7 @@ from main.interface import Vulnerability
 
 def debug():
     binary_path = "TestCases/feature_extraction/binaries/libcrypto.so.3"
+    binary_path = "TestCases/feature_extraction/binaries/openssl"
     vul = Vulnerability(
         project_name="openssl",
         file_path="TestCases/model_train/model_1/test_data/p12_add.c",
