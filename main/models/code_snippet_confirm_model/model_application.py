@@ -81,7 +81,4 @@ class SnippetConfirmer:
         # 预测
         predictions = self._predict(dataloader)
 
-        for pred, prob in predictions:
-            print(pred.item(), prob.item())
-
         return predictions

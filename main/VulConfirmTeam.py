@@ -36,7 +36,7 @@ class VulConfirmTeam:
 
         final_results = []
         for result in results[:3]:
-            print(
+            logger.info(
                 f"function：{result.function_name} ---> bin_function: {result.bin_function_name}, personality: {result.function_match_possibility}")
             # 2. 定位漏洞代码片段
             src_codes_text, asm_codes_texts = self.snippet_positioner.position(vul_function_name=vul.function_name,

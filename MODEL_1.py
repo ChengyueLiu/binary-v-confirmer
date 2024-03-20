@@ -17,12 +17,12 @@ openssl_bin_path = r"TestCases/feature_extraction/binaries/openssl"
 libssl_bin_path = r"TestCases/feature_extraction/binaries/libssl.so.3"
 
 # openssl matched_function_feature
-function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
+openssl_function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
 
 # openssl train data items
-train_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/train_data.json"
-val_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/val_data.json"
-test_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/test_data.json"
+openssl_train_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/train_data.json"
+openssl_val_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/val_data.json"
+openssl_test_data_save_path = r"TestCases/model_train/model_1/train_data/openssl/test_data.json"
 
 # libpng train data items
 # src
@@ -33,12 +33,12 @@ libpng_bin_path = r"TestCases/feature_extraction/binaries/libpng16.so.16.44.0"
 png_fix_itxt_bin_path = r"TestCases/feature_extraction/binaries/png-fix-itxt"
 pngfix_bin_path = r"TestCases/feature_extraction/binaries/pngfix"
 
-function_features_path = r"TestCases/feature_extraction/libpng_feature/function_features.json"
+libpng_function_features_path = r"TestCases/feature_extraction/libpng_feature/function_features.json"
 
-# train_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/train_data.json"
-# val_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/val_data.json"
-# test_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/test_data.json"
-test_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/train_data.json"
+libpng_train_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/train_data.json"
+libpng_val_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/val_data.json"
+libpng_test_data_save_path = r"TestCases/model_train/model_1/train_data/libpng/test_data.json"
+
 
 def prepare_train_data_for_model_1():
     """
@@ -48,17 +48,28 @@ def prepare_train_data_for_model_1():
     """
     # 提取原始特征
     extract_matched_function_feature(
-        #    project_path=openssl_src_path,
-        # binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
+        project_path=openssl_src_path,
+        binary_file_paths=[libcrypto_bin_path, openssl_bin_path, libssl_bin_path],
+        save_path=openssl_function_features_path,
+    )
+    # 转换成训练数据
+    convert_function_feature_to_train_data(openssl_function_features_path,
+                                           openssl_train_data_save_path,
+                                           openssl_val_data_save_path,
+                                           openssl_test_data_save_path,
+                                           negative_ratio=5)
+
+    # 提取原始特征
+    extract_matched_function_feature(
         project_path=libpng_src_path,
         binary_file_paths=[libpng_bin_path, png_fix_itxt_bin_path, pngfix_bin_path],
-        save_path=function_features_path)
-    # 转换成训练数据
-    convert_function_feature_to_train_data(function_features_path,
-                                           train_data_save_path,
-                                           val_data_save_path,
-                                           test_data_save_path,
-                                           negative_ratio=3)
+        save_path=libpng_function_features_path
+    )
+    convert_function_feature_to_train_data(libpng_function_features_path,
+                                           libpng_train_data_save_path,
+                                           libpng_val_data_save_path,
+                                           libpng_test_data_save_path,
+                                           negative_ratio=5)
 
 
 def train_model_1():
@@ -69,12 +80,13 @@ def train_model_1():
     :return:
     """
     from main.models.function_confirm_model.model_training import run_train
-    run_train(train_data_save_path,
-              val_data_save_path,
-              test_data_save_path,
-              epochs=3,
-              batch_size=64,
-              test_only=False)
+    run_train(
+        openssl_train_data_save_path,
+        openssl_val_data_save_path,
+        openssl_test_data_save_path,
+        epochs=3,
+        batch_size=64,
+        test_only=False)
 
 
 def test_model_1_by_openssl():

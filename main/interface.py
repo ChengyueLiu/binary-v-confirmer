@@ -193,7 +193,6 @@ class DataItemForFunctionConfirmModel:
         self.bin_numbers: List[str] = [str(num) for num in bin_numbers]
         self.label = label
         self.bin_function_name = bin_function_name
-        self._normalize()
 
     def custom_serialize(self):
         return {
@@ -287,7 +286,7 @@ class DataItemForFunctionConfirmModel:
             merged_text = f"{src_text} {bin_text}"
         return merged_text
 
-    def _normalize(self):
+    def normalize(self):
         # 正规化处理源代码
         self.src_codes = [normalized_line for line in self.src_codes
                           if (normalized_line := line.strip())]

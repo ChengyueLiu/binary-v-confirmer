@@ -52,13 +52,17 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    train_data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in train_data_json]
+    data_items = []
+    for item in train_data_json:
+        data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
+        data_item.normalize()
+        data_items.append(data_item)
 
     texts = []
     labels = []
-    for train_data_item in train_data_items:
-        texts.append(train_data_item.get_train_text(tokenizer.sep_token))
-        labels.append(train_data_item.label)
+    for data_item in data_items:
+        texts.append(data_item.get_train_text(tokenizer.sep_token))
+        labels.append(data_item.label)
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
