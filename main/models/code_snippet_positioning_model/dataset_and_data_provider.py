@@ -1,4 +1,4 @@
-
+from loguru import logger
 from torch.utils.data import DataLoader
 
 from bintools.general.file_tool import load_from_json_file
@@ -97,6 +97,10 @@ class CodeSnippetPositioningDataset(Dataset):
             answer_tokens_start_index = 0
             answer_tokens_end_index = 0
 
+        if answer_tokens_end_index < answer_tokens_start_index:
+            logger.warning(
+                f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index}")
+
         # print(f"question: {self.questions[idx]}, "
         #       f"context: {self.contexts[idx]}, "
         #       f"answer: {self.contexts[idx][self.answer_start_indexes[idx]:self.answer_end_indexes[idx]]}, "
@@ -123,7 +127,6 @@ def create_dataset(file_path, tokenizer, max_len=512):
         data_item = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
         data_item.normalize()
         data_items.append(data_item)
-
 
     questions = []
     contexts = []

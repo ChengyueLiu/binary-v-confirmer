@@ -95,6 +95,8 @@ class SnippetPositioner:
             questions.append(data_item.get_question_text())
             contexts.append(data_item.get_context_text())
             answer_start_index, answer_end_index = data_item.get_answer_position()
+            if answer_end_index < answer_start_index:
+                logger.warning(f"answer_end_index < answer_start_index: {answer_end_index} < {answer_start_index}")
             answer_start_indexes.append(answer_start_index)
             answer_end_indexes.append(answer_end_index)
 
