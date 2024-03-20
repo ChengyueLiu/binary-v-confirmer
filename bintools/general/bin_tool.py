@@ -27,23 +27,21 @@ def normalize_asm_code(asm_code: str,
     data_size_markers_pattern = r"\b(byte|word|dword|qword|tword)\s+ptr\b"
     asm_code = re.sub(data_size_markers_pattern, "", asm_code)
 
-    # 如果是函数调用，不优化后续的替换
-    if asm_code.startswith('call'):
-        return asm_code
-
     # 替换寄存器为统一标记
     asm_code = re.sub(r"\br[\w\d]+\b", reg_token, asm_code)
+
     # 替换数字（立即数）为统一标记
     asm_code = re.sub(r"\b\d+\b|\b0x[a-f0-9]+\b", num_token, asm_code)
+
     # 简化内存访问，替换为统一标记
-    asm_code = re.sub(r"\[[^\]]+\]", mem_token, asm_code)
+    # asm_code = re.sub(r"\[[^\]]+\]", mem_token, asm_code)
 
     # 简化控制流指令，替换为跳转统一标记
     asm_code = re.sub(r"\bj(mp|e|z|nz|ne|g|ge|l|le|b|be|a|ae)\b", jump_token, asm_code)
 
     # 简化标签和符号引用，替换为位置统一标记
-    asm_code = re.sub(r"\bloc(ret)?_[\w\d]+\b", loc_token, asm_code)
-    asm_code = re.sub(r"\b[\w\d]+:\b", loc_token, asm_code)
+    # asm_code = re.sub(r"\bloc(ret)?_[\w\d]+\b", loc_token, asm_code)
+    # asm_code = re.sub(r"\b[\w\d]+:\b", loc_token, asm_code)
 
     # 处理空格
     asm_code = asm_code.replace("  ", " ").replace(", ", ",")
