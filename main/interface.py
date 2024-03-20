@@ -477,7 +477,7 @@ class Result:
     asm_codes: List[str]
     src_codes_text: str = None
     asm_codes_texts: List[str] = None
-    snippet_match_possibilities: List = None
+    snippet_match_possibilities: List = dataclasses.field(default_factory=list)
 
     def custom_serialize(self):
         return {
