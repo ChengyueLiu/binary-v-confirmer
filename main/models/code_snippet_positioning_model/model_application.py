@@ -98,7 +98,7 @@ class SnippetPositioner:
             answer_start_indexes.append(answer_start_index)
             answer_end_indexes.append(answer_end_index)
 
-        print("原始数据数量: ", len(questions))
+        # print("原始数据数量: ", len(questions))
         dataset = CodeSnippetPositioningDataset(questions,
                                                 contexts,
                                                 answer_start_indexes,
@@ -157,7 +157,5 @@ class SnippetPositioner:
 
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
-
-        logger.info(f"function: {vul_function_name}, predicted answers: {len(predicted_answers)}")
 
         return question, predicted_answers

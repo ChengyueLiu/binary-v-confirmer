@@ -21,9 +21,6 @@ def debug():
     )
 
     results = vul_confirm_team.confirm(binary_path=binary_path, vul=vul)
-    for result in results:
-        for prediction in result.snippet_match_possibilities:
-            print(prediction)
 
 
 if __name__ == '__main__':

@@ -41,15 +41,16 @@ class VulConfirmTeam:
             src_codes_text, asm_codes_texts = self.snippet_positioner.position(vul_function_name=vul.function_name,
                                                                                src_codes=result.src_codes,
                                                                                asm_codes=result.asm_codes)
-            print(f"len(asm_codes): {len(result.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_texts)}")
-            # result.src_codes_text = src_codes_text
-            # result.asm_codes_texts = asm_codes_texts
-            #
-            # # 3. 确认漏洞代码片段
-            # predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
-            #                                                   asm_codes_texts)
-            # result.snippet_match_possibilities = predictions
-            # print(predictions)
+
+            logger.info(f"len(asm_codes): {len(result.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_texts)}")
+            result.src_codes_text = src_codes_text
+            result.asm_codes_texts = asm_codes_texts
+
+            # 3. 确认漏洞代码片段
+            predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
+                                                              asm_codes_texts)
+            for pred in predictions:
+                logger.info(f"pred: {pred.item()}")
             # 4. 返回确认结果
             final_results.append(result)
 
