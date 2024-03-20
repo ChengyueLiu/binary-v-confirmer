@@ -50,7 +50,7 @@ class VulConfirmTeam:
             predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
                                                               asm_codes_texts)
             for pred in predictions:
-                logger.info(f"pred: {pred.item()}")
+                logger.info(f"pred: {pred[0]}, prob: {pred[1]}")
             # 4. 返回确认结果
             final_results.append(result)
 
