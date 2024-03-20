@@ -36,7 +36,8 @@ def train_model_3():
               test_data_save_path,
               model_save_path,
               epochs=3,
-              batch_size=64)
+              batch_size=64,
+              test_only=True)
 
 
 def test_model():
@@ -60,6 +61,6 @@ def test_model():
 
 
 if __name__ == '__main__':
-    prepare_data()
-    # train_model_3()
+    # prepare_data()
+    train_model_3()
     test_model()
