@@ -9,7 +9,8 @@ from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
 from bintools.general.file_tool import check_file_path, load_from_json_file
 from main.extractors.function_feature_extractor import extract_bin_feature, extract_src_feature_for_specific_function
-from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, Result
+from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, Result, PossibleBinFunction, \
+    CauseFunction
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataset_from_model_input
 import torch.nn.functional as F
@@ -45,15 +46,15 @@ class FunctionFinder:
 
         return device, tokenizer, model
 
-    def _preprocess_data(self, src_file_path, vul_function_name, binary_file_abs_path) -> (
+    def _preprocess_data(self, src_file_path, cause_function_name, binary_file_abs_path) -> (
             DataLoader, List[DataItemForFunctionConfirmModel]):
 
         # step 1 提取源代码特征
         logger.info(f"Extracting feature for {src_file_path}")
         src_function_feature = extract_src_feature_for_specific_function(file_path=src_file_path,
-                                                                         vul_function_name=vul_function_name)
+                                                                         vul_function_name=cause_function_name)
         if src_function_feature is None:
-            logger.error(f"Can't find function {vul_function_name} in {src_file_path}")
+            logger.error(f"Can't find function {cause_function_name} in {src_file_path}")
             return None
 
         logger.info(f"Feature extracted for {src_file_path}")
@@ -109,32 +110,29 @@ class FunctionFinder:
                 predictions.append((pred, prob))
         return predictions
 
-    def find_binary_functions(self, src_file_path: str,
-                              vul_function_name: str,
-                              binary_file_abs_path: str) -> List[Result]:
+    def find_binary_functions(self, cause_function: CauseFunction,
+                              binary_file_abs_path: str) -> (List[str], List[PossibleBinFunction]):
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
         """
         # 预处理数据
-        dataloader, data_items = self._preprocess_data(src_file_path,
-                                                       vul_function_name,
+        dataloader, data_items = self._preprocess_data(cause_function.file_path,
+                                                       cause_function.function_name,
                                                        binary_file_abs_path)
-
+        src_codes = data_items[0].src_codes
         # 预测
         predictions = self._predict(dataloader)
 
         # 输出结果
-        result: List[Result] = []
+        possible_bin_functions: List[PossibleBinFunction] = []
         for data_item, (pred, prob) in zip(data_items, predictions):
             if pred.item() == 1:
-                possible_bin_function = Result(
-                    function_name=vul_function_name,
-                    bin_function_name=data_item.bin_function_name,
-                    function_match_possibility=prob.item(),
-                    src_codes=data_item.src_codes,
+                possible_bin_function = PossibleBinFunction(
+                    function_name=data_item.bin_function_name,
+                    match_possibility=prob.item(),
                     asm_codes=data_item.asm_codes,
                 )
-                result.append(possible_bin_function)
-        result.sort(key=lambda x: x.function_match_possibility, reverse=True)
-        return result
+                possible_bin_functions.append(possible_bin_function)
+        possible_bin_functions.sort(key=lambda x: x.function_match_possibility, reverse=True)
+        return src_codes, possible_bin_functions

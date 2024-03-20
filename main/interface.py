@@ -453,35 +453,78 @@ class DataItemForCodeSnippetConfirmModel:
 
 
 @dataclass
-class Vulnerability:
+class Patch:
+    start_line_before_commit: int
+    end_line_before_commit: int
+    snippet_codes_before_commit: List[str]
+
+    start_line_after_commit: int
+    end_line_after_commit: int
+    snippet_codes_after_commit: List[str]
+
+    def customer_serialize(self):
+        return {
+            "start_line_before_commit": self.start_line_before_commit,
+            "end_line_before_commit": self.end_line_before_commit,
+            "snippet_codes_before_commit": self.snippet_codes_before_commit,
+            "start_line_after_commit": self.start_line_after_commit,
+            "end_line_after_commit": self.end_line_after_commit,
+            "snippet_codes_after_commit": self.snippet_codes_after_commit
+        }
+
+
+@dataclass
+class CauseFunction:
     project_name: str
     file_path: str
     function_name: str
     line_start: int = 0
     line_end: int = 0
-    function_codes: List[str] = dataclasses.field(default_factory=list)
-    snippet_codes: List[str] = dataclasses.field(default_factory=list)
+    src_codes: List[str] = dataclasses.field(default_factory=list)
+    src_codes_text: str = ""
+    patch: Patch = None
+
+    def customer_serialize(self):
+        return {
+            "project_name": self.project_name,
+            "file_path": self.file_path,
+            "function_name": self.function_name,
+            "line_start": self.line_start,
+            "line_end": self.line_end,
+            "src_codes": self.src_codes,
+            "src_codes_text": self.src_codes_text,
+            "patch": self.patch.customer_serialize() if self.patch else None
+        }
+
+
+@dataclass
+class PossibleBinFunction:
+    function_name: str
+    match_possibility: float
+    asm_codes: List[str] = dataclasses.field(default_factory=list)
+    asm_codes_window_texts: List[str] = dataclasses.field(default_factory=list)
+    predictions: List = dataclasses.field(default_factory=list)
+
+    def customer_serialize(self):
+        return {
+            "function_name": self.function_name,
+            "match_possibility": self.match_possibility,
+            "asm_codes": self.asm_codes,
+            "asm_codes_window_texts": self.asm_codes_window_texts,
+            "predictions": self.predictions
+        }
 
 
 @dataclass
 class Result:
-    function_name: str
-    bin_function_name: str
-    function_match_possibility: float
-    src_codes: List[str]
-    asm_codes: List[str]
-    src_codes_text: str = None
-    asm_codes_texts: List[str] = None
-    snippet_match_possibilities: List = dataclasses.field(default_factory=list)
+    # bin file path
+    # input
+    cause_function: CauseFunction
+    possible_bin_functions: List[PossibleBinFunction] = dataclasses.field(default_factory=list)
 
-    def custom_serialize(self):
+    def customer_serialize(self):
         return {
-            "function_name": self.function_name,
-            "bin_function_name": self.bin_function_name,
-            "function_match_possibility": self.function_match_possibility,
-            "src_codes": self.src_codes,
-            "asm_codes": self.asm_codes,
-            "src_codes_text": self.src_codes_text,
-            "asm_codes_texts": self.asm_codes_texts,
-            "snippet_match_possibilities": self.snippet_match_possibilities
+            "cause_function": self.cause_function.customer_serialize(),
+            "possible_bin_functions": [possible_bin_function.customer_serialize() for possible_bin_function in
+                                       self.possible_bin_functions]
         }

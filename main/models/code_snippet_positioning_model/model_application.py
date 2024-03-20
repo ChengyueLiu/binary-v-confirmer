@@ -137,8 +137,8 @@ class SnippetPositioner:
 
                 # 解码
                 answer = self.tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
-
-                predicted_answers.append(answer)
+                if answer:
+                    predicted_answers.append(answer)
         return predicted_answers
 
     def position(self, vul_function_name, src_codes: List[str], asm_codes: List[str]):
@@ -159,4 +159,5 @@ class SnippetPositioner:
 
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
+
         return question, predicted_answers

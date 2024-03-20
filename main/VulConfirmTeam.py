@@ -5,7 +5,7 @@ import torch
 from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file
-from main.interface import Vulnerability, Result
+from main.interface import CauseFunction, Result
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder
@@ -26,40 +26,46 @@ class VulConfirmTeam:
         self.snippet_confirmer = SnippetConfirmer(model_save_path=snippet_confirm_model_pth_path, batch_size=batch_size)
         logger.info("VulConfirmTeam init done")
 
-    def confirm(self, binary_path, vul: Vulnerability):
-        # TODO 今天要实现一个完整的代码，先不管正确率，然后要准备一个测试用例，之后才是调试
+    def confirm(self, binary_path, cause_function: CauseFunction) -> Result:
         # 1. 定位漏洞函数
-        results: List[Result] = self.function_finder.find_binary_functions(
-            src_file_path=vul.file_path,
-            vul_function_name=vul.function_name,
+        src_codes, possible_bin_functions = self.function_finder.find_binary_functions(
+            cause_function=cause_function,
             binary_file_abs_path=os.path.abspath(binary_path))
+        cause_function.src_codes = src_codes
 
-        final_results = []
-        for result in results[:3]:
+        final_possible_bin_functions = []
+        for possible_function in possible_bin_functions[:3]:
             logger.info(
-                f"function：{result.function_name} ---> bin_function: {result.bin_function_name}, personality: {result.function_match_possibility}")
-            # 2. 定位漏洞代码片段
-            src_codes_text, asm_codes_texts = self.snippet_positioner.position(vul_function_name=vul.function_name,
-                                                                               src_codes=result.src_codes,
-                                                                               asm_codes=result.asm_codes)
+                f"function：{cause_function.function_name} ---> bin_function: {possible_function.function_name}, "
+                f"personality: {possible_function.match_possibility}")
 
-            logger.info(f"len(asm_codes): {len(result.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_texts)}")
-            result.src_codes_text = src_codes_text
-            result.asm_codes_texts = [act for act in asm_codes_texts if act]
+            # 2. 定位漏洞代码片段
+            src_codes_text, asm_codes_texts = self.snippet_positioner.position(
+                vul_function_name=cause_function.function_name,
+                src_codes=src_codes,
+                asm_codes=possible_function.asm_codes)
+            cause_function.src_codes_text = src_codes_text
+
+            logger.info(
+                f"len(asm_codes): {len(possible_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_texts)}")
+            possible_function.asm_codes_window_texts = asm_codes_texts
 
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
                                                               asm_codes_texts)
-            for i, pred in enumerate(predictions):
-                logger.info(f"pred: {pred[0]}, prob: {pred[1]}")
-                result.snippet_match_possibilities.append(f"pred: {pred[0]}, prob: {pred[1]}")
+            for i, (pred, prob) in enumerate(predictions):
+                logger.info(f"pred: {pred}, prob: {prob}")
+                possible_function.predictions.append((pred, prob))
             # 4. 返回确认结果
-            final_results.append(result)
+            final_possible_bin_functions.append(possible_function)
+        result = Result(
+            cause_function=cause_function,
+            possible_bin_functions=final_possible_bin_functions
+        )
+        return result
 
-        return final_results
 
-
-def confirm_vul(vul_confirm_team: VulConfirmTeam, binary_path, vul: Vulnerability, save_path):
+def confirm_vul(vul_confirm_team: VulConfirmTeam, binary_path, vul: CauseFunction, save_path):
     """
     confirm vul and save result to json file
 
@@ -73,10 +79,7 @@ def confirm_vul(vul_confirm_team: VulConfirmTeam, binary_path, vul: Vulnerabilit
     # init confirm team
 
     # confirm vul
-    results = vul_confirm_team.confirm(binary_path=binary_path, vul=vul)
-
-    # convert result to json
-    result_json = [result.custom_serialize() for result in results]
+    result = vul_confirm_team.confirm(binary_path=binary_path, cause_function=vul)
 
     # save result to json file
-    save_to_json_file(result_json, save_path, output_log=True)
+    save_to_json_file(result.customer_serialize(), save_path, output_log=True)
