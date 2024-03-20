@@ -134,5 +134,5 @@ class FunctionFinder:
                     asm_codes=data_item.asm_codes,
                 )
                 possible_bin_functions.append(possible_bin_function)
-        possible_bin_functions.sort(key=lambda x: x.function_match_possibility, reverse=True)
+        possible_bin_functions.sort(key=lambda x: x.match_possibility, reverse=True)
         return src_codes, possible_bin_functions
