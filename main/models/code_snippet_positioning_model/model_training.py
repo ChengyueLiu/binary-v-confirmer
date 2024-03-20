@@ -141,7 +141,6 @@ def run_train(train_data_json_file_path,
               **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
-    test_only = kwargs.get('test_only', False)
     # 初始化训练
     logger.info('Init train...')
     device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(

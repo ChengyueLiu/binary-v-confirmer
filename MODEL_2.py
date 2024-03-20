@@ -50,8 +50,7 @@ def train_model_2():
               test_data_save_path,
               model_save_path,
               epochs=3,
-              batch_size=64,
-              test_only=True)
+              batch_size=64)
 
 
 def test_model():
