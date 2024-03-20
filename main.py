@@ -1,3 +1,4 @@
+from bintools.general.file_tool import save_to_json_file
 from main.VulConfirmTeam import VulConfirmTeam
 from main.interface import Vulnerability
 
@@ -22,6 +23,7 @@ def debug():
 
     results = vul_confirm_team.confirm(binary_path=binary_path, vul=vul)
 
+    save_to_json_file([result.custom_serialize() for result in results], "Results/confirm_results.json", output_log=True)
 
 if __name__ == '__main__':
     debug()

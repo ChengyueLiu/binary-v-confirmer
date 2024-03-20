@@ -49,8 +49,9 @@ class VulConfirmTeam:
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
                                                               asm_codes_texts)
-            for pred in predictions:
+            for i, pred in enumerate(predictions):
                 logger.info(f"pred: {pred[0]}, prob: {pred[1]}")
+                result.snippet_match_possibilities.append(f"pred: {pred[0]}, prob: {pred[1]}")
             # 4. 返回确认结果
             final_results.append(result)
 

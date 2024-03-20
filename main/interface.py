@@ -478,3 +478,15 @@ class Result:
     src_codes_text: str = None
     asm_codes_texts: List[str] = None
     snippet_match_possibilities: List = None
+
+    def custom_serialize(self):
+        return {
+            "function_name": self.function_name,
+            "bin_function_name": self.bin_function_name,
+            "function_match_possibility": self.function_match_possibility,
+            "src_codes": self.src_codes,
+            "asm_codes": self.asm_codes,
+            "src_codes_text": self.src_codes_text,
+            "asm_codes_texts": self.asm_codes_texts,
+            "snippet_match_possibilities": self.snippet_match_possibilities
+        }
