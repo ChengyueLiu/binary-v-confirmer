@@ -138,6 +138,7 @@ def run_train(train_data_json_file_path,
               val_data_json_file_path,
               test_data_json_file_path,
               model_save_path="model_weights.pth",
+              test_only=False,
               **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
