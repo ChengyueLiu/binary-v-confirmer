@@ -82,8 +82,8 @@ class SnippetPositioner:
                                                                src_codes=src_codes,
                                                                asm_codes=asm_codes_window,
                                                                answer_start_index=0,
-                                                               answer_end_index=0,
-                                                               normalized=False)
+                                                               answer_end_index=0)
+            data_item.normalize()
             data_items.append(data_item)
 
         # step 2: 创建dataset
@@ -157,5 +157,4 @@ class SnippetPositioner:
 
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
-
         return question, predicted_answers

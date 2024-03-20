@@ -86,7 +86,9 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
                                            src_function_features=[src_function_feature])
         function_features.append(function_feature)
 
-    model_input = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
-                   for ff in function_features]
-
+    model_input = []
+    for ff in function_features:
+        data_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
+        data_item.normalize()
+        model_input.append(data_item)
     return model_input

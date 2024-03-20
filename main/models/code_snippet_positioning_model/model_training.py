@@ -141,7 +141,7 @@ def run_train(train_data_json_file_path,
               **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
-
+    test_only = kwargs.get('test_only', False)
     # 初始化训练
     logger.info('Init train...')
     device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(
@@ -150,21 +150,21 @@ def run_train(train_data_json_file_path,
         test_data_json_file_path,
         **kwargs)  # 确保其他参数也能被传递
     logger.info('Initialized, start training, epochs: {}, batch_size: {}...'.format(epochs, batch_size))
+    if not test_only:
+        # 训练和验证
+        for epoch in range(epochs):
+            logger.info(f'Epoch {epoch + 1}/{epochs}')
+            train_loss, train_precision, train_recall, train_f1 = train_or_evaluate(model, train_loader, optimizer,
+                                                                                    scheduler, device, is_train=True)
+            valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer, scheduler,
+                                                                                    device, is_train=False)
+            print(
+                f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
+            print(
+                f'\t Val. Loss: {valid_loss:.3f} |  Val Precision: {valid_precision:.2f} | Val Recall: {valid_recall:.2f} | Val F1: {valid_f1:.2f}')
 
-    # 训练和验证
-    for epoch in range(epochs):
-        logger.info(f'Epoch {epoch + 1}/{epochs}')
-        train_loss, train_precision, train_recall, train_f1 = train_or_evaluate(model, train_loader, optimizer,
-                                                                                scheduler, device, is_train=True)
-        valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer, scheduler,
-                                                                                device, is_train=False)
-        print(
-            f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
-        print(
-            f'\t Val. Loss: {valid_loss:.3f} |  Val Precision: {valid_precision:.2f} | Val Recall: {valid_recall:.2f} | Val F1: {valid_f1:.2f}')
-
-    logger.info('Training complete, saving model...')
-    torch.save(model.state_dict(), model_save_path)
+        logger.info('Training complete, saving model...')
+        torch.save(model.state_dict(), model_save_path)
 
     # 测试
     logger.info('Model saved, starting test, loading model from {}...'.format(model_save_path))

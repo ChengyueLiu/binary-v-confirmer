@@ -62,4 +62,4 @@ def test_model():
 if __name__ == '__main__':
     prepare_data()
     # train_model_3()
-    # test_model()
+    test_model()
