@@ -39,7 +39,8 @@ class SnippetConfirmer:
         return device, tokenizer, model
 
     def _preprocess_data(self, src_codes_text: str, asm_codes_text_list: str):
-        texts = [src_codes_text] * len(asm_codes_text_list)
+        texts = [f"{src_codes_text} {self.tokenizer.sep_token} {asm_codes_text}"
+                 for asm_codes_text in asm_codes_text_list]
         labels = [0] * len(asm_codes_text_list)
         dataset = CodeSnippetConfirmDataset(texts, labels, self.tokenizer)
         train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
@@ -57,6 +58,7 @@ class SnippetConfirmer:
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
             with torch.no_grad():
+                # model: RobertaForSequenceClassification
                 outputs = self.model(input_ids, attention_mask=attention_mask)
             logits = outputs.logits
             # 使用softmax计算概率
@@ -79,10 +81,7 @@ class SnippetConfirmer:
         # 预测
         predictions = self._predict(dataloader)
 
-        # 输出结果
-        # possible_snippets = []
-        # for pred, prob in predictions:
-        #     if pred.item() == 1:
-        #         print(pred)
+        for pred, prob in predictions:
+            print(pred.item(), prob.item())
 
         return predictions

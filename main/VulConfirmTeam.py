@@ -45,7 +45,7 @@ class VulConfirmTeam:
 
             logger.info(f"len(asm_codes): {len(result.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_texts)}")
             result.src_codes_text = src_codes_text
-            result.asm_codes_texts = asm_codes_texts
+            result.asm_codes_texts = [act for act in asm_codes_texts if act]
 
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(src_codes_text,
