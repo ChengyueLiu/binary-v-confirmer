@@ -4,6 +4,7 @@ from typing import List
 import torch
 from loguru import logger
 
+from bintools.general.file_tool import save_to_json_file
 from main.interface import Vulnerability, Result
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
@@ -56,3 +57,36 @@ class VulConfirmTeam:
             final_results.append(result)
 
         return final_results
+
+
+def confirm_vul(binary_path, vul: Vulnerability, save_path,
+                function_confirm_model_pth_path=r"Resources/model_weights/model_1_weights.pth",
+                snippet_positioning_model_pth_path=r"Resources/model_weights/model_2_weights.pth",
+                snippet_confirm_model_pth_path=r"Resources/model_weights/model_3_weights.pth"):
+    """
+    confirm vul and save result to json file
+
+    :param binary_path:
+    :param vul:
+    :param save_path:
+    :param function_confirm_model_pth_path:
+    :param snippet_positioning_model_pth_path:
+    :param snippet_confirm_model_pth_path:
+    :return:
+    """
+    # init confirm team
+    vul_confirm_team = VulConfirmTeam(
+        function_confirm_model_pth_path=function_confirm_model_pth_path,
+        snippet_positioning_model_pth_path=snippet_positioning_model_pth_path,
+        snippet_confirm_model_pth_path=snippet_confirm_model_pth_path,
+        batch_size=16
+    )
+
+    # confirm vul
+    results = vul_confirm_team.confirm(binary_path=binary_path, vul=vul)
+
+    # convert result to json
+    result_json = [result.custom_serialize() for result in results]
+
+    # save result to json file
+    save_to_json_file(result_json, save_path, output_log=True)
