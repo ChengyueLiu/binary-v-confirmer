@@ -10,7 +10,7 @@ def debug():
         file_path="TestCases/model_train/model_1/test_data/p12_add.c",
         function_name="*PKCS12_unpack_p7data"
     )
-    save_path = "Results/confirm_results.json"
+    save_path = "TestCases/confirm_results.json"
 
     confirm_vul(binary_path, vul, save_path)
 
