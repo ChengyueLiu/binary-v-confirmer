@@ -99,7 +99,8 @@ class CodeSnippetPositioningDataset(Dataset):
 
         if answer_tokens_end_index < answer_tokens_start_index:
             logger.warning(
-                f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index}")
+                f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index},\n"
+                f"answer_start_index: {self.answer_start_indexes[idx]}, answer_end_index: {self.answer_end_indexes[idx]}")
 
         # print(f"question: {self.questions[idx]}, "
         #       f"context: {self.contexts[idx]}, "
