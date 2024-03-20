@@ -213,9 +213,14 @@ def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
     data_items = []
     # 遍历这些片段，构成训练数据
     for function_name, left_raw_data_items, current_raw_data_items, right_raw_data_items in train_data_items:
+        if function_name == "AES_ecb_encrypt":
+            print()
         # 匹配的汇编源代码
-        src_codes = [current_raw_data_item["current_src_line"] for current_raw_data_item in current_raw_data_items]
-
+        # TODO 这里的源码不对，顺序不对，或者重复了，需要调整
+        # src_codes = [current_raw_data_item["current_src_line"] for current_raw_data_item in current_raw_data_items]
+        src_dict, min_line, max_line = process_src_codes(current_raw_data_items)
+        if not src_dict:
+            continue
         # 匹配的汇编代码
         asm_codes = []
         for current_raw_data_item in current_raw_data_items:
@@ -225,7 +230,14 @@ def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
         answer_start_index, answer_end_index, answer_length, asm_codes = cal_answer_position(asm_codes,
                                                                                              left_raw_data_items,
                                                                                              max_asm_lines,
-                                                                                             right_raw_data_items)
+                                                                                             right_raw_data_items,
+                                                                                             src_dict,
+                                                                                             min_line,
+                                                                                             max_line)
+        # 重新构建源代码
+        src_codes = []
+        for i in range(min_line, max_line + 1):
+            src_codes.append(src_dict.get(i, ""))
 
         # 筛选数据
         succeed = check_effective(src_codes, asm_codes)
@@ -260,6 +272,8 @@ def merge_discriminators(raw_train_data):
 def random_select_snippets(max_src_lines, raw_train_data, max_num=3):
     train_data_items = []
     for function_name, raw_data_items in raw_train_data.items():
+        if function_name == "AES_ecb_encrypt":
+            print()
         if len(raw_data_items) < max_src_lines:
             train_data_items.append((function_name, [], raw_data_items, []))
             continue
@@ -280,7 +294,35 @@ def random_select_snippets(max_src_lines, raw_train_data, max_num=3):
     return train_data_items
 
 
-def cal_answer_position(asm_codes, left_raw_data_items, max_asm_lines, right_raw_data_items):
+def process_src_codes(current_raw_data_items):
+    if not current_raw_data_items:
+        return [], None, None
+
+    # 先构建一个源代码字典
+    src_dict = {}
+    min_line = None
+    max_line = None
+    for current_raw_data_item in current_raw_data_items:
+        src_code = current_raw_data_item["current_src_line"]
+        src_line_num = current_raw_data_item["line_number"]
+        if not min_line or src_line_num < min_line:
+            min_line = src_line_num
+        if not max_line or src_line_num > max_line:
+            max_line = src_line_num
+
+        src_dict[src_line_num] = src_code
+        previous_src_lines = current_raw_data_item["previous_src_lines"]
+        next_src_lines = current_raw_data_item["next_src_lines"]
+        for i, line in enumerate(previous_src_lines, start=src_line_num - len(previous_src_lines)):
+            src_dict[i] = line
+        for i, line in enumerate(next_src_lines, start=src_line_num + 1):
+            src_dict[i] = line
+
+    return src_dict, min_line, max_line
+
+
+def cal_answer_position(asm_codes, left_raw_data_items, max_asm_lines, right_raw_data_items, src_dict, min_line,
+                        max_line):
     # 答案位置
     answer_start_index = 0
     answer_end_index = len(asm_codes) - 1
@@ -295,9 +337,16 @@ def cal_answer_position(asm_codes, left_raw_data_items, max_asm_lines, right_raw
             left_asm_codes = left_raw_data_items[left_index]["asm_lines"]
             asm_codes = left_asm_codes + asm_codes
 
-            # 更新答案位置
-            answer_start_index += len(left_asm_codes)
-            answer_end_index += len(left_asm_codes)
+            # 更新结束位置和源码字典
+            line_number = left_raw_data_items[left_index]["line_number"]
+            if min_line <= line_number <= max_line:
+                answer_end_index += len(left_raw_data_items[left_index]["asm_lines"])
+                src_dict[line_number] = left_raw_data_items[left_index]["current_src_line"]
+
+            # 否则更新开始和结束位置
+            else:
+                answer_start_index += len(left_asm_codes)
+                answer_end_index += len(left_asm_codes)
 
             # 如果超过了50，就不添加了
             if len(asm_codes) >= max_asm_lines:
@@ -309,7 +358,12 @@ def cal_answer_position(asm_codes, left_raw_data_items, max_asm_lines, right_raw
         # 如果有右边的，再添加右边的
         if right_index < len(right_raw_data_items):
             # 添加
-            asm_codes.extend(right_raw_data_items[0]["asm_lines"])
+            asm_codes.extend(right_raw_data_items[right_index]["asm_lines"])
+            # 更新结束位置和源码字典
+            line_number = right_raw_data_items[right_index]["line_number"]
+            if min_line <= line_number <= max_line:
+                answer_end_index += len(right_raw_data_items[right_index]["asm_lines"])
+                src_dict[line_number] = right_raw_data_items[right_index]["current_src_line"]
 
             # 如果超过了50，就不添加了
             if len(asm_codes) >= max_asm_lines:

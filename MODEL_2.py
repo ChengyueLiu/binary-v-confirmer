@@ -118,6 +118,6 @@ def test_model():
 
 
 if __name__ == '__main__':
-    # prepare_data()
-    train_model_2()
+    prepare_data()
+    # train_model_2()
     # test_model()
