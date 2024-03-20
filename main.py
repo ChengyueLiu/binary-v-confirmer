@@ -48,13 +48,13 @@ def test_model():
     confirm_vul(vul_confirm_team, binary_path, cause_function, save_path)
 
     # test file: libcrypto.so.3
-    binary_path = "TestCases/feature_extraction/binaries/libcrypto.so.3"
-    save_path = "TestCases/libcrypto_confirm_results.json"
-    confirm_vul(vul_confirm_team, binary_path, cause_function, save_path)
+    # binary_path = "TestCases/feature_extraction/binaries/libcrypto.so.3"
+    # save_path = "TestCases/libcrypto_confirm_results.json"
+    # confirm_vul(vul_confirm_team, binary_path, cause_function, save_path)
 
     logger.info("Test finished")
 
 
 if __name__ == '__main__':
-    train()
-    # test_model()
+    # train()
+    test_model()
