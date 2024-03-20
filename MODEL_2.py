@@ -39,7 +39,7 @@ def prepare_data():
                                          test_data_json)
 
 
-def train_model():
+def train_model_2():
     train_data_save_path = "TestCases/model_train/model_2/final_train_data_items/train_data.json"
     val_data_save_path = "TestCases/model_train/model_2/final_train_data_items/valid_data.json"
     test_data_save_path = "TestCases/model_train/model_2/final_train_data_items/test_data.json"
@@ -119,5 +119,5 @@ def test_model():
 
 if __name__ == '__main__':
     # prepare_data()
-    train_model()
+    train_model_2()
     # test_model()
