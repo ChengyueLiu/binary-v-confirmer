@@ -40,14 +40,17 @@ class CodeSnippetConfirmDataset(Dataset):
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    train_data_items = [DataItemForCodeSnippetConfirmModel.init_from_dict(item)
-                        for item in train_data_json]
+    data_items = []
+    for item in train_data_json:
+        data_item = DataItemForCodeSnippetConfirmModel.init_from_dict(item)
+        data_item.normalize()
+        data_items.append(data_item)
 
     texts = []
     labels = []
-    for train_data_item in train_data_items:
-        texts.append(train_data_item.get_text(tokenizer.sep_token))
-        labels.append(train_data_item.get_label())
+    for data_item in data_items:
+        texts.append(data_item.get_text(tokenizer.sep_token))
+        labels.append(data_item.get_label())
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})

@@ -320,6 +320,7 @@ class DataItemForCodeSnippetPositioningModel:
         self.asm_codes = asm_codes
         self.answer_start_index = answer_start_index
         self.answer_end_index = answer_end_index
+        self.answer_asm_codes = self.asm_codes[self.answer_start_index:self.answer_end_index + 1]
 
         self.answer_length = len(self.asm_codes[self.answer_start_index:self.answer_end_index + 1])  # 结束位置的索引是闭区间
         self.src_length = len(self.src_codes)
@@ -358,7 +359,7 @@ class DataItemForCodeSnippetPositioningModel:
         return " ".join(self.asm_codes)
 
     def get_answer_text(self):
-        return " ".join(self.asm_codes[self.answer_start_index:self.answer_end_index + 1])
+        return " ".join(self.answer_asm_codes)
 
     def get_answer_position(self):
         # 这里要重新计算，换成字符的位置
@@ -372,6 +373,9 @@ class DataItemForCodeSnippetPositioningModel:
 
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := self._normalize_asm_code(code))]
+
+        self.answer_asm_codes = [normalized_code for code in self.answer_asm_codes
+                                 if (normalized_code := self._normalize_asm_code(code))]
 
     def _normalize_asm_code(self, asm_code):
         # 如果输入的是原始的行信息，要先分割一下
@@ -397,7 +401,6 @@ class DataItemForCodeSnippetConfirmModel:
         self.src_codes = src_codes
         self.asm_codes = asm_codes
         self.label = label
-
 
     def custom_serialize(self):
         return {

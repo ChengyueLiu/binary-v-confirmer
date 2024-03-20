@@ -13,7 +13,7 @@ def generate_data_items(file_path: str, save_path: str):
     # step 2: 生成例子
     train_data_items = [DataItemForCodeSnippetConfirmModel(
         src_codes=item.src_codes,
-        asm_codes=item.asm_codes[item.answer_start_index:item.answer_end_index + 1],
+        asm_codes=item.answer_asm_codes,
         label=1,
     ) for item in model_2_train_data_items]
 
@@ -21,7 +21,7 @@ def generate_data_items(file_path: str, save_path: str):
     negative_examples = []
     for positive_item in model_2_train_data_items:
         # 为每个正例生成3个负例
-        for _ in range(3):
+        for _ in range(5):
             # 随机选择一个不同的条目作为负例的源
             while True:
                 random_item = random.choice(model_2_train_data_items)
@@ -34,7 +34,6 @@ def generate_data_items(file_path: str, save_path: str):
                 src_codes=positive_item.src_codes,  # 使用正例的 src_codes
                 asm_codes=random_item.asm_codes,  # 使用随机选择的不相关的 asm_codes
                 label=0,  # 标签设置为0
-                normalize=False
             )
             negative_examples.append(negative_example)
 
