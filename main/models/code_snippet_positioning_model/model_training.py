@@ -8,7 +8,6 @@ from main.interface import DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset, create_dataloaders
 
 
-
 def init_train(train_data_json_file_path,
                val_data_json_file_path,
                test_data_json_file_path,
@@ -124,6 +123,8 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
             total_overlap += overlap
             total_true_length += true_length
             total_pred_length += pred_length
+            if overlap > true_length:
+                logger.warning(f'overlap: {overlap} > true_length: {true_length}')
 
     precision = total_overlap / total_pred_length if total_pred_length > 0 else 0
     recall = total_overlap / total_true_length if total_true_length > 0 else 0
