@@ -107,8 +107,8 @@ def test_model_1_by_openssl():
     libssl = os.path.join(test_data_dir, "libssl.so.3")
 
     # model init
-    model_save_path = os.path.join(root_dir, "model_weights.pth")
-    # model_save_path = r"C:\Users\liuchengyue\Desktop\projects\Wroks\binary-v-confirmer\Resources\model_weights\stable_model_1_weights.pth"
+    # model_save_path = os.path.join(root_dir, "model_weights.pth")
+    model_save_path = r"Resources/model_weights/model_1_weights.pth"
     vul_function_finder = FunctionFinder(
         model_save_path=model_save_path,
         batch_size=batch_size
@@ -141,9 +141,9 @@ if __name__ == '__main__':
     # prepare_train_data_for_model_1()
 
     # Done
-    # train_model_1()
+    train_model_1()
 
     # Done
-    test_model_1_by_openssl()
+    # test_model_1_by_openssl()
 
     # TODO test_model_1_by_more_test_cases()
