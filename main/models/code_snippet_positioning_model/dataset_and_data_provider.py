@@ -95,6 +95,9 @@ class CodeSnippetPositioningDataset(Dataset):
         elif not answer_tokens_end_index:
             answer_tokens_end_index = len(encoding['input_ids']) - 1
 
+        if answer_tokens_end_index < answer_tokens_start_index:
+            logger.warning(f"answer_start_index: {self.answer_start_indexes[idx]}, answer_end_index: {self.answer_end_indexes[idx]}")
+            logger.warning(f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index}")
         answer_tokens_start_index_tensor = torch.tensor([answer_tokens_start_index])
         answer_tokens_end_index_tensor = torch.tensor([answer_tokens_end_index])
 
