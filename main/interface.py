@@ -314,8 +314,7 @@ class DataItemForCodeSnippetPositioningModel:
                  src_codes: List[str],
                  asm_codes: List[str],
                  answer_start_index: int,
-                 answer_end_index: int,
-                 normalized=True):
+                 answer_end_index: int):
         self.function_name = function_name
         self.src_codes = src_codes
         self.asm_codes = asm_codes
@@ -325,8 +324,6 @@ class DataItemForCodeSnippetPositioningModel:
         self.answer_length = len(self.asm_codes[self.answer_start_index:self.answer_end_index + 1])  # 结束位置的索引是闭区间
         self.src_length = len(self.src_codes)
         self.asm_length = len(self.asm_codes)
-        if normalized:
-            self._normalize()
 
     def custom_serialize(self):
         return {
@@ -348,7 +345,6 @@ class DataItemForCodeSnippetPositioningModel:
             asm_codes=data['asm_codes'],
             answer_start_index=data['answer_start_index'],
             answer_end_index=data['answer_end_index'],
-            normalized=False
         )
 
     @classmethod
@@ -370,7 +366,7 @@ class DataItemForCodeSnippetPositioningModel:
         end_index = start_index + len(self.get_answer_text()) - 1
         return start_index, end_index
 
-    def _normalize(self):
+    def normalize(self):
         self.src_codes = [normalized_line for line in self.src_codes
                           if (normalized_line := line.strip())]
 
@@ -397,13 +393,11 @@ class DataItemForCodeSnippetConfirmModel:
 
     def __init__(self, src_codes: List[str],
                  asm_codes: List[str],
-                 label=1,
-                 normalize=True):
+                 label=1):
         self.src_codes = src_codes
         self.asm_codes = asm_codes
         self.label = label
-        if normalize:
-            self.normalize()
+
 
     def custom_serialize(self):
         return {
@@ -417,8 +411,7 @@ class DataItemForCodeSnippetConfirmModel:
         return cls(
             src_codes=data['src_codes'],
             asm_codes=data['asm_codes'],
-            label=data['label'],
-            normalize=False
+            label=data['label']
         )
 
     def get_text(self, separator=None):

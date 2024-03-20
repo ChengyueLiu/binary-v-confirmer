@@ -118,16 +118,21 @@ class CodeSnippetPositioningDataset(Dataset):
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    train_data_items = [DataItemForCodeSnippetPositioningModel.init_from_dict(item) for item in train_data_json]
+    data_items = []
+    for item in train_data_json:
+        data_item = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
+        data_item.normalize()
+        data_items.append(data_item)
+
 
     questions = []
     contexts = []
     answer_start_indexes = []
     answer_end_indexes = []
-    for train_data_item in train_data_items:
-        questions.append(train_data_item.get_question_text())
-        contexts.append(train_data_item.get_context_text())
-        answer_start_index, answer_end_index = train_data_item.get_answer_position()
+    for data_item in data_items:
+        questions.append(data_item.get_question_text())
+        contexts.append(data_item.get_context_text())
+        answer_start_index, answer_end_index = data_item.get_answer_position()
         answer_start_indexes.append(answer_start_index)
         answer_end_indexes.append(answer_end_index)
 

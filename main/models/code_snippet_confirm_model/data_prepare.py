@@ -15,7 +15,6 @@ def generate_data_items(file_path: str, save_path: str):
         src_codes=item.src_codes,
         asm_codes=item.asm_codes[item.answer_start_index:item.answer_end_index + 1],
         label=1,
-        normalize=False
     ) for item in model_2_train_data_items]
 
     # step 3: 生成负例
