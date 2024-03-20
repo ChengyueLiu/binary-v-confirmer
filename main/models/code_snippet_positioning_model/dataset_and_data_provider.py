@@ -93,7 +93,7 @@ class CodeSnippetPositioningDataset(Dataset):
             answer_tokens_end_index = 0
 
         elif not answer_tokens_end_index:
-            answer_tokens_end_index = len(encoding['input_ids']) - 1
+            answer_tokens_end_index = self.max_len - 1
 
         if answer_tokens_end_index < answer_tokens_start_index:
             logger.warning(f"answer_start_index: {self.answer_start_indexes[idx]}, answer_end_index: {self.answer_end_indexes[idx]}")
