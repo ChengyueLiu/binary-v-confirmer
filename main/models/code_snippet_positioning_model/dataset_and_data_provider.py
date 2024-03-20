@@ -88,28 +88,13 @@ class CodeSnippetPositioningDataset(Dataset):
             self.answer_end_indexes[idx],
             encoding['offset_mapping'].squeeze())
 
-        # TODO ,解决这个问题：answer_tokens_end_index 可能为None, 因为token可能超出了max_len，被截断了
-        if not answer_tokens_end_index:
-            answer_tokens_end_index = len(encoding['input_ids']) - 1
-
-        # TODO 另一个问题，源代码本身就超长了，这个问题怎么解决？
         if not answer_tokens_start_index:
             answer_tokens_start_index = 0
             answer_tokens_end_index = 0
 
-        if answer_tokens_end_index < answer_tokens_start_index:
-            logger.warning(
-                f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index},\n"
-                f"answer_start_index: {self.answer_start_indexes[idx]}, answer_end_index: {self.answer_end_indexes[idx]}")
+        elif not answer_tokens_end_index:
+            answer_tokens_end_index = len(encoding['input_ids']) - 1
 
-        # print(f"question: {self.questions[idx]}, "
-        #       f"context: {self.contexts[idx]}, "
-        #       f"answer: {self.contexts[idx][self.answer_start_indexes[idx]:self.answer_end_indexes[idx]]}, "
-        #       f"answer_start: {self.answer_start_indexes[idx]}, "
-        #       f"answer_end: {self.answer_end_indexes[idx]}, "
-        #       f"answer_tokens_start_index: {answer_tokens_start_index}, "
-        #       f"answer_tokens_end_index: {answer_tokens_end_index}")
-        # 将答案的token级别的开始和结束位置转换为tensor
         answer_tokens_start_index_tensor = torch.tensor([answer_tokens_start_index])
         answer_tokens_end_index_tensor = torch.tensor([answer_tokens_end_index])
 
