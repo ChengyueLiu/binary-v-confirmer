@@ -102,7 +102,7 @@ def test_model():
     cause_function_2 = CauseFunction(
         project_name="openssl",
         file_name="crypto/pkcs12/p12_npas.c",
-        file_path="TestCases/cve/p12_add.c",
+        file_path="TestCases/cve/p12_npas.c",
         function_name="newpass_p12",
         patches=[patch_2]
     )
