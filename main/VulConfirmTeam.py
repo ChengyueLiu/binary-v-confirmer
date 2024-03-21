@@ -1,11 +1,9 @@
 import os
-from typing import List
 
-import torch
 from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file
-from main.interface import CauseFunction, ConfirmAnalysis, Vulnerability, PossibleBinFunction, PossibleAsmSnippet
+from main.interface import Vulnerability, PossibleAsmSnippet
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder

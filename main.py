@@ -1,7 +1,6 @@
-from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file
-from main.VulConfirmTeam import VulConfirmTeam, confirm_vul
+from main.VulConfirmTeam import VulConfirmTeam
 from main.interface import CauseFunction, Vulnerability, Patch
 
 
