@@ -56,6 +56,9 @@ def create_dataset(file_path, tokenizer, max_len=512):
     for item in train_data_json:
         data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
         data_item.normalize()
+        # 算上函数名，还小于7行的函数不使用
+        if len(data_item.src_codes) < 7:
+            continue
         data_items.append(data_item)
 
     texts = []

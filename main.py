@@ -14,9 +14,9 @@ def train():
         logger.info("Start training model 1")
         train_model_1()
         logger.info("Start training model 2")
-        train_model_2()
+        # train_model_2()
         logger.info("Start training model 3")
-        train_model_3()
+        # train_model_3()
         logger.info("Training finished")
 
 
@@ -190,5 +190,9 @@ def test_model():
 
 
 if __name__ == '__main__':
-    # train()
+    train()
     test_model()
+    # TODO 调整分析文件的格式，更容易分析
+    # TODO 增加最终结果判定
+    # TODO 如何在linux上安装IDA pro？
+    # TODO 优化训练数据，移除干扰函数
