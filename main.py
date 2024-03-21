@@ -2,7 +2,7 @@ from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file
 from main.VulConfirmTeam import VulConfirmTeam, confirm_vul
-from main.interface import CauseFunction
+from main.interface import CauseFunction, Vulnerability, Patch
 
 
 def train():
@@ -23,36 +23,68 @@ def train():
 
 
 def test_model():
-    # Test model
-    function_confirm_model_pth_path = r"Resources/model_weights/model_1_weights.pth"
-    snippet_positioning_model_pth_path = r"Resources/model_weights/model_2_weights.pth"
-    snippet_confirm_model_pth_path = r"Resources/model_weights/model_3_weights.pth"
-
-    vul_confirm_team = VulConfirmTeam(
-        function_confirm_model_pth_path=function_confirm_model_pth_path,
-        snippet_positioning_model_pth_path=snippet_positioning_model_pth_path,
-        snippet_confirm_model_pth_path=snippet_confirm_model_pth_path,
-        batch_size=16
-    )
-
-    # Test vulnerability
+    # cause_function
     cause_function = CauseFunction(
         project_name="openssl",
         file_path="TestCases/model_train/model_1/test_data/p12_add.c",
         function_name="*PKCS12_unpack_p7data"
     )
 
+    # patch
+    patch = Patch(
+        commit_id="",
+        affected_since="",
+        fixed_in="",
+
+        start_line_before_commit=78,
+        snippet_size_before_commit=6,
+        snippet_codes_before_commit=[
+            "         ERR_raise(ERR_LIB_PKCS12, PKCS12_R_CONTENT_TYPE_NOT_DATA);",
+            "         return NULL;",
+            "     }",
+            "     return ASN1_item_unpack_ex(p7->d.data, ASN1_ITEM_rptr(PKCS12_SAFEBAGS),",
+            "                                ossl_pkcs7_ctx_get0_libctx(&p7->ctx),",
+            "                                ossl_pkcs7_ctx_get0_propq(&p7->ctx));"
+        ],
+        start_line_after_commit=78,
+        snippet_size_after_commit=12,
+        snippet_codes_after_commit=[
+            "         ERR_raise(ERR_LIB_PKCS12, PKCS12_R_CONTENT_TYPE_NOT_DATA);",
+            "         return NULL;",
+            "     }",
+            "+",
+            "+    if (p7->d.data == NULL) {",
+            "+        ERR_raise(ERR_LIB_PKCS12, PKCS12_R_DECODE_ERROR);",
+            "+        return NULL;",
+            "+    }",
+            "+",
+            "     return ASN1_item_unpack_ex(p7->d.data, ASN1_ITEM_rptr(PKCS12_SAFEBAGS),",
+            "                                ossl_pkcs7_ctx_get0_libctx(&p7->ctx),",
+            "                                ossl_pkcs7_ctx_get0_propq(&p7->ctx));"
+        ]
+    )
+
+    # vulnerability
+    vulnerability = Vulnerability(
+        cve_id="CVE-2024-0727",
+        cve_link="https://www.cve.org/CVERecord?id=CVE-2024-0727",
+        title="PKCS12 Decoding crashes",
+        severity="Low",
+        cause_function=cause_function,
+        patches=[patch]
+    )
+
     # test file: openssl
     binary_path = "TestCases/feature_extraction/binaries/openssl"
+
+    # confirm vulnerability
     save_path = "TestCases/openssl_confirm_results.json"
-    confirm_vul(vul_confirm_team, binary_path, cause_function, save_path)
 
-    # test file: libcrypto.so.3
-    # binary_path = "TestCases/feature_extraction/binaries/libcrypto.so.3"
-    # save_path = "TestCases/libcrypto_confirm_results.json"
-    # confirm_vul(vul_confirm_team, binary_path, cause_function, save_path)
+    vul_confirm_team = VulConfirmTeam()
+    analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
 
-    logger.info("Test finished")
+    # save result to json file
+    save_to_json_file(analysis.customer_serialize(), save_path, output_log=True)
 
 
 if __name__ == '__main__':

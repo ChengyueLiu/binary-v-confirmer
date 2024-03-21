@@ -9,7 +9,7 @@ from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
 from bintools.general.file_tool import check_file_path, load_from_json_file
 from main.extractors.function_feature_extractor import extract_bin_feature, extract_src_feature_for_specific_function
-from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, Result, PossibleBinFunction, \
+from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, ConfirmAnalysis, PossibleBinFunction, \
     CauseFunction
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataset_from_model_input
@@ -46,8 +46,9 @@ class FunctionFinder:
 
         return device, tokenizer, model
 
-    def _preprocess_data(self, src_file_path, cause_function_name, binary_file_abs_path) -> (
-            DataLoader, List[DataItemForFunctionConfirmModel]):
+    def _preprocess_data(self, src_file_path,
+                         cause_function_name,
+                         binary_file_abs_path) -> (List[DataItemForFunctionConfirmModel], DataLoader):
 
         # step 1 提取源代码特征
         logger.info(f"Extracting feature for {src_file_path}")
@@ -56,13 +57,13 @@ class FunctionFinder:
         if src_function_feature is None:
             logger.error(f"Can't find function {cause_function_name} in {src_file_path}")
             return None
-
         logger.info(f"Feature extracted for {src_file_path}")
+
         # step 2 提取二进制文件特征
         logger.info(f"Extracting feature for {binary_file_abs_path}")
         # TODO linux下使用IDA Pro提取特征？
         # bin_function_features = extract_bin_feature(binary_file_abs_path)
-        # 临时使用已经提取好的特征，以下是临时代码
+        # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
         bin_file_name = os.path.basename(binary_file_abs_path)
         if bin_file_name == "openssl":
             IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/openssl.json"
@@ -70,22 +71,20 @@ class FunctionFinder:
             IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/libcrypto.json"
         elif bin_file_name == "libssl.so.3":
             IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/libssl.json"
-
         results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
         # 转换成外部的数据结构
         bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
                                                            for json_item in results]
-        # 以上是临时代码
         logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
+        # ---------- 以上是临时代码 ----------
 
         # step 3 使用模型遍历比较源代码函数和二进制文件函数
-
         # convert data
         data_items = convert_function_feature_to_model_input(src_function_feature, bin_function_features)
         dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
 
-        return dataloader, data_items
+        return data_items, dataloader
 
     def _predict(self, dataloader):
         """
@@ -110,17 +109,17 @@ class FunctionFinder:
                 predictions.append((pred, prob))
         return predictions
 
-    def find_binary_functions(self, cause_function: CauseFunction,
-                              binary_file_abs_path: str) -> (List[str], List[PossibleBinFunction]):
+    def find_similar_bin_functions(self, src_file_path,
+                                   function_name,
+                                   binary_file_abs_path: str) -> List[PossibleBinFunction]:
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
         """
         # 预处理数据
-        dataloader, data_items = self._preprocess_data(cause_function.file_path,
-                                                       cause_function.function_name,
+        data_items, dataloader = self._preprocess_data(src_file_path,
+                                                       function_name,
                                                        binary_file_abs_path)
-        src_codes = data_items[0].src_codes
         # 预测
         predictions = self._predict(dataloader)
 
@@ -135,4 +134,4 @@ class FunctionFinder:
                 )
                 possible_bin_functions.append(possible_bin_function)
         possible_bin_functions.sort(key=lambda x: x.match_possibility, reverse=True)
-        return src_codes, possible_bin_functions
+        return possible_bin_functions

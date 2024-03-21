@@ -14,6 +14,9 @@ from main.extractors.src_function_feature_extractor.entities import NodeFeature
 
 @dataclass
 class SrcFunctionFeature:
+    """
+    源代码函数特征
+    """
     name: str
     file_path: str
     line_start: int
@@ -90,6 +93,9 @@ class SrcFunctionFeature:
 
 @dataclass
 class BinFunctionFeature:
+    """
+    二进制文件函数特征
+    """
     name: str
     asm_codes: List[str]
     strings: List[str]
@@ -120,6 +126,11 @@ class BinFunctionFeature:
 
 @dataclass
 class FunctionFeature:
+    """
+    函数特征，包括源代码函数特征和二进制文件函数特征，以及函数名
+
+    提取方法：同时提取源代码和二进制文件，并且找到同名的函数
+    """
     function_name: str
     bin_function_feature: BinFunctionFeature
     src_function_features: List[SrcFunctionFeature]
@@ -146,6 +157,9 @@ class FunctionFeature:
 
 
 class SpecialToken(Enum):
+    """
+    一些特殊的token，用于标记一些特殊的信息
+    """
     # for DataItemForFunctionConfirmModel
     SRC_CODE_SEPARATOR = "[SRC_CODE]"
     SRC_STRING_SEPARATOR = "[SRC_STR]"
@@ -171,6 +185,10 @@ class SpecialToken(Enum):
 
 
 class DataItemForFunctionConfirmModel:
+    """
+    训练数据项，用于函数确认模型
+    """
+
     def __init__(self, function_name: str,
                  src_codes: List[str],
                  src_strings: List[str],
@@ -310,6 +328,10 @@ class DataItemForFunctionConfirmModel:
 
 @dataclass
 class DataItemForCodeSnippetPositioningModel:
+    """
+    训练数据项，用于代码片段定位模型
+    """
+
     def __init__(self, function_name: str,
                  src_codes: List[str],
                  asm_codes: List[str],
@@ -394,6 +416,9 @@ class DataItemForCodeSnippetPositioningModel:
 
 
 class DataItemForCodeSnippetConfirmModel:
+    """
+    训练数据项，用于代码片段确认模型
+    """
 
     def __init__(self, src_codes: List[str],
                  asm_codes: List[str],
@@ -454,35 +479,55 @@ class DataItemForCodeSnippetConfirmModel:
 
 @dataclass
 class Patch:
-    start_line_before_commit: int
-    end_line_before_commit: int
-    snippet_codes_before_commit: List[str]
+    """
+    修复补丁信息
+    """
 
-    start_line_after_commit: int
-    end_line_after_commit: int
-    snippet_codes_after_commit: List[str]
+    commit_id: str = ""
+    affected_since: str = ""
+    fixed_in: str = ""
+
+    start_line_before_commit: int = 0
+    snippet_size_before_commit: int = 0
+    snippet_codes_before_commit: List[str] = dataclasses.field(default_factory=list)
+    snippet_codes_text_before_commit: str = ""
+
+    start_line_after_commit: int = 0
+    snippet_size_after_commit: int = 0
+    snippet_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
+    snippet_codes_text_after_commit: str = ""
 
     def customer_serialize(self):
         return {
+            "commit_id": self.commit_id,
+            "affected_since": self.affected_since,
+            "fixed_in": self.fixed_in,
             "start_line_before_commit": self.start_line_before_commit,
-            "end_line_before_commit": self.end_line_before_commit,
+            "end_line_before_commit": self.snippet_size_before_commit,
             "snippet_codes_before_commit": self.snippet_codes_before_commit,
             "start_line_after_commit": self.start_line_after_commit,
-            "end_line_after_commit": self.end_line_after_commit,
-            "snippet_codes_after_commit": self.snippet_codes_after_commit
+            "end_line_after_commit": self.snippet_size_after_commit,
+            "snippet_codes_after_commit": self.snippet_codes_after_commit,
+
         }
 
 
 @dataclass
 class CauseFunction:
-    project_name: str
+    """
+    漏洞函数
+    NOTE:
+        1. file_path: 源代码文件实际存储路径, 例如: "TestCases/model_train/model_1/test_data/p12_add.c", 不是文件相对项目的路径
+    """
+
     file_path: str
     function_name: str
+
+    project_name: str = ""
     line_start: int = 0
     line_end: int = 0
     src_codes: List[str] = dataclasses.field(default_factory=list)
     src_codes_text: str = ""
-    patch: Patch = None
 
     def customer_serialize(self):
         return {
@@ -493,12 +538,39 @@ class CauseFunction:
             "line_end": self.line_end,
             "src_codes": self.src_codes,
             "src_codes_text": self.src_codes_text,
-            "patch": self.patch.customer_serialize() if self.patch else None
+        }
+
+
+@dataclass
+class Vulnerability:
+    """
+    漏洞信息
+    """
+    cve_id: str
+    cve_link: str
+    title: str = ""
+    severity: str = ""
+    description: str = ""
+    cause_function: CauseFunction = None
+    patches: List[Patch] = dataclasses.field(default_factory=list)
+
+    def customer_serialize(self):
+        return {
+            "cve_id": self.cve_id,
+            "cve_link": self.cve_link,
+            "title": self.title,
+            "severity": self.severity,
+            "description": self.description,
+            "cause_function": self.cause_function.customer_serialize(),
+            "patches": [patch.customer_serialize() for patch in self.patches]
         }
 
 
 @dataclass
 class PossibleBinFunction:
+    """
+    可能与漏洞函数相关的二进制文件函数
+    """
     function_name: str
     match_possibility: float
     asm_codes: List[str] = dataclasses.field(default_factory=list)
@@ -516,15 +588,15 @@ class PossibleBinFunction:
 
 
 @dataclass
-class Result:
+class ConfirmAnalysis:
     # bin file path
     # input
-    cause_function: CauseFunction
+    vulnerability: Vulnerability
     possible_bin_functions: List[PossibleBinFunction] = dataclasses.field(default_factory=list)
 
     def customer_serialize(self):
         return {
-            "cause_function": self.cause_function.customer_serialize(),
-            "possible_bin_functions": [possible_bin_function.customer_serialize() for possible_bin_function in
-                                       self.possible_bin_functions]
+            "vulnerability": self.vulnerability.customer_serialize(),
+            "possible_bin_functions": [possible_bin_function.customer_serialize()
+                                       for possible_bin_function in self.possible_bin_functions]
         }

@@ -131,7 +131,7 @@ def test_model_1_by_openssl():
         similar_functions_dict[binary] = binary_similar_functions_dict = {}
         for vul_function_name in ["*PKCS12_unpack_p7data", "*PKCS12_unpack_p7encdata", "*PKCS12_unpack_authsafes"]:
             logger.info(f"Finding similar functions for {vul_function_name} in {binary}")
-            bin_function_num, similar_functions = vul_function_finder.find_binary_functions(
+            bin_function_num, similar_functions = vul_function_finder.find_similar_bin_functions(
                 src_file_path=vul_function_file_path,
                 cause_function_name=vul_function_name,
                 binary_file_abs_path=binary)
