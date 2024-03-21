@@ -81,23 +81,11 @@ class VulConfirmTeam:
                 possible_bin_function.conclusion = True
                 possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
 
-                analysis.conclusion = True
             else:
                 possible_bin_function.conclusion = False
                 possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
 
-        analysis.possible_bin_function_num = len(possible_bin_functions)
-
-        high_possibility_bin_functions = [f for f in possible_bin_functions if f.match_possibility > 0.9]
-        analysis.highly_possible_bin_function_num = len(high_possibility_bin_functions)
-
-        confirmed_bin_functions = [f for f in high_possibility_bin_functions if f.conclusion]
-        analysis.confirmed_bin_function_num = len(confirmed_bin_functions)
-
-        highly_confirmed_bin_functions = [f for f in confirmed_bin_functions
-                                          if (f.confirmed_snippet_count / len(f.possible_asm_snippets)) > 0.5]
-        analysis.highly_confirmed_bin_function_num = len(highly_confirmed_bin_functions)
-        analysis.judge_reason = f"possible_bin_function names: {[f.function_name for f in possible_bin_functions if f.conclusion]}"
+        analysis.summary()
         return analysis
 
 
