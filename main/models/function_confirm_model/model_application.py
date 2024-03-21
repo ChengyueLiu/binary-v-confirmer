@@ -7,9 +7,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
-from bintools.general.file_tool import check_file_path, load_from_json_file
-from main.extractors.function_feature_extractor import extract_bin_feature, extract_src_feature_for_specific_function
-from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, ConfirmAnalysis, PossibleBinFunction, \
+from bintools.general.file_tool import load_from_json_file
+from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
+from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, PossibleBinFunction, \
     CauseFunction
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataset_from_model_input

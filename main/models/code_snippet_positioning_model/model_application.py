@@ -6,11 +6,9 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, RobertaForQuestionAnswering
 
-from bintools.general.bin_tool import normalize_asm_code
-from bintools.general.src_tool import remove_comments
-from main.interface import DataItemForCodeSnippetPositioningModel, SpecialToken, ConfirmAnalysis
-from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset, \
-    CodeSnippetPositioningDataset
+
+from main.interface import DataItemForCodeSnippetPositioningModel
+from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset
 
 
 def split_list_by_sliding_window(input_list, window_length=50, step=20):
