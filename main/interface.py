@@ -573,6 +573,20 @@ class Vulnerability:
 
 
 @dataclass
+class PossibleAsmSnippet:
+    asm_codes_text: str
+    is_match: bool
+    probability: float
+
+    def customer_serialize(self):
+        return {
+            "asm_codes_text": self.asm_codes_text,
+            "is_match": self.is_match,
+            "probability": self.probability
+        }
+
+
+@dataclass
 class PossibleBinFunction:
     """
     可能与漏洞函数相关的二进制文件函数
@@ -580,8 +594,7 @@ class PossibleBinFunction:
     function_name: str
     match_possibility: float
     asm_codes: List[str] = dataclasses.field(default_factory=list)
-    asm_codes_window_texts: List[str] = dataclasses.field(default_factory=list)
-    predictions: List = dataclasses.field(default_factory=list)
+    possible_asm_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
 
     conclusion: bool = False
     judge_reason: str = ""
@@ -593,8 +606,8 @@ class PossibleBinFunction:
             "conclusion": self.conclusion,
             "judge_reason": self.judge_reason,
             "asm_codes": self.asm_codes,
-            "asm_codes_window_texts": self.asm_codes_window_texts,
-            "predictions": [[pred.item(), prob.item()] for pred, prob in self.predictions]
+            "possible_asm_snippets": [possible_asm_snippet.customer_serialize()
+                                      for possible_asm_snippet in self.possible_asm_snippets]
         }
 
 

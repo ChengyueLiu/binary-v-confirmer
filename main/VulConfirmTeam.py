@@ -5,7 +5,7 @@ import torch
 from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file
-from main.interface import CauseFunction, ConfirmAnalysis, Vulnerability, PossibleBinFunction
+from main.interface import CauseFunction, ConfirmAnalysis, Vulnerability, PossibleBinFunction, PossibleAsmSnippet
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder
@@ -37,10 +37,11 @@ class VulConfirmTeam:
             function_name=vul.cause_function.function_name,
             binary_file_abs_path=os.path.abspath(binary_path),
             analysis=analysis)
+        logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
 
-        for possible_bin_function in possible_bin_functions:
+        for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
             logger.info(
-                f"function：{vul.cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
+                f"{i}: function：{vul.cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
                 f"personality: {possible_bin_function.match_possibility}")
             # 函数是否确认漏洞
             if possible_bin_function.match_possibility < 0.9:
@@ -68,12 +69,12 @@ class VulConfirmTeam:
             predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
                                                               asm_codes_window_texts)
             confirmed_snippet_count = 0
-            for i, (pred, prob) in enumerate(predictions):
+            for i, (asm_codes_window_text, (pred, prob)) in enumerate(zip(asm_codes_window_texts, predictions)):
                 logger.info(f"pred: {pred}, prob: {prob}")
-                possible_bin_function.predictions.append((pred, prob))
+                pas = PossibleAsmSnippet(asm_codes_window_text, pred, prob)
+                possible_bin_function.possible_asm_snippets.append(pas)
                 if pred == 1:
                     confirmed_snippet_count += 1
-
             # 函数是否确认漏洞
             if confirmed_snippet_count > 0:
                 possible_bin_function.conclusion = True
