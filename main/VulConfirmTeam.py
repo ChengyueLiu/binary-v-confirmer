@@ -36,7 +36,7 @@ class VulConfirmTeam:
             src_file_path=vul.cause_function.file_path,
             function_name=vul.cause_function.function_name,
             binary_file_abs_path=os.path.abspath(binary_path))
-        analysis.bif_function_num = bin_function_num
+        analysis.bin_function_num = bin_function_num
         analysis.vulnerability.cause_function.normalized_src_codes = normalized_src_codes
         analysis.possible_bin_functions = possible_bin_functions
         logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
