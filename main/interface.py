@@ -511,7 +511,7 @@ class PossibleBinFunction:
             "match_possibility": self.match_possibility,
             "asm_codes": self.asm_codes,
             "asm_codes_window_texts": self.asm_codes_window_texts,
-            "predictions": [[pred, prob] for pred, prob in self.predictions]
+            "predictions": [[pred.item(), prob.item()] for pred, prob in self.predictions]
         }
 
 
