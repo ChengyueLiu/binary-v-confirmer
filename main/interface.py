@@ -489,7 +489,8 @@ class Patch:
     修复补丁信息
     """
 
-    commit_id: str = ""
+    commit_link: str = ""
+    commit_api: str = ""
     affected_since: str = ""
     fixed_in: str = ""
 
@@ -505,7 +506,8 @@ class Patch:
 
     def customer_serialize(self):
         return {
-            "commit_id": self.commit_id,
+            "commit_link": self.commit_link,
+            "commit_api": self.commit_api,
             "affected_since": self.affected_since,
             "fixed_in": self.fixed_in,
             "start_line_before_commit": self.start_line_before_commit,
@@ -581,10 +583,15 @@ class PossibleBinFunction:
     asm_codes_window_texts: List[str] = dataclasses.field(default_factory=list)
     predictions: List = dataclasses.field(default_factory=list)
 
+    conclusion: bool = False
+    judge_reason: str = ""
+
     def customer_serialize(self):
         return {
             "function_name": self.function_name,
             "match_possibility": self.match_possibility,
+            "conclusion": self.conclusion,
+            "judge_reason": self.judge_reason,
             "asm_codes": self.asm_codes,
             "asm_codes_window_texts": self.asm_codes_window_texts,
             "predictions": [[pred.item(), prob.item()] for pred, prob in self.predictions]
@@ -595,11 +602,13 @@ class PossibleBinFunction:
 class ConfirmAnalysis:
     # bin file path
     # input
+
     vulnerability: Vulnerability
     possible_bin_functions: List[PossibleBinFunction] = dataclasses.field(default_factory=list)
-
+    conclusion: bool = False
     def customer_serialize(self):
         return {
+            "conclusion": self.conclusion,
             "vulnerability": self.vulnerability.customer_serialize(),
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]

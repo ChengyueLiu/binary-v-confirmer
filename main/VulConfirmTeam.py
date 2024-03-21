@@ -42,6 +42,11 @@ class VulConfirmTeam:
             logger.info(
                 f"function：{vul.cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
                 f"personality: {possible_bin_function.match_possibility}")
+            # 函数是否确认漏洞
+            if possible_bin_function.match_possibility < 0.9:
+                possible_bin_function.conclusion = False
+                possible_bin_function.judge_reason = "match_possibility < 0.9"
+                continue
 
             # 2. 定位漏洞代码片段
             patch_src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
@@ -58,9 +63,20 @@ class VulConfirmTeam:
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
                                                               asm_codes_window_texts)
+            confirmed_snippet_count = 0
             for i, (pred, prob) in enumerate(predictions):
                 logger.info(f"pred: {pred}, prob: {prob}")
                 possible_bin_function.predictions.append((pred, prob))
+                if pred == 1:
+                    confirmed_snippet_count += 1
+            # 函数是否确认漏洞
+            if confirmed_snippet_count > 0:
+                possible_bin_function.conclusion = True
+                possible_bin_function.judge_reason = f"confirmed_snippet_count = {confirmed_snippet_count}"
+
+            # 二进制文件是否确认漏洞
+            if possible_bin_function.conclusion:
+                analysis.conclusion = True
 
         return analysis
 

@@ -204,7 +204,7 @@ class RawVulInfo:
         return hash(json.dumps(self.commit_id))
 
     def __eq__(self, other):
-        return self.commit_id == other.commit_id
+        return self.commit_id == other.commit_link
 
     @classmethod
     def init_from_original_dict(cls, json_data_item):

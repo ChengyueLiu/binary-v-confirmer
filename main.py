@@ -32,9 +32,10 @@ def test_model():
 
     # patch
     patch = Patch(
-        commit_id="",
-        affected_since="",
-        fixed_in="",
+        commit_link="https://github.com/openssl/openssl/commit/775acfdbd0c6af9ac855f34969cdab0c0c90844a",
+        commit_api="https://api.github.com/repos/openssl/openssl/commits/775acfdbd0c6af9ac855f34969cdab0c0c90844a",
+        fixed_in="3.2.1",
+        affected_since="3.2.0",
 
         start_line_before_commit=78,
         snippet_size_before_commit=6,
@@ -78,7 +79,7 @@ def test_model():
     binary_path = "TestCases/feature_extraction/binaries/openssl"
 
     # confirm vulnerability
-    save_path = "TestCases/openssl_confirm_results.json"
+    save_path = "openssl_confirm_results.json"
 
     vul_confirm_team = VulConfirmTeam()
     analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
