@@ -602,8 +602,6 @@ class CauseFunction:
         self.confirmed_bin_function_names = [f.function_name for f in confirmed_bin_functions]
         self.confirmed_bin_function_num = len(confirmed_bin_functions)
 
-        if self.confirmed_bin_function_num > 0:
-            self.conclusion = True
 
     def customer_serialize(self):
         return {

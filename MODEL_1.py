@@ -80,10 +80,12 @@ def train_model_1():
     :return:
     """
     from main.models.function_confirm_model.model_training import run_train
+    model_save_path = r"Resources/model_weights/model_1_weights.pth"
     run_train(
         openssl_train_data_save_path,
         openssl_val_data_save_path,
         libpng_train_data_save_path,
+        model_save_path=model_save_path,
         test_only=False,
         epochs=3,
         batch_size=100,
