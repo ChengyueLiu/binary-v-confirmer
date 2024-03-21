@@ -71,9 +71,7 @@ class VulConfirmTeam:
             confirmed_snippet_count = 0
             for i, (asm_codes_window_text, (pred, prob)) in enumerate(zip(asm_codes_window_texts, predictions)):
                 logger.info(f"pred: {pred}, prob: {prob}")
-                pas = PossibleAsmSnippet(asm_codes_text=asm_codes_window_text,
-                                         match_type=pred.item(),
-                                         probability=prob.item())
+                pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
                 possible_bin_function.possible_asm_snippets.append(pas)
                 if pred == 1:
                     confirmed_snippet_count += 1

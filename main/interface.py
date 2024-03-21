@@ -575,13 +575,13 @@ class Vulnerability:
 @dataclass
 class PossibleAsmSnippet:
     asm_codes_text: str
-    is_match: bool
+    match_type: int
     probability: float
 
     def customer_serialize(self):
         return {
             "asm_codes_text": self.asm_codes_text,
-            "is_match": self.is_match,
+            "match_type": self.match_type,
             "probability": self.probability
         }
 
