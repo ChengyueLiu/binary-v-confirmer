@@ -32,10 +32,11 @@ class VulConfirmTeam:
         )
 
         # 1. 定位漏洞函数
-        normalized_src_codes, possible_bin_functions = self.function_finder.find_similar_bin_functions(
+        normalized_src_codes, bin_function_num, possible_bin_functions = self.function_finder.find_similar_bin_functions(
             src_file_path=vul.cause_function.file_path,
             function_name=vul.cause_function.function_name,
             binary_file_abs_path=os.path.abspath(binary_path))
+        analysis.bif_function_num = bin_function_num
         analysis.vulnerability.cause_function.normalized_src_codes = normalized_src_codes
         analysis.possible_bin_functions = possible_bin_functions
         logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")

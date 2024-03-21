@@ -619,12 +619,15 @@ class PossibleBinFunction:
 
 @dataclass
 class ConfirmAnalysis:
-    # bin file path
-    # input
-
+    # vulnerability
     vulnerability: Vulnerability
+
+    # bin function num
+    bin_function_num: int = 0
+    # possible bin functions
     possible_bin_functions: List[PossibleBinFunction] = dataclasses.field(default_factory=list)
 
+    # summary
     possible_bin_function_num: int = 0
     possible_bin_function_names: List[str] = dataclasses.field(default_factory=list)
 
