@@ -76,7 +76,8 @@ def test_model():
     )
 
     # test file: openssl
-    binary_path = "TestCases/feature_extraction/binaries/openssl"
+    # binary_path = "TestCases/feature_extraction/binaries/openssl"
+    binary_path = "TestCases/model_train/model_1/test_data/libcrypto.so.3"
 
     # confirm vulnerability
     save_path = "openssl_confirm_results.json"

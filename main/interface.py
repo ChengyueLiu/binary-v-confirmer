@@ -609,11 +609,10 @@ class ConfirmAnalysis:
     conclusion: bool = False
     judge_reason: str = ""
 
-
-
     def customer_serialize(self):
         return {
             "conclusion": self.conclusion,
+            "judge_reason": self.judge_reason,
             "vulnerability": self.vulnerability.customer_serialize(),
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]
