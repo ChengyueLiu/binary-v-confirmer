@@ -128,7 +128,7 @@ def test_model():
         cause_function=cause_function,
         patches=[patch]
     )
-    vul_confirm_team = VulConfirmTeam(batch_size=64)
+    vul_confirm_team = VulConfirmTeam(batch_size=100)
 
     # openssl
     binary_path = "TestCases/model_train/model_1/test_data/openssl"
