@@ -27,13 +27,16 @@ class VulConfirmTeam:
         logger.info("VulConfirmTeam init done")
 
     def confirm(self, binary_path, vul: Vulnerability) -> ConfirmAnalysis:
+        analysis = ConfirmAnalysis(
+            vulnerability=vul,
+        )
 
         # 1. 定位漏洞函数
         possible_bin_functions: List[PossibleBinFunction] = self.function_finder.find_similar_bin_functions(
             src_file_path=vul.cause_function.file_path,
             function_name=vul.cause_function.function_name,
-            binary_file_abs_path=os.path.abspath(binary_path))
-
+            binary_file_abs_path=os.path.abspath(binary_path),
+            analysis=analysis)
 
         for possible_bin_function in possible_bin_functions:
             logger.info(
@@ -49,6 +52,7 @@ class VulConfirmTeam:
 
             logger.info(
                 f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
+            vul.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
             possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
 
             # 3. 确认漏洞代码片段
@@ -58,10 +62,6 @@ class VulConfirmTeam:
                 logger.info(f"pred: {pred}, prob: {prob}")
                 possible_bin_function.predictions.append((pred, prob))
 
-        analysis = ConfirmAnalysis(
-            vulnerability=vul,
-            possible_bin_functions=possible_bin_functions
-        )
         return analysis
 
 

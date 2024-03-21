@@ -111,7 +111,8 @@ class FunctionFinder:
 
     def find_similar_bin_functions(self, src_file_path,
                                    function_name,
-                                   binary_file_abs_path: str) -> List[PossibleBinFunction]:
+                                   binary_file_abs_path: str,
+                                   analysis: ConfirmAnalysis = None) -> List[PossibleBinFunction]:
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
@@ -120,6 +121,7 @@ class FunctionFinder:
         data_items, dataloader = self._preprocess_data(src_file_path,
                                                        function_name,
                                                        binary_file_abs_path)
+
         # 预测
         predictions = self._predict(dataloader)
 
@@ -134,4 +136,11 @@ class FunctionFinder:
                 )
                 possible_bin_functions.append(possible_bin_function)
         possible_bin_functions.sort(key=lambda x: x.match_possibility, reverse=True)
+
+        # 记录分析结果
+        if analysis:
+            normalized_src_codes = data_items[0].normalized_src_codes
+            analysis.vulnerability.cause_function.normalized_src_codes = normalized_src_codes
+            analysis.possible_bin_functions = possible_bin_functions
+
         return possible_bin_functions

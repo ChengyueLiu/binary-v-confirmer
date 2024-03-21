@@ -390,8 +390,14 @@ class DataItemForCodeSnippetPositioningModel:
         return start_index, end_index
 
     def normalize(self):
-        self.src_codes = [normalized_line for line in self.src_codes
-                          if (normalized_line := line.strip())]
+        normalized_src_codes = []
+        for line in self.src_codes:
+            if line.startswith(("+", "-")):
+                continue
+            if not (normalized_line := line.strip()):
+                continue
+            normalized_src_codes.append(normalized_line)
+        self.src_codes = normalized_src_codes
 
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := self._normalize_asm_code(code))]
@@ -526,8 +532,7 @@ class CauseFunction:
     project_name: str = ""
     line_start: int = 0
     line_end: int = 0
-    src_codes: List[str] = dataclasses.field(default_factory=list)
-    src_codes_text: str = ""
+    normalized_src_codes: List[str] = dataclasses.field(default_factory=list)
 
     def customer_serialize(self):
         return {
@@ -536,8 +541,7 @@ class CauseFunction:
             "function_name": self.function_name,
             "line_start": self.line_start,
             "line_end": self.line_end,
-            "src_codes": self.src_codes,
-            "src_codes_text": self.src_codes_text,
+            "normalized_src_codes": self.normalized_src_codes,
         }
 
 

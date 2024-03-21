@@ -8,7 +8,7 @@ from transformers import AutoTokenizer, RobertaForQuestionAnswering
 
 from bintools.general.bin_tool import normalize_asm_code
 from bintools.general.src_tool import remove_comments
-from main.interface import DataItemForCodeSnippetPositioningModel, SpecialToken
+from main.interface import DataItemForCodeSnippetPositioningModel, SpecialToken, ConfirmAnalysis
 from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset, \
     CodeSnippetPositioningDataset
 
@@ -149,6 +149,7 @@ class SnippetPositioner:
             2. 使用模型预测
 
 
+        :param analysis:
         :param vul_function_name:
         :param src_codes: 源代码中提取到的代码片段，代表了漏洞函数中的关键patch代码
         :param asm_codes: 使用IDA Pro提取到的汇编代码片段，代表了第一个模型找到的可能的漏洞函数
@@ -160,4 +161,4 @@ class SnippetPositioner:
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
 
-        return question, predicted_answers
+        return predicted_answers
