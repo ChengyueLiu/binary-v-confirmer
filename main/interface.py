@@ -502,7 +502,10 @@ class Patch:
     start_line_after_commit: int = 0
     snippet_size_after_commit: int = 0
     snippet_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
+    snippet_asm_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
     snippet_codes_text_after_commit: str = ""
+
+
 
     def customer_serialize(self):
         return {
@@ -533,6 +536,7 @@ class CauseFunction:
     """
 
     file_path: str
+    file_name: str
     function_name: str
 
     project_name: str = ""
@@ -610,7 +614,7 @@ class PossibleBinFunction:
             "match_possibility": self.match_possibility,
             "conclusion": self.conclusion,
             "judge_reason": self.judge_reason,
-            # "asm_codes": self.asm_codes,
+            "asm_codes": self.asm_codes,
             "confirmed_snippet_count": self.confirmed_snippet_count,
             "possible_asm_snippets": [possible_asm_snippet.customer_serialize()
                                       for possible_asm_snippet in self.possible_asm_snippets]
