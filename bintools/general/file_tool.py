@@ -12,7 +12,8 @@ def check_dir_path(dir_path):
     :return: a normalized and absolute path
     """
     if not os.path.exists(dir_path):
-        raise FileNotFoundError(f"Directory not found: {dir_path}, create it first.")
+        error_msg = f"Directory not found: {dir_path}, create it first."
+        raise FileNotFoundError(error_msg)
     if not os.path.isdir(dir_path):
         raise NotADirectoryError(f"{dir_path} is not a directory.")
     return os.path.normpath(os.path.abspath(dir_path))
@@ -24,6 +25,7 @@ def check_file_path(file_path, extension=None):
     :param file_path: a file path
     :return: a normalized and absolute path
     """
+    file_path = os.path.normpath(os.path.abspath(file_path))
     dir_path, file_name = os.path.split(file_path)
     dir_path = check_dir_path(dir_path)
 
