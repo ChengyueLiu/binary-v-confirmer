@@ -509,14 +509,18 @@ class Patch:
             "commit_link": self.commit_link,
             "commit_api": self.commit_api,
             "affected_since": self.affected_since,
-            "fixed_in": self.fixed_in,
-            "start_line_before_commit": self.start_line_before_commit,
-            "end_line_before_commit": self.snippet_size_before_commit,
-            "snippet_codes_before_commit": self.snippet_codes_before_commit,
-            "start_line_after_commit": self.start_line_after_commit,
-            "end_line_after_commit": self.snippet_size_after_commit,
-            "snippet_codes_after_commit": self.snippet_codes_after_commit,
-
+            "before_commit": {
+                "start_line": self.start_line_before_commit,
+                "snippet_size": self.snippet_size_before_commit,
+                "snippet_codes": self.snippet_codes_before_commit,
+                "snippet_codes_text": self.snippet_codes_text_before_commit
+            },
+            "after_commit": {
+                "start_line": self.start_line_after_commit,
+                "snippet_size": self.snippet_size_after_commit,
+                "snippet_codes": self.snippet_codes_after_commit,
+                "snippet_codes_text": self.snippet_codes_text_after_commit
+            }
         }
 
 
