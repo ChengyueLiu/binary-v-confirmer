@@ -56,7 +56,7 @@ class FunctionFinder:
                                                                          vul_function_name=cause_function_name)
         if src_function_feature is None:
             logger.error(f"Can't find function {cause_function_name} in {src_file_path}")
-            return None
+            return None, None
         logger.info(f"Feature extracted for {src_file_path}")
 
         # step 2 提取二进制文件特征
@@ -111,7 +111,7 @@ class FunctionFinder:
 
     def find_similar_bin_functions(self, src_file_path,
                                    function_name,
-                                   binary_file_abs_path: str) -> (List[str], List[PossibleBinFunction]):
+                                   binary_file_abs_path: str):
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
