@@ -74,18 +74,18 @@ def test_model():
         cause_function=cause_function,
         patches=[patch]
     )
-
-    # test file: openssl
-    # binary_path = "TestCases/feature_extraction/binaries/openssl"
-    binary_path = "TestCases/model_train/model_1/test_data/libcrypto.so.3"
-
-    # confirm vulnerability
-    save_path = "openssl_confirm_results.json"
-
     vul_confirm_team = VulConfirmTeam()
-    analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
 
-    # save result to json file
+    # openssl
+    binary_path = "TestCases/model_train/model_1/test_data/openssl"
+    save_path = "openssl_confirm_results.json"
+    analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
+    save_to_json_file(analysis.customer_serialize(), save_path, output_log=True)
+
+    # openssl
+    binary_path = "TestCases/model_train/model_1/test_data/libcrypto.so.3"
+    save_path = "libcrypto_confirm_results.json"
+    analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
     save_to_json_file(analysis.customer_serialize(), save_path, output_log=True)
 
 
