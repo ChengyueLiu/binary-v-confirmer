@@ -59,6 +59,10 @@ class VulConfirmTeam:
                 f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
             vul.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
             possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
+            if len(asm_codes_window_texts) == 0:
+                possible_bin_function.conclusion = False
+                possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
+                continue
 
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
