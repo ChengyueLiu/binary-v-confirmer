@@ -120,6 +120,9 @@ class FunctionFinder:
         data_items, dataloader = self._preprocess_data(src_file_path,
                                                        function_name,
                                                        binary_file_abs_path)
+        if not data_items:
+            return [], 0, []
+
         normalized_src_codes = data_items[0].src_codes
 
         # 预测
