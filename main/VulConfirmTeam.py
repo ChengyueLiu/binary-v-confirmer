@@ -37,7 +37,7 @@ class VulConfirmTeam:
         if len(asm_codes_window_texts) == 0:
             possible_bin_function.conclusion = False
             possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
-            return None, None
+            return [], []
         logger.info(
             f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
 
