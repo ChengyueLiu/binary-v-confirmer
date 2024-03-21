@@ -487,7 +487,6 @@ class Patch:
     start_line_after_commit: int = 0
     snippet_size_after_commit: int = 0
     snippet_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
-    snippet_asm_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
     snippet_codes_text_after_commit: str = ""
 
     def customer_serialize(self):

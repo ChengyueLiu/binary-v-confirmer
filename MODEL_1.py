@@ -84,9 +84,10 @@ def train_model_1():
         openssl_train_data_save_path,
         openssl_val_data_save_path,
         libpng_train_data_save_path,
+        test_only=False,
         epochs=3,
         batch_size=100,
-        test_only=False)
+        )
 
 
 def test_model_1_by_openssl():

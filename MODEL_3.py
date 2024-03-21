@@ -35,9 +35,9 @@ def train_model_3():
               val_data_save_path,
               test_data_save_path,
               model_save_path,
+              test_only=False,
               epochs=3,
-              batch_size=100,
-              test_only=False)
+              batch_size=100)
 
 
 def test_model():
