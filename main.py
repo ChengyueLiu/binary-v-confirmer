@@ -161,7 +161,7 @@ def test_model():
         cve_link="https://www.cve.org/CVERecord?id=CVE-2024-0727",
         title="PKCS12 Decoding crashes",
         severity="Low",
-        cause_functions=[cause_function_1]
+        cause_functions=[cause_function_1, cause_function_2, cause_function_3]
     )
     vul_confirm_team = VulConfirmTeam(batch_size=100)
 
@@ -174,13 +174,17 @@ def test_model():
     libssl_321 = "TestCases/binaries/openssl_3.2.1/libssl.so.3"
     libpng16 = "TestCases/binaries/libpng/libpng16.so.16.43.0"
 
-    save_path = "test_results/openssl_result.json"
+    save_path = "test_results/openssl_320_result.json"
     vul_confirm_team.confirm(binary_path=openssl_320, vul=vulnerability)
     save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
-    # save_path = "test_results/libpng_result.json"
-    # vul_confirm_team.confirm(binary_path=libcrypto_321, vul=vulnerability)
-    # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
+    save_path = "test_results/libpng_16_result.json"
+    vul_confirm_team.confirm(binary_path=libpng16, vul=vulnerability)
+    save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
+
+    save_path = "test_results/libcrypto_321_result.json"
+    vul_confirm_team.confirm(binary_path=libcrypto_321, vul=vulnerability)
+    save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
 
 if __name__ == '__main__':
