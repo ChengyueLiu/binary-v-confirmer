@@ -609,7 +609,7 @@ class PossibleBinFunction:
             "match_possibility": self.match_possibility,
             "conclusion": self.conclusion,
             "judge_reason": self.judge_reason,
-            "asm_codes": self.asm_codes,
+            # "asm_codes": self.asm_codes,
             "possible_asm_snippets": [possible_asm_snippet.customer_serialize()
                                       for possible_asm_snippet in self.possible_asm_snippets]
         }
