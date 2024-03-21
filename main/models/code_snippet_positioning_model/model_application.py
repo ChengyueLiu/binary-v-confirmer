@@ -83,7 +83,7 @@ class SnippetPositioner:
                                                                asm_codes=asm_codes_window,
                                                                answer_start_index=0,
                                                                answer_end_index=0)
-            data_item.normalize()
+            # data_item.normalize()
             data_items.append(data_item)
 
         # step 2: 创建dataset
