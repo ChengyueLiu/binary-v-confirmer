@@ -139,7 +139,7 @@ class FunctionFinder:
 
         # 记录分析结果
         if analysis:
-            normalized_src_codes = data_items[0].normalized_src_codes
+            normalized_src_codes = data_items[0].src_codes
             analysis.vulnerability.cause_function.normalized_src_codes = normalized_src_codes
             analysis.possible_bin_functions = possible_bin_functions
 
