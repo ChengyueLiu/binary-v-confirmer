@@ -161,4 +161,4 @@ class SnippetPositioner:
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
 
-        return predicted_answers
+        return question, predicted_answers
