@@ -30,30 +30,30 @@ def normalize_asm_code(asm_code: str,
     # 简化空格，保持格式整洁
     asm_code = re.sub(r"\s+", " ", asm_code).strip()
 
-    # 移除所有的数据大小标记，如 'qword ptr'
-    data_size_markers_pattern = r"\b(byte|word|dword|qword|tword)\s+ptr\b"
+    # 移除所有的数据大小标记
+    data_size_markers_pattern = r"\b(byte|word|dword|qword|tword|short)\s+ptr\b"
     asm_code = re.sub(data_size_markers_pattern, "", asm_code)
 
-    # 替换寄存器为统一标记
-    asm_code = re.sub(r"\br[\w\d]+\b", reg_token, asm_code)
-
     # 替换数字（立即数）为统一标记
-    asm_code = re.sub(r"\b\d+\b|\b0x[a-f0-9]+\b", num_token, asm_code)
+    asm_code = re.sub(r"\b\d+\b|\b0x[a-f\d]+\b", num_token, asm_code)
 
     # 简化内存访问，替换为统一标记
-    # asm_code = re.sub(r"\[[^\]]+\]", mem_token, asm_code)
+    asm_code = re.sub(r"\[[^\]]+\]", mem_token, asm_code)
 
-    # 简化控制流指令，替换为跳转统一标记
+    # 简化控制流指令，保留跳转逻辑
     asm_code = re.sub(r"\bj(mp|e|z|nz|ne|g|ge|l|le|b|be|a|ae)\b", jump_token, asm_code)
 
-    # 简化标签和符号引用，替换为位置统一标记
-    # asm_code = re.sub(r"\bloc(ret)?_[\w\d]+\b", loc_token, asm_code)
-    # asm_code = re.sub(r"\b[\w\d]+:\b", loc_token, asm_code)
-
-    # 处理空格
+    # 移除call和jump指令后的直接内存地址，保留函数名和跳转标签，处理可选的偏移量
+    asm_code = re.sub(r"\bcall\s+[0-9a-f]+\s+<([^>]+)>", r"call <\1>", asm_code)
+    # 现有的跳转指令正则表达式调整，移除或处理含short的情况
+    # 移除jmp指令后的short关键字，并保留跳转标签
+    asm_code = re.sub(r"\b(j(mp|e|z|nz|ne|g|ge|l|le|b|be|a|ae))\s+short\s+[0-9a-f]+\s+<([^>]+)>", jump_token + r" <\3>",
+                      asm_code)
+    # 移除short
+    asm_code = asm_code.replace(" short ", " ")
+    # 对于带有偏移量的标签，特殊处理以保留偏移量信息
+    asm_code = re.sub(r"<([^+]+)\+\S+>", r"<\1+OFFSET>", asm_code)
+    # 处理空格和逗号
     asm_code = asm_code.replace("  ", " ").replace(", ", ",")
-
-    # 保留特定函数调用的结构化信息可能有助于理解代码的功能，这里以伪代码表示这一逻辑
-    # asm_code = re.sub(r"call\s+[a-f0-9]+", "call " + func_token, asm_code)
 
     return asm_code
