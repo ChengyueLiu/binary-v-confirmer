@@ -628,14 +628,21 @@ class ConfirmAnalysis:
     possible_bin_function_num: int = 0
     highly_possible_bin_function_num: int = 0  # match_possibility > 0.9
     confirmed_bin_function_num: int = 0  # match_possibility > 0.9 and confirmed_snippet_count > 0
-    highly_confirmed_bin_function_num: int = 0 # match_possibility > 0.9 and confirmed_snippet_count > 50%
+    highly_confirmed_bin_function_num: int = 0  # match_possibility > 0.9 and confirmed_snippet_count > 50%
+
     conclusion: bool = False
     judge_reason: str = ""
 
     def customer_serialize(self):
         return {
-            "conclusion": self.conclusion,
-            "judge_reason": self.judge_reason,
+            "summary": {
+                "conclusion": self.conclusion,
+                "judge_reason": self.judge_reason,
+                "possible_bin_function_num": self.possible_bin_function_num,
+                "highly_possible_bin_function_num": self.highly_possible_bin_function_num,
+                "confirmed_bin_function_num": self.confirmed_bin_function_num,
+                "highly_confirmed_bin_function_num": self.highly_confirmed_bin_function_num
+            },
             "vulnerability": self.vulnerability.customer_serialize(),
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]
