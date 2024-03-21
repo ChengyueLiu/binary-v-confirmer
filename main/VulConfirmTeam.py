@@ -32,17 +32,19 @@ class VulConfirmTeam:
         )
 
         # 1. 定位漏洞函数
-        possible_bin_functions: List[PossibleBinFunction] = self.function_finder.find_similar_bin_functions(
+        normalized_src_codes, possible_bin_functions = self.function_finder.find_similar_bin_functions(
             src_file_path=vul.cause_function.file_path,
             function_name=vul.cause_function.function_name,
-            binary_file_abs_path=os.path.abspath(binary_path),
-            analysis=analysis)
+            binary_file_abs_path=os.path.abspath(binary_path))
+        analysis.vulnerability.cause_function.normalized_src_codes = normalized_src_codes
+        analysis.possible_bin_functions = possible_bin_functions
         logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
 
         for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
             logger.info(
                 f"{i}: function：{vul.cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
                 f"personality: {possible_bin_function.match_possibility}")
+
             # 函数是否确认漏洞
             if possible_bin_function.match_possibility < 0.9:
                 possible_bin_function.conclusion = False
@@ -55,36 +57,46 @@ class VulConfirmTeam:
                 src_codes=vul.patches[0].snippet_codes_after_commit,
                 asm_codes=possible_bin_function.asm_codes)
             vul.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
-
-            logger.info(
-                f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
-            vul.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
             possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
             if len(asm_codes_window_texts) == 0:
                 possible_bin_function.conclusion = False
                 possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
                 continue
+            logger.info(
+                f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
 
             # 3. 确认漏洞代码片段
             predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
                                                               asm_codes_window_texts)
-            confirmed_snippet_count = 0
+
             for i, (asm_codes_window_text, (pred, prob)) in enumerate(zip(asm_codes_window_texts, predictions)):
                 logger.info(f"pred: {pred}, prob: {prob}")
                 pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
                 possible_bin_function.possible_asm_snippets.append(pas)
                 if pred == 1:
-                    confirmed_snippet_count += 1
+                    possible_bin_function.confirmed_snippet_count += 1
+
             # 函数是否确认漏洞
-            if confirmed_snippet_count > 0:
+            if possible_bin_function.confirmed_snippet_count > 0:
                 possible_bin_function.conclusion = True
-                possible_bin_function.judge_reason = f"confirmed_snippet_count = {confirmed_snippet_count}"
+                possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
 
                 analysis.conclusion = True
             else:
                 possible_bin_function.conclusion = False
-                possible_bin_function.judge_reason = f"confirmed_snippet_count = {confirmed_snippet_count}"
+                possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
 
+        analysis.possible_bin_function_num = len(possible_bin_functions)
+
+        high_possibility_bin_functions = [f for f in possible_bin_functions if f.match_possibility > 0.9]
+        analysis.highly_possible_bin_function_num = len(high_possibility_bin_functions)
+
+        confirmed_bin_functions = [f for f in high_possibility_bin_functions if f.conclusion]
+        analysis.confirmed_bin_function_num = len(confirmed_bin_functions)
+
+        highly_confirmed_bin_functions = [f for f in confirmed_bin_functions
+                                          if (f.confirmed_snippet_count / len(f.possible_asm_snippets)) > 0.5]
+        analysis.highly_confirmed_bin_function_num = len(highly_confirmed_bin_functions)
         analysis.judge_reason = f"possible_bin_function names: {[f.function_name for f in possible_bin_functions if f.conclusion]}"
         return analysis
 

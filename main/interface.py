@@ -599,6 +599,7 @@ class PossibleBinFunction:
     match_possibility: float
     asm_codes: List[str] = dataclasses.field(default_factory=list)
     possible_asm_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
+    confirmed_snippet_count: int = 0
 
     conclusion: bool = False
     judge_reason: str = ""
@@ -610,6 +611,7 @@ class PossibleBinFunction:
             "conclusion": self.conclusion,
             "judge_reason": self.judge_reason,
             # "asm_codes": self.asm_codes,
+            "confirmed_snippet_count": self.confirmed_snippet_count,
             "possible_asm_snippets": [possible_asm_snippet.customer_serialize()
                                       for possible_asm_snippet in self.possible_asm_snippets]
         }
@@ -623,6 +625,10 @@ class ConfirmAnalysis:
     vulnerability: Vulnerability
     possible_bin_functions: List[PossibleBinFunction] = dataclasses.field(default_factory=list)
 
+    possible_bin_function_num: int = 0
+    highly_possible_bin_function_num: int = 0  # match_possibility > 0.9
+    confirmed_bin_function_num: int = 0  # match_possibility > 0.9 and confirmed_snippet_count > 0
+    highly_confirmed_bin_function_num: int = 0 # match_possibility > 0.9 and confirmed_snippet_count > 50%
     conclusion: bool = False
     judge_reason: str = ""
 
