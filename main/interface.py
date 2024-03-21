@@ -659,6 +659,7 @@ class ConfirmAnalysis:
         return {
             "summary": {
                 "conclusion": self.conclusion,
+                "bin_function_num": self.bin_function_num,
                 "possible_bin_function_num": self.possible_bin_function_num,
                 "highly_possible_bin_function_num": self.highly_possible_bin_function_num,
                 "confirmed_bin_function_num": self.confirmed_bin_function_num,
