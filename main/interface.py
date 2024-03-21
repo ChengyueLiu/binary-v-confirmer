@@ -510,59 +510,6 @@ class Patch:
 
 
 @dataclass
-class CauseFunction:
-    """
-    漏洞函数
-    NOTE:
-        1. file_path: 源代码文件实际存储路径, 例如: "TestCases/model_train/model_1/test_data/p12_add.c", 不是文件相对项目的路径
-    """
-
-    file_path: str
-    file_name: str
-    function_name: str
-
-    project_name: str = ""
-    line_start: int = 0
-    line_end: int = 0
-    normalized_src_codes: List[str] = dataclasses.field(default_factory=list)
-
-    def customer_serialize(self):
-        return {
-            "project_name": self.project_name,
-            "file_path": self.file_path,
-            "function_name": self.function_name,
-            "line_start": self.line_start,
-            "line_end": self.line_end,
-            "normalized_src_codes": self.normalized_src_codes,
-        }
-
-
-@dataclass
-class Vulnerability:
-    """
-    漏洞信息
-    """
-    cve_id: str
-    cve_link: str
-    title: str = ""
-    severity: str = ""
-    description: str = ""
-    cause_function: CauseFunction = None
-    patches: List[Patch] = dataclasses.field(default_factory=list)
-
-    def customer_serialize(self):
-        return {
-            "cve_id": self.cve_id,
-            "cve_link": self.cve_link,
-            "title": self.title,
-            "severity": self.severity,
-            "description": self.description,
-            "cause_function": self.cause_function.customer_serialize(),
-            "patches": [patch.customer_serialize() for patch in self.patches]
-        }
-
-
-@dataclass
 class PossibleAsmSnippet:
     asm_codes_text: str
     match_type: int
@@ -604,9 +551,23 @@ class PossibleBinFunction:
 
 
 @dataclass
-class ConfirmAnalysis:
-    # vulnerability
-    vulnerability: Vulnerability
+class CauseFunction:
+    """
+    漏洞函数
+    NOTE:
+        1. file_path: 源代码文件实际存储路径, 例如: "TestCases/model_train/model_1/test_data/p12_add.c", 不是文件相对项目的路径
+    """
+
+    file_path: str
+    file_name: str
+    function_name: str
+
+    project_name: str = ""
+    line_start: int = 0
+    line_end: int = 0
+    normalized_src_codes: List[str] = dataclasses.field(default_factory=list)
+
+    patches: List[Patch] = dataclasses.field(default_factory=list)
 
     # bin function num
     bin_function_num: int = 0
@@ -623,7 +584,7 @@ class ConfirmAnalysis:
     confirmed_bin_function_num: int = 0  # match_possibility > 0.9 and confirmed_snippet_count > 0
     confirmed_bin_function_names: List[str] = dataclasses.field(default_factory=list)
 
-    conclusion: bool = False
+    conclusion = False
 
     def summary(self):
         possible_bin_function_names = [f.function_name for f in self.possible_bin_functions]
@@ -643,6 +604,13 @@ class ConfirmAnalysis:
 
     def customer_serialize(self):
         return {
+            "project_name": self.project_name,
+            "file_path": self.file_path,
+            "function_name": self.function_name,
+            "line_start": self.line_start,
+            "line_end": self.line_end,
+            "normalized_src_codes": self.normalized_src_codes,
+            "patches": [patch.customer_serialize() for patch in self.patches],
             "summary": {
                 "conclusion": self.conclusion,
                 "bin_function_num": self.bin_function_num,
@@ -653,7 +621,29 @@ class ConfirmAnalysis:
                 "highly_possible_bin_function_names": self.highly_possible_bin_function_names,
                 "confirmed_bin_function_names": self.confirmed_bin_function_names
             },
-            "vulnerability": self.vulnerability.customer_serialize(),
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]
+        }
+
+
+@dataclass
+class Vulnerability:
+    """
+    漏洞信息
+    """
+    cve_id: str
+    cve_link: str
+    title: str = ""
+    severity: str = ""
+    description: str = ""
+    cause_functions: List[CauseFunction] = dataclasses.field(default_factory=list)
+
+    def customer_serialize(self):
+        return {
+            "cve_id": self.cve_id,
+            "cve_link": self.cve_link,
+            "title": self.title,
+            "severity": self.severity,
+            "description": self.description,
+            "cause_function": [cause_function.customer_serialize() for cause_function in self.cause_functions],
         }

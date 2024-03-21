@@ -23,14 +23,6 @@ def train():
 
 
 def test_model():
-    # cause_function
-    cause_function = CauseFunction(
-        project_name="openssl",
-        file_name="crypto/pkcs12/p12_add.c",
-        file_path="TestCases/model_train/model_1/test_data/p12_add.c",
-        function_name="*PKCS12_unpack_p7data"
-    )
-
     # patch
     patch = Patch(
         commit_link="https://github.com/openssl/openssl/commit/775acfdbd0c6af9ac855f34969cdab0c0c90844a",
@@ -66,28 +58,36 @@ def test_model():
         ],
     )
 
+    # cause_function
+    cause_function = CauseFunction(
+        project_name="openssl",
+        file_name="crypto/pkcs12/p12_add.c",
+        file_path="TestCases/model_train/model_1/test_data/p12_add.c",
+        function_name="*PKCS12_unpack_p7data",
+        patches=[patch]
+    )
+
     # vulnerability
     vulnerability = Vulnerability(
         cve_id="CVE-2024-0727",
         cve_link="https://www.cve.org/CVERecord?id=CVE-2024-0727",
         title="PKCS12 Decoding crashes",
         severity="Low",
-        cause_function=cause_function,
-        patches=[patch]
+        cause_functions=[cause_function],
     )
     vul_confirm_team = VulConfirmTeam(batch_size=100)
 
     # openssl
     binary_path = "TestCases/model_train/model_1/test_data/openssl"
     save_path = "openssl_confirm_results.json"
-    analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
-    save_to_json_file(analysis.customer_serialize(), save_path, output_log=True)
+    vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
+    save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
     # openssl
     binary_path = "TestCases/model_train/model_1/test_data/libcrypto.so.3"
     save_path = "libcrypto_confirm_results.json"
-    analysis = vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
-    save_to_json_file(analysis.customer_serialize(), save_path, output_log=True)
+    vul_confirm_team.confirm(binary_path=binary_path, vul=vulnerability)
+    save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
 
 if __name__ == '__main__':

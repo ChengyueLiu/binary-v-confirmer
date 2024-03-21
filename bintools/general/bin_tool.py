@@ -30,6 +30,9 @@ def normalize_asm_code(asm_code: str,
     # 简化空格，保持格式整洁
     asm_code = re.sub(r"\s+", " ", asm_code).strip()
 
+    # 替换寄存器为统一标记
+    asm_code = re.sub(r"\br[\w\d]+\b", reg_token, asm_code)
+
     # 移除所有的数据大小标记
     data_size_markers_pattern = r"\b(byte|word|dword|qword|tword|short)\s+ptr\b"
     asm_code = re.sub(data_size_markers_pattern, "", asm_code)

@@ -26,68 +26,64 @@ class VulConfirmTeam:
         self.snippet_confirmer = SnippetConfirmer(model_save_path=snippet_confirm_model_pth_path, batch_size=batch_size)
         logger.info("VulConfirmTeam init done")
 
-    def confirm(self, binary_path, vul: Vulnerability) -> ConfirmAnalysis:
-        analysis = ConfirmAnalysis(
-            vulnerability=vul,
-        )
+    def confirm(self, binary_path, vul: Vulnerability):
+        for cause_function in vul.cause_functions:
+            # 1. 定位漏洞函数
+            normalized_src_codes, bin_function_num, possible_bin_functions = self.function_finder.find_similar_bin_functions(
+                src_file_path=cause_function.file_path,
+                function_name=cause_function.function_name,
+                binary_file_abs_path=os.path.abspath(binary_path))
+            cause_function.bin_function_num = bin_function_num
+            cause_function.normalized_src_codes = normalized_src_codes
+            cause_function.possible_bin_functions = possible_bin_functions
+            logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
 
-        # 1. 定位漏洞函数
-        normalized_src_codes, bin_function_num, possible_bin_functions = self.function_finder.find_similar_bin_functions(
-            src_file_path=vul.cause_function.file_path,
-            function_name=vul.cause_function.function_name,
-            binary_file_abs_path=os.path.abspath(binary_path))
-        analysis.bin_function_num = bin_function_num
-        analysis.vulnerability.cause_function.normalized_src_codes = normalized_src_codes
-        analysis.possible_bin_functions = possible_bin_functions
-        logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
+            for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
+                logger.info(
+                    f"{i}: function：{cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
+                    f"personality: {possible_bin_function.match_possibility}")
 
-        for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
-            logger.info(
-                f"{i}: function：{vul.cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
-                f"personality: {possible_bin_function.match_possibility}")
+                # 函数是否确认漏洞
+                if possible_bin_function.match_possibility < 0.9:
+                    possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = "match_possibility < 0.9"
+                    continue
 
-            # 函数是否确认漏洞
-            if possible_bin_function.match_possibility < 0.9:
-                possible_bin_function.conclusion = False
-                possible_bin_function.judge_reason = "match_possibility < 0.9"
-                continue
+                # 2. 定位漏洞代码片段
+                patch_src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
+                    vul_function_name=cause_function.function_name,
+                    src_codes=cause_function.patches[0].snippet_codes_after_commit,
+                    asm_codes=possible_bin_function.asm_codes)
+                cause_function.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
+                possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
+                if len(asm_codes_window_texts) == 0:
+                    possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
+                    continue
+                logger.info(
+                    f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
 
-            # 2. 定位漏洞代码片段
-            patch_src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
-                vul_function_name=vul.cause_function.function_name,
-                src_codes=vul.patches[0].snippet_codes_after_commit,
-                asm_codes=possible_bin_function.asm_codes)
-            vul.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
-            possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
-            if len(asm_codes_window_texts) == 0:
-                possible_bin_function.conclusion = False
-                possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
-                continue
-            logger.info(
-                f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
+                # 3. 确认漏洞代码片段
+                predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
+                                                                  asm_codes_window_texts)
 
-            # 3. 确认漏洞代码片段
-            predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
-                                                              asm_codes_window_texts)
+                for i, (asm_codes_window_text, (pred, prob)) in enumerate(zip(asm_codes_window_texts, predictions)):
+                    logger.info(f"pred: {pred}, prob: {prob}")
+                    pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
+                    possible_bin_function.possible_asm_snippets.append(pas)
+                    if pred == 1:
+                        possible_bin_function.confirmed_snippet_count += 1
 
-            for i, (asm_codes_window_text, (pred, prob)) in enumerate(zip(asm_codes_window_texts, predictions)):
-                logger.info(f"pred: {pred}, prob: {prob}")
-                pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
-                possible_bin_function.possible_asm_snippets.append(pas)
-                if pred == 1:
-                    possible_bin_function.confirmed_snippet_count += 1
+                # 函数是否确认漏洞
+                if possible_bin_function.confirmed_snippet_count > 0:
+                    possible_bin_function.conclusion = True
+                    possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
 
-            # 函数是否确认漏洞
-            if possible_bin_function.confirmed_snippet_count > 0:
-                possible_bin_function.conclusion = True
-                possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
+                else:
+                    possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
 
-            else:
-                possible_bin_function.conclusion = False
-                possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
-
-        analysis.summary()
-        return analysis
+            cause_function.summary()
 
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
