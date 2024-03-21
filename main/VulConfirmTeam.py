@@ -69,15 +69,18 @@ class VulConfirmTeam:
                 possible_bin_function.predictions.append((pred, prob))
                 if pred == 1:
                     confirmed_snippet_count += 1
+
             # 函数是否确认漏洞
             if confirmed_snippet_count > 0:
                 possible_bin_function.conclusion = True
                 possible_bin_function.judge_reason = f"confirmed_snippet_count = {confirmed_snippet_count}"
 
-            # 二进制文件是否确认漏洞
-            if possible_bin_function.conclusion:
                 analysis.conclusion = True
+            else:
+                possible_bin_function.conclusion = False
+                possible_bin_function.judge_reason = f"confirmed_snippet_count = {confirmed_snippet_count}"
 
+        analysis.judge_reason = f"possible_bin_function names: {[f.function_name for f in possible_bin_functions if f.conclusion]}"
         return analysis
 
 

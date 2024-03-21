@@ -605,7 +605,12 @@ class ConfirmAnalysis:
 
     vulnerability: Vulnerability
     possible_bin_functions: List[PossibleBinFunction] = dataclasses.field(default_factory=list)
+
     conclusion: bool = False
+    judge_reason: str = ""
+
+
+
     def customer_serialize(self):
         return {
             "conclusion": self.conclusion,
