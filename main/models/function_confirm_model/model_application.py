@@ -137,4 +137,4 @@ class FunctionFinder:
                 possible_bin_functions.append(possible_bin_function)
         possible_bin_functions.sort(key=lambda x: x.match_possibility, reverse=True)
 
-        return normalized_src_codes, len(data_items), possible_bin_functions
+        return normalized_src_codes, len(predictions), possible_bin_functions
