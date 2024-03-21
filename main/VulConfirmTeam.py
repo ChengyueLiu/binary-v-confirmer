@@ -26,6 +26,28 @@ class VulConfirmTeam:
         self.snippet_confirmer = SnippetConfirmer(model_save_path=snippet_confirm_model_pth_path, batch_size=batch_size)
         logger.info("VulConfirmTeam init done")
 
+    def confirm_snippet(self, cause_function, possible_bin_function, is_vul=True):
+        # 2. 定位漏洞代码片段
+        patch = cause_function.patches[0]
+        src_codes = patch.snippet_codes_before_commit if is_vul else patch.snippet_codes_after_commit
+        patch_src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
+            vul_function_name=cause_function.function_name,
+            src_codes=src_codes,
+            asm_codes=possible_bin_function.asm_codes)
+        cause_function.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
+        possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
+        if len(asm_codes_window_texts) == 0:
+            possible_bin_function.conclusion = False
+            possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
+            return None, None
+        logger.info(
+            f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
+
+        # 3. 确认漏洞代码片段
+        predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
+                                                          asm_codes_window_texts)
+        return asm_codes_window_texts, predictions
+
     def confirm(self, binary_path, vul: Vulnerability):
         for cause_function in vul.cause_functions:
             # 1. 定位漏洞函数
@@ -49,39 +71,40 @@ class VulConfirmTeam:
                     possible_bin_function.judge_reason = "match_possibility < 0.9"
                     continue
 
-                # 2. 定位漏洞代码片段
-                patch_src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
-                    vul_function_name=cause_function.function_name,
-                    src_codes=cause_function.patches[0].snippet_codes_after_commit,
-                    asm_codes=possible_bin_function.asm_codes)
-                cause_function.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
-                possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
-                if len(asm_codes_window_texts) == 0:
-                    possible_bin_function.conclusion = False
-                    possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
-                    continue
-                logger.info(
-                    f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
+                # 确认漏洞片段
+                vul_asm_codes_window_texts, vul_predictions = self.confirm_snippet(cause_function,
+                                                                                   possible_bin_function,
+                                                                                   is_vul=True)
 
-                # 3. 确认漏洞代码片段
-                predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
-                                                                  asm_codes_window_texts)
-
-                for i, (asm_codes_window_text, (pred, prob)) in enumerate(zip(asm_codes_window_texts, predictions)):
+                for i, (asm_codes_window_text, (pred, prob)) in enumerate(
+                        zip(vul_asm_codes_window_texts, vul_predictions)):
                     logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
-                    possible_bin_function.possible_asm_snippets.append(pas)
+                    possible_bin_function.possible_vul_snippets.append(pas)
                     if pred == 1:
-                        possible_bin_function.confirmed_snippet_count += 1
+                        possible_bin_function.confirmed_vul_snippet_count += 1
 
+                # 确认补丁片段
+                patch_asm_codes_window_texts, patch_predictions = self.confirm_snippet(cause_function,
+                                                                                       possible_bin_function,
+                                                                                       is_vul=False)
+                for i, (asm_codes_window_text, (pred, prob)) in enumerate(
+                        zip(patch_asm_codes_window_texts, patch_predictions)):
+                    logger.info(f"pred: {pred}, prob: {prob}")
+                    pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
+                    possible_bin_function.possible_patch_snippets.append(pas)
+                    if pred == 1:
+                        possible_bin_function.confirmed_patch_snippet_count += 1
+
+                # TODO 统计漏洞和补丁
                 # 函数是否确认漏洞
-                if possible_bin_function.confirmed_snippet_count > 0:
+                if possible_bin_function.confirmed_vul_snippet_count > 0:
                     possible_bin_function.conclusion = True
-                    possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
+                    possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}"
 
                 else:
                     possible_bin_function.conclusion = False
-                    possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_snippet_count}"
+                    possible_bin_function.judge_reason = f"confirmed_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}"
 
             cause_function.summary()
 

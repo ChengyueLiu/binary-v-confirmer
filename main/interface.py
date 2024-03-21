@@ -531,8 +531,10 @@ class PossibleBinFunction:
     function_name: str
     match_possibility: float
     asm_codes: List[str] = dataclasses.field(default_factory=list)
-    possible_asm_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
-    confirmed_snippet_count: int = 0
+    possible_vul_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
+    possible_patch_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
+    confirmed_vul_snippet_count: int = 0
+    confirmed_patch_snippet_count: int = 0
 
     conclusion: bool = False
     judge_reason: str = ""
@@ -544,9 +546,10 @@ class PossibleBinFunction:
             "conclusion": self.conclusion,
             "judge_reason": self.judge_reason,
             "asm_codes": self.asm_codes,
-            "confirmed_snippet_count": self.confirmed_snippet_count,
-            "possible_asm_snippets": [possible_asm_snippet.customer_serialize()
-                                      for possible_asm_snippet in self.possible_asm_snippets]
+            "confirmed_vul_snippet_count": self.confirmed_vul_snippet_count,
+            "confirmed_patch_snippet_count": self.confirmed_patch_snippet_count,
+            "possible_vul_snippets": [possible_vul_snippet.customer_serialize() for possible_vul_snippet in self.possible_vul_snippets],
+            "possible_patch_snippets": [possible_patch_snippet.customer_serialize() for possible_patch_snippet in self.possible_patch_snippets]
         }
 
 
