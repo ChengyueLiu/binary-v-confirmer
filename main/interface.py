@@ -400,25 +400,20 @@ class DataItemForCodeSnippetPositioningModel:
         self.src_codes = normalized_src_codes
 
         self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := self._normalize_asm_code(code))]
+                          if (normalized_code := normalize_asm_code(code,
+                                                                    reg_token=SpecialToken.ASM_REG.value,
+                                                                    num_token=SpecialToken.ASM_NUM.value,
+                                                                    jump_token=SpecialToken.ASM_JUMP.value,
+                                                                    loc_token=SpecialToken.ASM_LOC.value,
+                                                                    mem_token=SpecialToken.ASM_MEM.value))]
 
         self.answer_asm_codes = [normalized_code for code in self.answer_asm_codes
-                                 if (normalized_code := self._normalize_asm_code(code))]
-
-    def _normalize_asm_code(self, asm_code):
-        # 如果输入的是原始的行信息，要先分割一下
-        if "\t" in asm_code:
-            asm_line_parts = asm_code.split("\t")
-            if len(asm_line_parts) != 3:
-                return None
-            asm_code = asm_line_parts[-1]
-        asm_code = normalize_asm_code(asm_code,
-                                      reg_token=SpecialToken.ASM_REG.value,
-                                      num_token=SpecialToken.ASM_NUM.value,
-                                      jump_token=SpecialToken.ASM_JUMP.value,
-                                      loc_token=SpecialToken.ASM_LOC.value,
-                                      mem_token=SpecialToken.ASM_MEM.value)
-        return asm_code
+                                 if (normalized_code := normalize_asm_code(code,
+                                                                           reg_token=SpecialToken.ASM_REG.value,
+                                                                           num_token=SpecialToken.ASM_NUM.value,
+                                                                           jump_token=SpecialToken.ASM_JUMP.value,
+                                                                           loc_token=SpecialToken.ASM_LOC.value,
+                                                                           mem_token=SpecialToken.ASM_MEM.value))]
 
 
 class DataItemForCodeSnippetConfirmModel:
@@ -461,22 +456,12 @@ class DataItemForCodeSnippetConfirmModel:
                           if (normalized_line := line.strip())]
 
         self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := self._normalize_asm_code(code))]
-
-    def _normalize_asm_code(self, asm_code):
-        # 如果输入的是原始的行信息，要先分割一下
-        if "\t" in asm_code:
-            asm_line_parts = asm_code.split("\t")
-            if len(asm_line_parts) != 3:
-                return None
-            asm_code = asm_line_parts[-1]
-        asm_code = normalize_asm_code(asm_code,
-                                      reg_token=SpecialToken.ASM_REG.value,
-                                      num_token=SpecialToken.ASM_NUM.value,
-                                      jump_token=SpecialToken.ASM_JUMP.value,
-                                      loc_token=SpecialToken.ASM_LOC.value,
-                                      mem_token=SpecialToken.ASM_MEM.value)
-        return asm_code
+                          if (normalized_code := normalize_asm_code(code,
+                                                                    reg_token=SpecialToken.ASM_REG.value,
+                                                                    num_token=SpecialToken.ASM_NUM.value,
+                                                                    jump_token=SpecialToken.ASM_JUMP.value,
+                                                                    loc_token=SpecialToken.ASM_LOC.value,
+                                                                    mem_token=SpecialToken.ASM_MEM.value))]
 
     @classmethod
     def get_special_tokens(cls):
@@ -504,8 +489,6 @@ class Patch:
     snippet_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
     snippet_asm_codes_after_commit: List[str] = dataclasses.field(default_factory=list)
     snippet_codes_text_after_commit: str = ""
-
-
 
     def customer_serialize(self):
         return {

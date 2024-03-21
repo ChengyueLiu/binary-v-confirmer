@@ -1,4 +1,108 @@
-from bintools.general.file_tool import load_from_json_file
+from bintools.general.bin_tool import normalize_asm_code
+from main.interface import SpecialToken
 
-bfs = load_from_json_file("TestCases/model_train/model_1/test_data/ida_pro_results/libcrypto.json")
-print(len(bfs))
+demo = [
+    "endbr64",
+    "push    rbp",
+    "mov     rbp, rsp",
+    "sub     rsp, 20h",
+    "mov     [rbp+var_18], rdi",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+148h]",
+    "test    rax, rax",
+    "jz      short loc_4824",
+    "mov     rax, [rbp+var_18]",
+    "add     rax, 148h",
+    "mov     rdi, rax",
+    "call    IDAT_end",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+140h]",
+    "test    rax, rax",
+    "jz      short loc_4846",
+    "mov     rax, [rbp+var_18]",
+    "add     rax, 140h",
+    "mov     rdi, rax",
+    "call    chunk_end",
+    "mov     rax, [rbp+var_18]",
+    "mov     eax, [rax+18h]",
+    "mov     [rbp+var_8], eax",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+40h]",
+    "test    rax, rax",
+    "jz      short loc_486D",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+40h]",
+    "mov     rdi, rax; stream",
+    "call    _fclose",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+48h]",
+    "test    rax, rax",
+    "jz      short loc_48F7",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+48h]",
+    "mov     rdi, rax; stream",
+    "call    _fflush",
+    "test    eax, eax",
+    "jnz     short loc_48A2",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+48h]",
+    "mov     rdi, rax; stream",
+    "call    _ferror",
+    "test    eax, eax",
+    "jz      short loc_48A9",
+    "mov     eax, 1",
+    "jmp     short loc_48AE",
+    "mov     eax, 0",
+    "mov     [rbp+var_4], eax",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+48h]",
+    "mov     rdi, rax; stream",
+    "call    _fclose",
+    "test    eax, eax",
+    "jnz     short loc_48CB",
+    "cmp     [rbp+var_4], 0",
+    "jz      short loc_48F7",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax+10h]",
+    "mov     rdi, rax; s",
+    "call    _perror",
+    "mov     rax, [rbp+var_18]",
+    "lea     rdx, aOutputWriteErr; \"output write error\"",
+    "mov     esi, 5",
+    "mov     rdi, rax",
+    "call    emit_error",
+    "or      [rbp+var_8], 20h",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax]",
+    "mov     edx, [rax+8]",
+    "mov     rax, [rbp+var_18]",
+    "mov     rax, [rax]",
+    "or      edx, [rbp+var_8]",
+    "mov     [rax+8], edx",
+    "mov     rax, [rbp+var_18]",
+    "mov     esi, 160h",
+    "mov     rdi, rax",
+    "call    clear",
+    "mov     eax, [rbp+var_8]",
+    "leave",
+    "retn"]
+
+
+def _normalize_asm_code(asm_code):
+    # 如果输入的是原始的行信息，要先分割一下
+    if "\t" in asm_code:
+        asm_line_parts = asm_code.split("\t")
+        if len(asm_line_parts) != 3:
+            return None
+        asm_code = asm_line_parts[-1]
+    asm_code = normalize_asm_code(asm_code,
+                                  reg_token=SpecialToken.ASM_REG.value,
+                                  num_token=SpecialToken.ASM_NUM.value,
+                                  jump_token=SpecialToken.ASM_JUMP.value,
+                                  loc_token=SpecialToken.ASM_LOC.value,
+                                  mem_token=SpecialToken.ASM_MEM.value)
+    return asm_code
+
+
+for asm_code in demo:
+    print(_normalize_asm_code(asm_code))

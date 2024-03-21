@@ -14,7 +14,7 @@ def train():
 
     if __name__ == '__main__':
         logger.info("Start training model 1")
-        # train_model_1()
+        train_model_1()
         logger.info("Start training model 2")
         train_model_2()
         logger.info("Start training model 3")
@@ -144,5 +144,5 @@ def test_model():
 
 
 if __name__ == '__main__':
-    # train()
+    train()
     test_model()

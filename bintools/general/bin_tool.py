@@ -15,6 +15,13 @@ def normalize_asm_code(asm_code: str,
     :param asm_code: 待处理的汇编代码字符串。
     :return: 正规化后的汇编代码字符串。
     """
+    # 如果输入的是原始的行信息，要先分割一下
+    if "\t" in asm_code:
+        asm_line_parts = asm_code.split("\t")
+        if len(asm_line_parts) != 3:
+            return None
+        asm_code = asm_line_parts[-1]
+
     # 转换为小写，保持一致性
     asm_code = asm_code.lower()
 
