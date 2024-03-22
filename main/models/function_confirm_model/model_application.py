@@ -64,9 +64,8 @@ class FunctionFinder:
         # TODO linux下使用IDA Pro提取特征？
         # bin_function_features = extract_bin_feature(binary_file_abs_path)
         # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
-        bin_file_name = os.path.basename(binary_file_abs_path)
         if "TestCases/binaries" in binary_file_abs_path:
-            IDA_PRO_OUTPUT_PATH = bin_file_name.replace("TestCases/binaries/", "TestCases/binary_function_features/") + ".json"
+            IDA_PRO_OUTPUT_PATH = binary_file_abs_path.replace("TestCases/binaries/", "TestCases/binary_function_features/") + ".json"
         results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
         # 转换成外部的数据结构
         bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
