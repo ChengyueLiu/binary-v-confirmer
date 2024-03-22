@@ -25,6 +25,13 @@ class VulConfirmTeam:
         logger.info("VulConfirmTeam init done")
 
     def confirm_snippet(self, cause_function, possible_bin_function, is_vul=True):
+        """
+        定位，确认漏洞代码片段
+        :param cause_function:
+        :param possible_bin_function:
+        :param is_vul:
+        :return:
+        """
         # 2. 定位漏洞代码片段
         patch = cause_function.patches[0]
         src_codes = patch.snippet_codes_before_commit if is_vul else patch.snippet_codes_after_commit
@@ -63,10 +70,18 @@ class VulConfirmTeam:
                     f"{i}: function：{cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
                     f"personality: {possible_bin_function.match_possibility}")
 
-                # 可能性很小的函数直接跳过
-                if possible_bin_function.match_possibility < 0.9:
+                # 跳过源代码函数比二进制函数长的情况，这种基本都是误判
+                if (asm_codes_length := len(possible_bin_function.asm_codes)) <= (
+                        src_codes_length := len(normalized_src_codes)):
                     possible_bin_function.conclusion = False
-                    possible_bin_function.judge_reason = "match_possibility < 0.9"
+                    possible_bin_function.judge_reason = f"asm_codes_length({asm_codes_length}) <= src_codes_length({src_codes_length})"
+                    continue
+
+                # 可能性很小的函数直接跳过
+                min_match_possibility = 0.9
+                if possible_bin_function.match_possibility < min_match_possibility:
+                    possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = f"match_possibility < {min_match_possibility}"
                     continue
 
                 # 确认漏洞片段
@@ -93,6 +108,22 @@ class VulConfirmTeam:
                     if pred == 1:
                         possible_bin_function.confirmed_patch_snippet_count += 1
 
+                # 判定这个函数
+                # 如果没有确认的漏洞片段，直接判定为False
+                if possible_bin_function.confirmed_vul_snippet_count == 0:
+                    possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = "confirmed_vul_snippet_count == 0"
+
+                else:
+                    # 如果确认的漏洞片段数大于确认的补丁片段数，判定为True
+                    if possible_bin_function.confirmed_patch_snippet_count < possible_bin_function.confirmed_vul_snippet_count:
+                        possible_bin_function.conclusion = True
+                    # 如果确认的漏洞片段数小于等于确认的补丁片段数，判定为False
+                    else:
+                        possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = (
+                        f"confirmed_vul_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}, "
+                        f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
             cause_function.summary()
 
 

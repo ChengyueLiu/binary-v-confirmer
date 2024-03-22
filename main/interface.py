@@ -604,15 +604,14 @@ class CauseFunction:
         self.confirmed_bin_function_names = [f.function_name for f in confirmed_bin_functions]
         self.confirmed_bin_function_num = len(confirmed_bin_functions)
 
+        if self.confirmed_bin_function_num > 0:
+            self.conclusion = True
+
     def customer_serialize(self):
         return {
             "project_name": self.project_name,
             "file_path": self.file_path,
             "function_name": self.function_name,
-            "line_start": self.line_start,
-            "line_end": self.line_end,
-            "normalized_src_codes": self.normalized_src_codes,
-            "patches": [patch.customer_serialize() for patch in self.patches],
             "summary": {
                 "conclusion": self.conclusion,
                 "bin_function_num": self.bin_function_num,
@@ -623,6 +622,10 @@ class CauseFunction:
                 "highly_possible_bin_function_names": self.highly_possible_bin_function_names,
                 "confirmed_bin_function_names": self.confirmed_bin_function_names
             },
+            "line_start": self.line_start,
+            "line_end": self.line_end,
+            "normalized_src_codes": self.normalized_src_codes,
+            "patches": [patch.customer_serialize() for patch in self.patches],
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]
         }

@@ -114,13 +114,18 @@ class FunctionFinder:
                                    binary_file_abs_path: str):
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
+            step 1: 提取源代码, 二进制文件特征
+            step 2: 使用模型预测
+            step 3: 输出结果
+                1. 预测label为1的函数
+                2.
 
         """
         # 预处理数据
         data_items, dataloader = self._preprocess_data(src_file_path,
                                                        function_name,
                                                        binary_file_abs_path)
-
+        # 正规化处理的源代码
         normalized_src_codes = data_items[0].src_codes
 
         # 预测
