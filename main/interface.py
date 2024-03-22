@@ -642,6 +642,9 @@ class Vulnerability:
     severity: str = ""
     description: str = ""
     cause_functions: List[CauseFunction] = dataclasses.field(default_factory=list)
+    cause_function_num: int = len(cause_functions)
+    confirmed_cause_function_num: int = 0
+    conclusion: bool = False
 
     def init_from_commit_info(self, commit_info: dict):
         # TODO 从commit_info中初始化Vulnerability对象
@@ -654,5 +657,15 @@ class Vulnerability:
             "title": self.title,
             "severity": self.severity,
             "description": self.description,
+            "summary": {
+                "cause_function_num": self.cause_function_num,
+                "confirmed_cause_function_num": self.confirmed_cause_function_num,
+                "conclusion": self.conclusion
+            },
             "cause_function": [cause_function.customer_serialize() for cause_function in self.cause_functions],
         }
+
+    def summary(self):
+        self.confirmed_cause_function_num = len(
+            [cause_function for cause_function in self.cause_functions if cause_function.conclusion])
+        self.conclusion = self.confirmed_cause_function_num > 0

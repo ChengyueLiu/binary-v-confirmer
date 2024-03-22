@@ -42,8 +42,6 @@ class VulConfirmTeam:
         cause_function.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
         possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
         if len(asm_codes_window_texts) == 0:
-            possible_bin_function.conclusion = False
-            possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
             return [], []
         logger.info(
             f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
@@ -67,11 +65,11 @@ class VulConfirmTeam:
 
             for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
                 # 跳过源代码函数比二进制函数长的情况，这种基本都是误判
-                if (asm_codes_length := len(possible_bin_function.asm_codes)) <= (
-                        src_codes_length := len(normalized_src_codes)):
-                    possible_bin_function.conclusion = False
-                    possible_bin_function.judge_reason = f"asm_codes_length({asm_codes_length}) <= src_codes_length({src_codes_length})"
-                    continue
+                # if (asm_codes_length := len(possible_bin_function.asm_codes)) <= (
+                #         src_codes_length := len(normalized_src_codes)):
+                #     possible_bin_function.conclusion = False
+                #     possible_bin_function.judge_reason = f"asm_codes_length({asm_codes_length}) <= src_codes_length({src_codes_length})"
+                #     continue
 
                 # 可能性很小的函数直接跳过
                 min_match_possibility = 0.9
@@ -96,6 +94,11 @@ class VulConfirmTeam:
                 patch_asm_codes_window_texts, patch_predictions = self.confirm_snippet(cause_function,
                                                                                        possible_bin_function,
                                                                                        is_vul=False)
+                if not patch_asm_codes_window_texts:
+                    possible_bin_function.conclusion = False
+                    possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
+                    continue
+
                 # 更新补丁片段信息
                 for asm_codes_window_text, (pred, prob) in zip(patch_asm_codes_window_texts, patch_predictions):
                     logger.info(f"pred: {pred}, prob: {prob}")
@@ -125,6 +128,7 @@ class VulConfirmTeam:
                     f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.conclusion}. \n"
                     f"reason: {possible_bin_function.judge_reason}")
             cause_function.summary()
+        vul.summary()
 
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
