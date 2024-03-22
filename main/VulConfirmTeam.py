@@ -33,24 +33,33 @@ class VulConfirmTeam:
         :param is_vul:
         :return:
         """
-        # 2. 定位漏洞代码片段
+        # 2. 定位代码片段
+        # TODO 可能会有多个patch，这里只取第一个patch
         patch = cause_function.patches[0]
-        src_codes = patch.snippet_codes_before_commit if is_vul else patch.snippet_codes_after_commit
-        patch_src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
+        # 源代码片段
+        if is_vul:
+            src_codes = patch.snippet_codes_before_commit
+        else:
+            src_codes = patch.snippet_codes_after_commit
+        # 定位代码片段
+        src_codes_text, asm_codes_window_texts = self.snippet_positioner.position(
             vul_function_name=cause_function.function_name,
             src_codes=src_codes,
             asm_codes=possible_bin_function.asm_codes)
-        cause_function.patches[0].snippet_codes_text_after_commit = patch_src_codes_text
-        possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
+
+        # 更新代码片段text
+        if is_vul:
+            cause_function.patches[0].snippet_codes_text_before_commit = src_codes_text
+        else:
+            cause_function.patches[0].snippet_codes_text_after_commit = src_codes_text
         if len(asm_codes_window_texts) == 0:
             return "", [], []
         # logger.info(
         #     f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
 
-        # 3. 确认漏洞代码片段
-        predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
-                                                          asm_codes_window_texts)
-        return patch_src_codes_text, asm_codes_window_texts, predictions
+        # 3. 确认代码片段
+        predictions = self.snippet_confirmer.confirm_vuls(src_codes_text, asm_codes_window_texts)
+        return src_codes_text, asm_codes_window_texts, predictions
 
     def confirm(self, binary_path, vul: Vulnerability):
         logger.info(f"Start confirm {vul.cve_id} in {binary_path}")
@@ -84,9 +93,10 @@ class VulConfirmTeam:
                     continue
 
                 # 确认漏洞片段
-                vul_src_codes_text, vul_asm_codes_window_texts, vul_predictions = self.confirm_snippet(cause_function,
-                                                                                                       possible_bin_function,
-                                                                                                       is_vul=True)
+                vul_src_codes_text, vul_asm_codes_window_texts, vul_predictions = self.confirm_snippet(
+                    cause_function,
+                    possible_bin_function,
+                    is_vul=True)
                 # 更新漏洞片段信息
                 for asm_codes_window_text, (pred, prob) in zip(vul_asm_codes_window_texts, vul_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
