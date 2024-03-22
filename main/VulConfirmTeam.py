@@ -65,7 +65,7 @@ class VulConfirmTeam:
             cause_function.normalized_src_codes = normalized_src_codes
             cause_function.bin_function_num = bin_function_num
             cause_function.possible_bin_functions = possible_bin_functions
-            logger.info(f"{cause_function.function_name}: possible_bin_functions: {len(possible_bin_functions)}")
+            logger.info(f"{cause_function.function_name}: possible_bin_functions: {len(possible_bin_functions)}/{bin_function_num}")
 
             for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
                 # 跳过源代码函数比二进制函数长的情况，这种基本都是误判
@@ -132,7 +132,7 @@ class VulConfirmTeam:
                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
 
             cause_function.summary()
-            logger.info(f"{cause_function.function_name}: confirmed bin functions: {cause_function.confirmed_bin_function_num}")
+            logger.info(f"{cause_function.function_name}: confirmed bin functions: {cause_function.confirmed_bin_function_num}/{bin_function_num}")
         vul.summary()
         logger.info(f"Confirm Done, Time cost: {round(time.perf_counter() - start_at, 2)}s")
 
