@@ -33,6 +33,25 @@ def split_list_by_sliding_window(input_list, window_length=50, step=20):
     return windows
 
 
+def remove_subsets(str_list):
+    # 按字符串长度排序，这样我们可以先处理短字符串
+    sorted_str_list = sorted(str_list, key=len)
+    result = []
+
+    for i in range(len(sorted_str_list)):
+        subset_found = False
+        for j in range(i + 1, len(sorted_str_list)):
+            # 如果当前字符串是后面任一字符串的子集，则标记它，不再添加到结果中
+            if sorted_str_list[i] in sorted_str_list[j]:
+                subset_found = True
+                break
+        # 如果当前字符串不是任何字符串的子集，则添加到结果列表中
+        if not subset_found:
+            result.append(sorted_str_list[i])
+
+    return result
+
+
 class SnippetPositioner:
 
     def __init__(self, model_save_path: str = 'model_weights.pth', batch_size: int = 16):
@@ -136,6 +155,8 @@ class SnippetPositioner:
                 answer = self.tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
                 if answer:
                     predicted_answers.append(answer)
+        # 移除子集
+        predicted_answers = remove_subsets(predicted_answers)
         return predicted_answers
 
     def position(self, vul_function_name, src_codes: List[str], asm_codes: List[str]):
