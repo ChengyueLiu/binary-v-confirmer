@@ -517,12 +517,14 @@ class Patch:
 
 @dataclass
 class PossibleAsmSnippet:
+    src_codes_text: str
     asm_codes_text: str
     match_type: int
     probability: float
 
     def customer_serialize(self):
         return {
+            "src_codes_text": self.src_codes_text,
             "asm_codes_text": self.asm_codes_text,
             "match_type": self.match_type,
             "probability": self.probability
