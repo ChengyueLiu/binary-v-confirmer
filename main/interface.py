@@ -642,7 +642,7 @@ class Vulnerability:
     severity: str = ""
     description: str = ""
     cause_functions: List[CauseFunction] = dataclasses.field(default_factory=list)
-    cause_function_num: int = len(cause_functions)
+    cause_function_num: int = 0
     confirmed_cause_function_num: int = 0
     conclusion: bool = False
 
@@ -666,6 +666,7 @@ class Vulnerability:
         }
 
     def summary(self):
+        self.cause_function_num = len(self.cause_functions)
         self.confirmed_cause_function_num = len(
             [cause_function for cause_function in self.cause_functions if cause_function.conclusion])
         self.conclusion = self.confirmed_cause_function_num > 0
