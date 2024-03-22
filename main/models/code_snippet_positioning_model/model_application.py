@@ -112,7 +112,7 @@ class SnippetPositioner:
 
     def _predict(self, dataloader: DataLoader):
         predicted_answers = []
-        for batch in tqdm(dataloader, desc="positioning code snippet ..."):
+        for batch in dataloader:
             # 转移到设备
             batch_input_ids = batch['input_ids'].to(self.device)
             batch_attention_mask = batch['attention_mask'].to(self.device)

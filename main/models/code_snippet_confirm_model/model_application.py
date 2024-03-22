@@ -54,7 +54,7 @@ class SnippetConfirmer:
         """
         # predict
         predictions = []
-        for batch in tqdm(dataloader, desc="confirming functions ..."):
+        for batch in dataloader:
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
             with torch.no_grad():

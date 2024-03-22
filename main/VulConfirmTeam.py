@@ -43,8 +43,8 @@ class VulConfirmTeam:
         possible_bin_function.asm_codes_window_texts = asm_codes_window_texts
         if len(asm_codes_window_texts) == 0:
             return [], []
-        logger.info(
-            f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
+        # logger.info(
+        #     f"len(asm_codes): {len(possible_bin_function.asm_codes)} ---> len(asm_codes_texts): {len(asm_codes_window_texts)}")
 
         # 3. 确认漏洞代码片段
         predictions = self.snippet_confirmer.confirm_vuls(patch_src_codes_text,
