@@ -117,6 +117,9 @@ class VulConfirmTeam:
                     # 如果确认的漏洞片段数大于确认的补丁片段数，判定为True
                     if possible_bin_function.confirmed_patch_snippet_count < possible_bin_function.confirmed_vul_snippet_count:
                         possible_bin_function.conclusion = True
+                        logger.info(
+                            f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.conclusion}. \n"
+                            f"reason: {possible_bin_function.judge_reason}")
                     # 如果确认的漏洞片段数小于等于确认的补丁片段数，判定为False
                     else:
                         possible_bin_function.conclusion = False
@@ -124,9 +127,7 @@ class VulConfirmTeam:
                         f"confirmed_vul_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}, "
                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
 
-                logger.info(
-                    f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.conclusion}. \n"
-                    f"reason: {possible_bin_function.judge_reason}")
+
             cause_function.summary()
         vul.summary()
 
