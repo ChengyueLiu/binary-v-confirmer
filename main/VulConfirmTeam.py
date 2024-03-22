@@ -66,10 +66,6 @@ class VulConfirmTeam:
             logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
 
             for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
-                logger.info(
-                    f"{i}: function：{cause_function.function_name} ---> bin_function: {possible_bin_function.function_name}, "
-                    f"personality: {possible_bin_function.match_possibility}")
-
                 # 跳过源代码函数比二进制函数长的情况，这种基本都是误判
                 if (asm_codes_length := len(possible_bin_function.asm_codes)) <= (
                         src_codes_length := len(normalized_src_codes)):
@@ -124,6 +120,10 @@ class VulConfirmTeam:
                     possible_bin_function.judge_reason = (
                         f"confirmed_vul_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}, "
                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
+
+                logger.info(
+                    f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.conclusion}. \n"
+                    f"reason: {possible_bin_function.judge_reason}")
             cause_function.summary()
 
 
