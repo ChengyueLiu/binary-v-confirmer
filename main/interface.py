@@ -400,7 +400,7 @@ class DataItemForCodeSnippetPositioningModel:
         normalized_src_codes = []
         for line in self.src_codes:
             if line.startswith(("+", "-")):
-                continue
+                line = line[1:]
             if not (normalized_line := line.strip()):
                 continue
             normalized_src_codes.append(normalized_line)
