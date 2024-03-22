@@ -132,7 +132,7 @@ class VulConfirmTeam:
                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
 
             cause_function.summary()
-            logger.info(f"{cause_function.function_name}: confirmed bin functions: {cause_function.confirmed_bin_function_count}")
+            logger.info(f"{cause_function.function_name}: confirmed bin functions: {cause_function.confirmed_bin_function_num}")
         vul.summary()
         logger.info(f"Confirm Done, Time cost: {round(time.perf_counter() - start_at, 2)}s")
 
