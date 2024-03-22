@@ -57,6 +57,7 @@ class VulConfirmTeam:
         start_at = time.perf_counter()
         for cause_function in vul.cause_functions:
             # 1. 定位漏洞函数
+            logger.info(f"{cause_function.function_name}: start confirm")
             normalized_src_codes, bin_function_num, possible_bin_functions = self.function_finder.find_similar_bin_functions(
                 src_file_path=cause_function.file_path,
                 function_name=cause_function.function_name,
@@ -64,7 +65,7 @@ class VulConfirmTeam:
             cause_function.normalized_src_codes = normalized_src_codes
             cause_function.bin_function_num = bin_function_num
             cause_function.possible_bin_functions = possible_bin_functions
-            logger.info(f"possible_bin_functions: {len(possible_bin_functions)}")
+            logger.info(f"{cause_function.function_name}: possible_bin_functions: {len(possible_bin_functions)}")
 
             for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
                 # 跳过源代码函数比二进制函数长的情况，这种基本都是误判
@@ -131,6 +132,7 @@ class VulConfirmTeam:
                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
 
             cause_function.summary()
+            logger.info(f"{cause_function.function_name}: confirmed bin functions: {cause_function.confirmed_bin_function_count}")
         vul.summary()
         logger.info(f"Confirm Done, Time cost: {round(time.perf_counter() - start_at, 2)}s")
 

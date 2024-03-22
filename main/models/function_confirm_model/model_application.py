@@ -51,17 +51,17 @@ class FunctionFinder:
                          binary_file_abs_path) -> (List[DataItemForFunctionConfirmModel], DataLoader):
 
         # step 1 提取源代码特征
-        logger.info(f"Extracting feature for {src_file_path}")
+        # logger.info(f"Extracting feature for {src_file_path}")
         src_function_feature = extract_src_feature_for_specific_function(file_path=src_file_path,
                                                                          vul_function_name=cause_function_name)
         if src_function_feature is None:
             logger.error(f"Can't find function {cause_function_name} in {src_file_path}")
             return None, None
-        logger.info(f"Feature extracted for {src_file_path}")
+        # logger.info(f"Feature extracted for {src_file_path}")
 
         # step 2 提取二进制文件特征
-        logger.info(f"Extracting feature for {binary_file_abs_path}")
-        # TODO linux下使用IDA Pro提取特征？
+        # logger.info(f"Extracting feature for {binary_file_abs_path}")
+        # TODO linux下使用IDA Pro提取特征？ 另外，这里逻辑需要优化，避免重复提取
         # bin_function_features = extract_bin_feature(binary_file_abs_path)
         # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
         if "TestCases/binaries" in binary_file_abs_path:
@@ -70,7 +70,7 @@ class FunctionFinder:
         # 转换成外部的数据结构
         bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
                                                            for json_item in results]
-        logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
+        # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
         # ---------- 以上是临时代码 ----------
 
         # step 3 使用模型遍历比较源代码函数和二进制文件函数
