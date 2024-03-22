@@ -65,12 +65,8 @@ class FunctionFinder:
         # bin_function_features = extract_bin_feature(binary_file_abs_path)
         # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
         bin_file_name = os.path.basename(binary_file_abs_path)
-        if bin_file_name == "openssl":
-            IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/openssl.json"
-        elif bin_file_name == "libcrypto.so.3":
-            IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/libcrypto.json"
-        elif bin_file_name == "libssl.so.3":
-            IDA_PRO_OUTPUT_PATH = r"TestCases/model_train/model_1/test_data/ida_pro_results/libssl.json"
+        if "TestCases/binaries" in binary_file_abs_path:
+            IDA_PRO_OUTPUT_PATH = bin_file_name.replace("TestCases/binaries/", "TestCases/binary_function_features/") + ".json"
         results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
         # 转换成外部的数据结构
         bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
