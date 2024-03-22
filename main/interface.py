@@ -422,6 +422,8 @@ class DataItemForCodeSnippetPositioningModel:
                                                                            jump_token=SpecialToken.ASM_JUMP.value,
                                                                            loc_token=SpecialToken.ASM_LOC.value,
                                                                            mem_token=SpecialToken.ASM_MEM.value))]
+
+
 class DataItemForCodeSnippetConfirmModel:
     """
     训练数据项，用于代码片段确认模型
@@ -544,6 +546,9 @@ class PossibleBinFunction:
     confirmed_vul_snippet_count: int = 0
     confirmed_patch_snippet_count: int = 0
 
+    has_vul_snippet: bool = False
+    has_patch_snippet = False
+
     conclusion: bool = False
     judge_reason: str = ""
 
@@ -551,11 +556,14 @@ class PossibleBinFunction:
         return {
             "function_name": self.function_name,
             "match_possibility": self.match_possibility,
+            "has_vul_snippet": self.has_vul_snippet,
+            "confirmed_vul_snippet_count": self.confirmed_vul_snippet_count,
+            "has_patch_snippet": self.has_patch_snippet,
+            "confirmed_patch_snippet_count": self.confirmed_patch_snippet_count,
             "conclusion": self.conclusion,
             "judge_reason": self.judge_reason,
+
             "asm_codes": self.asm_codes,
-            "confirmed_vul_snippet_count": self.confirmed_vul_snippet_count,
-            "confirmed_patch_snippet_count": self.confirmed_patch_snippet_count,
             "possible_vul_snippets": [possible_vul_snippet.customer_serialize() for possible_vul_snippet in
                                       self.possible_vul_snippets],
             "possible_patch_snippets": [possible_patch_snippet.customer_serialize() for possible_patch_snippet in
@@ -598,6 +606,7 @@ class CauseFunction:
     confirmed_bin_function_names: List[str] = dataclasses.field(default_factory=list)
 
     conclusion = False
+
 
     def summary(self):
         possible_bin_function_names = [f.function_name for f in self.possible_bin_functions]

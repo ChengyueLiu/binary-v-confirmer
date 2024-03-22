@@ -88,7 +88,7 @@ class VulConfirmTeam:
                 # 可能性很小的函数直接跳过
                 min_match_possibility = 0.9
                 if possible_bin_function.match_possibility < min_match_possibility:
-                    possible_bin_function.conclusion = False
+                    possible_bin_function.has_vul_snippet = False
                     possible_bin_function.judge_reason = f"match_possibility < {min_match_possibility}"
                     continue
 
@@ -97,12 +97,19 @@ class VulConfirmTeam:
                     cause_function,
                     possible_bin_function,
                     is_vul=True)
+
+                if not vul_asm_codes_window_texts:
+                    possible_bin_function.has_vul_snippet = False
+                    possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
+                    continue
+
                 # 更新漏洞片段信息
                 for asm_codes_window_text, (pred, prob) in zip(vul_asm_codes_window_texts, vul_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(vul_src_codes_text, asm_codes_window_text, pred.item(), prob.item())
                     possible_bin_function.possible_vul_snippets.append(pas)
                     if pred == 1:
+                        possible_bin_function.has_vul_snippet = True
                         possible_bin_function.confirmed_vul_snippet_count += 1
 
                 # 确认补丁片段
@@ -110,8 +117,9 @@ class VulConfirmTeam:
                     cause_function,
                     possible_bin_function,
                     is_vul=False)
+
                 if not patch_asm_codes_window_texts:
-                    possible_bin_function.conclusion = False
+                    possible_bin_function.has_vul_snippet = False
                     possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
                     continue
 
@@ -121,6 +129,7 @@ class VulConfirmTeam:
                     pas = PossibleAsmSnippet(patch_src_codes_text, asm_codes_window_text, pred.item(), prob.item())
                     possible_bin_function.possible_patch_snippets.append(pas)
                     if pred == 1:
+                        possible_bin_function.has_patch_snippet = True
                         possible_bin_function.confirmed_patch_snippet_count += 1
 
                 # 判定这个函数
@@ -134,7 +143,7 @@ class VulConfirmTeam:
                     if possible_bin_function.confirmed_patch_snippet_count < possible_bin_function.confirmed_vul_snippet_count:
                         possible_bin_function.conclusion = True
                         logger.info(
-                            f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.conclusion}. \n"
+                            f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.has_vul_snippet}. \n"
                             f"reason: {possible_bin_function.judge_reason}")
                     # 如果确认的漏洞片段数小于等于确认的补丁片段数，判定为False
                     else:
