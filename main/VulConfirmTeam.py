@@ -1,4 +1,5 @@
 import os
+import time
 
 from loguru import logger
 
@@ -52,6 +53,7 @@ class VulConfirmTeam:
         return asm_codes_window_texts, predictions
 
     def confirm(self, binary_path, vul: Vulnerability):
+        start_at = time.perf_counter()
         for cause_function in vul.cause_functions:
             # 1. 定位漏洞函数
             normalized_src_codes, bin_function_num, possible_bin_functions = self.function_finder.find_similar_bin_functions(
@@ -127,9 +129,9 @@ class VulConfirmTeam:
                         f"confirmed_vul_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}, "
                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
 
-
             cause_function.summary()
         vul.summary()
+        logger.info(f"Time cost: {round(time.perf_counter() - start_at, 2)}s")
 
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
