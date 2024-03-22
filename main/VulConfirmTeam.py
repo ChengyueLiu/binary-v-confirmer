@@ -53,6 +53,7 @@ class VulConfirmTeam:
         return asm_codes_window_texts, predictions
 
     def confirm(self, binary_path, vul: Vulnerability):
+        logger.info(f"Start confirm {vul.cve_id} in {binary_path}")
         start_at = time.perf_counter()
         for cause_function in vul.cause_functions:
             # 1. 定位漏洞函数
@@ -131,7 +132,7 @@ class VulConfirmTeam:
 
             cause_function.summary()
         vul.summary()
-        logger.info(f"Time cost: {round(time.perf_counter() - start_at, 2)}s")
+        logger.info(f"Confirm Done, Time cost: {round(time.perf_counter() - start_at, 2)}s")
 
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
