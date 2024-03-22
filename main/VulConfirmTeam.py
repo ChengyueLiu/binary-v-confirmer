@@ -84,7 +84,7 @@ class VulConfirmTeam:
                                                                                    is_vul=True)
                 # 更新漏洞片段信息
                 for asm_codes_window_text, (pred, prob) in zip(vul_asm_codes_window_texts, vul_predictions):
-                    logger.info(f"pred: {pred}, prob: {prob}")
+                    # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
                     possible_bin_function.possible_vul_snippets.append(pas)
                     if pred == 1:
@@ -101,7 +101,7 @@ class VulConfirmTeam:
 
                 # 更新补丁片段信息
                 for asm_codes_window_text, (pred, prob) in zip(patch_asm_codes_window_texts, patch_predictions):
-                    logger.info(f"pred: {pred}, prob: {prob}")
+                    # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(asm_codes_window_text, pred.item(), prob.item())
                     possible_bin_function.possible_patch_snippets.append(pas)
                     if pred == 1:
