@@ -6,7 +6,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AutoTokenizer, RobertaForQuestionAnswering
 
-
 from main.interface import DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset
 
@@ -81,7 +80,7 @@ class SnippetPositioner:
                                                                asm_codes=asm_codes_window,
                                                                answer_start_index=0,
                                                                answer_end_index=0)
-            # data_item.normalize()
+            data_item.normalize_src_codes()
             data_items.append(data_item)
 
         # step 2: 创建dataset

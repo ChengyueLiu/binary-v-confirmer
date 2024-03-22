@@ -390,6 +390,13 @@ class DataItemForCodeSnippetPositioningModel:
         return start_index, end_index
 
     def normalize(self):
+        # 正规化处理源代码
+        self.normalize_src_codes()
+
+        # 正规化处理汇编代码
+        self.normalize_asm_codes()
+
+    def normalize_src_codes(self):
         normalized_src_codes = []
         for line in self.src_codes:
             if line.startswith(("+", "-")):
@@ -399,6 +406,7 @@ class DataItemForCodeSnippetPositioningModel:
             normalized_src_codes.append(normalized_line)
         self.src_codes = normalized_src_codes
 
+    def normalize_asm_codes(self):
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := normalize_asm_code(code,
                                                                     reg_token=SpecialToken.ASM_REG.value,
@@ -414,8 +422,6 @@ class DataItemForCodeSnippetPositioningModel:
                                                                            jump_token=SpecialToken.ASM_JUMP.value,
                                                                            loc_token=SpecialToken.ASM_LOC.value,
                                                                            mem_token=SpecialToken.ASM_MEM.value))]
-
-
 class DataItemForCodeSnippetConfirmModel:
     """
     训练数据项，用于代码片段确认模型
