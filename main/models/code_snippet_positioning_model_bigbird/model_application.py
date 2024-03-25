@@ -10,7 +10,7 @@ from main.interface import DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset
 
 
-def split_list_by_sliding_window(input_list, window_length=50, step=20):
+def split_list_by_sliding_window(input_list, window_length=400, step=160):
     # 初始化一个空列表来存放所有窗口
     windows = []
 

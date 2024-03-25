@@ -3,3 +3,7 @@ loguru
 tqdm
 tree-sitter
 gitpython
+
+# bigbird
+sentencepiece
+protobuf

@@ -1,18 +1,18 @@
 import torch
 from loguru import logger
 from tqdm import tqdm
-from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering, \
-    AutoTokenizer
+from transformers import AdamW, get_linear_schedule_with_warmup, AutoTokenizer, AutoConfig, BigBirdForQuestionAnswering
 
 from main.interface import DataItemForCodeSnippetPositioningModel
-from main.models.code_snippet_positioning_model.dataset_and_data_provider import create_dataset, create_dataloaders
+from main.models.code_snippet_positioning_model_bigbird.dataset_and_data_provider import create_dataset, \
+    create_dataloaders
 
 
 def init_train(train_data_json_file_path,
                val_data_json_file_path,
                test_data_json_file_path,
-               model_name='microsoft/graphcodebert-base',
-               token_max_length=512,
+               model_name='google/bigbird-roberta-base',
+               token_max_length=4096,
                batch_size=512,
                learn_rate=5e-5,
                epochs=3):
@@ -33,12 +33,13 @@ def init_train(train_data_json_file_path,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+    # tokenizer 和 model 需要根据 BigBird 进行修改
+    config = AutoConfig.from_pretrained(model_name, attention_type="block_sparse", block_size=64, num_random_blocks=3)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, config=config)
     for special_token in DataItemForCodeSnippetPositioningModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
-    # model
-    model = RobertaForQuestionAnswering.from_pretrained(model_name)
+    model = BigBirdForQuestionAnswering.from_pretrained(model_name, config=config)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 
@@ -142,13 +143,15 @@ def run_train(train_data_json_file_path,
               **kwargs):
     batch_size = kwargs.get('batch_size', 32)
     epochs = kwargs.get('epochs', 3)
+    token_max_length = kwargs.get('token_max_length', 2048)
     # 初始化训练
     logger.info('Init train...')
     device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler = init_train(
         train_data_json_file_path,
         val_data_json_file_path,
         test_data_json_file_path,
-        **kwargs)  # 确保其他参数也能被传递
+        batch_size=batch_size,
+        token_max_length=token_max_length)  # 确保其他参数也能被传递
     logger.info('Initialized, start training, epochs: {}, batch_size: {}...'.format(epochs, batch_size))
     if not test_only:
         # 训练和验证
@@ -156,7 +159,8 @@ def run_train(train_data_json_file_path,
             logger.info(f'Epoch {epoch + 1}/{epochs}')
             train_loss, train_precision, train_recall, train_f1 = train_or_evaluate(model, train_loader, optimizer,
                                                                                     scheduler, device, is_train=True)
-            valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer, scheduler,
+            valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer,
+                                                                                    scheduler,
                                                                                     device, is_train=False)
             print(
                 f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
