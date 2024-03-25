@@ -8,6 +8,7 @@ from main.interface import Vulnerability, PossibleAsmSnippet
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder
+from setting.settings import CAUSE_FUNCTION_SIMILARITY_THRESHOLD, POSSIBLE_BIN_FUNCTION_TOP_N
 
 
 class VulConfirmTeam:
@@ -65,45 +66,31 @@ class VulConfirmTeam:
         logger.info(f"Start confirm {vul.cve_id} in {binary_path}")
         start_at = time.perf_counter()
         for cause_function in vul.cause_functions:
-            # 1. 定位漏洞函数
+            # 1. Model 1 函数确认
             logger.info(f"{cause_function.function_name}: start confirm")
             normalized_src_codes, bin_function_num, possible_bin_functions = self.function_finder.find_similar_bin_functions(
                 src_file_path=cause_function.file_path,
                 function_name=cause_function.function_name,
                 binary_file_abs_path=os.path.abspath(binary_path))
+            # 正规化的源代码
             cause_function.normalized_src_codes = normalized_src_codes
+            # 全部的二进制函数数量
             cause_function.bin_function_num = bin_function_num
-            cause_function.possible_bin_functions = possible_bin_functions
-            logger.info(
-                f"{cause_function.function_name}: possible_bin_functions: {len(possible_bin_functions)}/{bin_function_num}")
+            # label为1且概率大于阈值的二进制函数, 按照概率排序，取前n个
+            cause_function.possible_bin_functions = sorted([pbf for pbf in possible_bin_functions
+                                                            if
+                                                            pbf.match_possibility > CAUSE_FUNCTION_SIMILARITY_THRESHOLD],
+                                                           key=lambda x: x.match_possibility, reverse=True)[
+                                                    :POSSIBLE_BIN_FUNCTION_TOP_N]
 
-            for i, possible_bin_function in enumerate(possible_bin_functions, start=1):
-                # 跳过源代码函数比二进制函数长的情况，这种基本都是误判
-                # if (asm_codes_length := len(possible_bin_function.asm_codes)) <= (
-                #         src_codes_length := len(normalized_src_codes)):
-                #     possible_bin_function.conclusion = False
-                #     possible_bin_function.judge_reason = f"asm_codes_length({asm_codes_length}) <= src_codes_length({src_codes_length})"
-                #     continue
-
-                # 可能性很小的函数直接跳过
-                min_match_possibility = 0.9
-                if possible_bin_function.match_possibility < min_match_possibility:
-                    possible_bin_function.has_vul_snippet = False
-                    possible_bin_function.judge_reason = f"match_possibility < {min_match_possibility}"
-                    continue
-
-                # 确认漏洞片段
+            for i, possible_bin_function in enumerate(cause_function.possible_bin_functions, start=1):
+                # 2. Model 2 定位漏洞片段
                 vul_src_codes_text, vul_asm_codes_window_texts, vul_predictions = self.confirm_snippet(
                     cause_function,
                     possible_bin_function,
                     is_vul=True)
 
-                if not vul_asm_codes_window_texts:
-                    possible_bin_function.has_vul_snippet = False
-                    possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
-                    continue
-
-                # 更新漏洞片段信息
+                # 3. Model 3 确认漏洞片段
                 for asm_codes_window_text, (pred, prob) in zip(vul_asm_codes_window_texts, vul_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(vul_src_codes_text, asm_codes_window_text, pred.item(), prob.item())
@@ -112,18 +99,13 @@ class VulConfirmTeam:
                         possible_bin_function.has_vul_snippet = True
                         possible_bin_function.confirmed_vul_snippet_count += 1
 
-                # 确认补丁片段
+                # 4. Model 2 定位补丁片段
                 patch_src_codes_text, patch_asm_codes_window_texts, patch_predictions = self.confirm_snippet(
                     cause_function,
                     possible_bin_function,
                     is_vul=False)
 
-                if not patch_asm_codes_window_texts:
-                    possible_bin_function.has_vul_snippet = False
-                    possible_bin_function.judge_reason = "len(asm_codes_window_texts) == 0"
-                    continue
-
-                # 更新补丁片段信息
+                # 5. Model 4 确认补丁片段
                 for asm_codes_window_text, (pred, prob) in zip(patch_asm_codes_window_texts, patch_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(patch_src_codes_text, asm_codes_window_text, pred.item(), prob.item())
@@ -132,29 +114,21 @@ class VulConfirmTeam:
                         possible_bin_function.has_patch_snippet = True
                         possible_bin_function.confirmed_patch_snippet_count += 1
 
-                # 判定这个函数
-                # 如果没有确认的漏洞片段，直接判定为False
+                # 6. 判定是否是漏洞函数，并记录判定原因
+                # 如果没有漏洞函数，判定为False
                 if possible_bin_function.confirmed_vul_snippet_count == 0:
-                    possible_bin_function.conclusion = False
+                    possible_bin_function.is_vul_function = False
                     possible_bin_function.judge_reason = "confirmed_vul_snippet_count == 0"
-
                 else:
-                    # 如果确认的漏洞片段数大于确认的补丁片段数，判定为True
-                    if possible_bin_function.confirmed_patch_snippet_count < possible_bin_function.confirmed_vul_snippet_count:
-                        possible_bin_function.conclusion = True
-                        logger.info(
-                            f"{i}: {cause_function.function_name} ---> {possible_bin_function.function_name}: {possible_bin_function.has_vul_snippet}. \n"
-                            f"reason: {possible_bin_function.judge_reason}")
-                    # 如果确认的漏洞片段数小于等于确认的补丁片段数，判定为False
+                    possible_bin_function.is_vul_function = True
+                    # 如果有漏洞函数，则补丁更多，判定为修复
+                    if possible_bin_function.confirmed_patch_snippet_count >= possible_bin_function.confirmed_vul_snippet_count:
+                        possible_bin_function.is_repaired = True
                     else:
-                        possible_bin_function.conclusion = False
-                    possible_bin_function.judge_reason = (
-                        f"confirmed_vul_snippet_count = {possible_bin_function.confirmed_vul_snippet_count}, "
-                        f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}")
-
+                        possible_bin_function.is_repaired = False
+                    possible_bin_function.judge_reason = f"possible_bin_function = {possible_bin_function.confirmed_vul_snippet_count}, " \
+                                                         f"confirmed_patch_snippet_count = {possible_bin_function.confirmed_patch_snippet_count}"
             cause_function.summary()
-            logger.info(
-                f"{cause_function.function_name}: confirmed bin functions: {cause_function.confirmed_bin_function_num}/{bin_function_num}")
         vul.summary()
         logger.info(f"Confirm Done, Time cost: {round(time.perf_counter() - start_at, 2)}s")
 

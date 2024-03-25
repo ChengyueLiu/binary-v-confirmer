@@ -12,9 +12,9 @@ def train():
 
     if __name__ == '__main__':
         logger.info("Start training model 1")
-        train_model_1()
+        # train_model_1()
         logger.info("Start training model 2")
-        # train_model_2()
+        train_model_2()
         logger.info("Start training model 3")
         # train_model_3()
         logger.info("Training finished")
@@ -161,8 +161,8 @@ def test_model():
         cve_link="https://www.cve.org/CVERecord?id=CVE-2024-0727",
         title="PKCS12 Decoding crashes",
         severity="Low",
-        # cause_functions=[cause_function_1, cause_function_2, cause_function_3]
-        cause_functions=[cause_function_3]
+        cause_functions=[cause_function_1, cause_function_2, cause_function_3]
+        # cause_functions=[cause_function_2]
     )
     vul_confirm_team = VulConfirmTeam(batch_size=100)
 
@@ -200,12 +200,8 @@ def test_model():
     save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
 
-
-
-
-
 if __name__ == '__main__':
-    # train()
-    test_model()
+    train()
+    # test_model()
     # TODO 如何在linux上安装IDA pro？
     # TODO 优化训练数据，移除干扰函数

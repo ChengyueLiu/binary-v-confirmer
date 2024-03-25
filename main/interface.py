@@ -1,10 +1,7 @@
 import dataclasses
-import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
-
-from loguru import logger
 
 from bintools.general.bin_tool import normalize_asm_code
 from bintools.general.file_tool import load_from_json_file
@@ -547,9 +544,10 @@ class PossibleBinFunction:
     confirmed_patch_snippet_count: int = 0
 
     has_vul_snippet: bool = False
-    has_patch_snippet = False
+    has_patch_snippet: bool = False
 
-    conclusion: bool = False
+    is_vul_function: bool = False
+    is_repaired: bool = False
     judge_reason: str = ""
 
     def customer_serialize(self):
@@ -560,7 +558,8 @@ class PossibleBinFunction:
             "confirmed_vul_snippet_count": self.confirmed_vul_snippet_count,
             "has_patch_snippet": self.has_patch_snippet,
             "confirmed_patch_snippet_count": self.confirmed_patch_snippet_count,
-            "conclusion": self.conclusion,
+            "is_vul_function": self.is_vul_function,
+            "is_repaired": self.is_repaired,
             "judge_reason": self.judge_reason,
 
             "asm_codes": self.asm_codes,
@@ -599,29 +598,28 @@ class CauseFunction:
     possible_bin_function_num: int = 0
     possible_bin_function_names: List[str] = dataclasses.field(default_factory=list)
 
-    highly_possible_bin_function_num: int = 0  # match_possibility > 0.9
-    highly_possible_bin_function_names: List[str] = dataclasses.field(default_factory=list)
+    vul_bin_function_num: int = 0  # match_possibility > 0.9
+    vul_bin_function_names: List[str] = dataclasses.field(default_factory=list)
 
-    confirmed_bin_function_num: int = 0  # match_possibility > 0.9 and confirmed_snippet_count > 0
-    confirmed_bin_function_names: List[str] = dataclasses.field(default_factory=list)
+    repaired_bin_function_num: int = 0  # match_possibility > 0.9 and confirmed_snippet_count > 0
+    repaired_bin_function_names: List[str] = dataclasses.field(default_factory=list)
 
     conclusion = False
-
 
     def summary(self):
         possible_bin_function_names = [f.function_name for f in self.possible_bin_functions]
         self.possible_bin_function_names = possible_bin_function_names
         self.possible_bin_function_num = len(possible_bin_function_names)
 
-        high_possibility_bin_functions = [f for f in self.possible_bin_functions if f.match_possibility > 0.9]
-        self.highly_possible_bin_function_names = [f.function_name for f in high_possibility_bin_functions]
-        self.highly_possible_bin_function_num = len(high_possibility_bin_functions)
+        vul_bin_functions = [f for f in self.possible_bin_functions if f.is_vul_function]
+        self.vul_bin_function_names = [f.function_name for f in vul_bin_functions]
+        self.vul_bin_function_num = len(vul_bin_functions)
 
-        confirmed_bin_functions = [f for f in high_possibility_bin_functions if f.conclusion]
-        self.confirmed_bin_function_names = [f.function_name for f in confirmed_bin_functions]
-        self.confirmed_bin_function_num = len(confirmed_bin_functions)
+        repaired_bin_functions = [f for f in vul_bin_functions if f.is_repaired]
+        self.repaired_bin_function_names = [f.function_name for f in repaired_bin_functions]
+        self.repaired_bin_function_num = len(repaired_bin_functions)
 
-        if self.confirmed_bin_function_num > 0:
+        if self.vul_bin_function_num > self.repaired_bin_function_num:
             self.conclusion = True
 
     def customer_serialize(self):
@@ -633,11 +631,11 @@ class CauseFunction:
                 "conclusion": self.conclusion,
                 "bin_function_num": self.bin_function_num,
                 "possible_bin_function_num": self.possible_bin_function_num,
-                "highly_possible_bin_function_num": self.highly_possible_bin_function_num,
-                "confirmed_bin_function_num": self.confirmed_bin_function_num,
+                "vul_bin_function_num": self.vul_bin_function_num,
+                "repaired_bin_function_num": self.repaired_bin_function_num,
                 "possible_bin_function_names": self.possible_bin_function_names,
-                "highly_possible_bin_function_names": self.highly_possible_bin_function_names,
-                "confirmed_bin_function_names": self.confirmed_bin_function_names
+                "vul_bin_function_names": self.vul_bin_function_names,
+                "repaired_bin_function_names": self.repaired_bin_function_names
             },
             "line_start": self.line_start,
             "line_end": self.line_end,
@@ -645,6 +643,18 @@ class CauseFunction:
             "patches": [patch.customer_serialize() for patch in self.patches],
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]
+        }
+
+    def short_summary_serialize(self):
+        return {
+            "project_name": self.project_name,
+            "file_path": self.file_path,
+            "function_name": self.function_name,
+            "conclusion": self.conclusion,
+            "bin_function_num": self.bin_function_num,
+            "possible_bin_function_num": self.possible_bin_function_num,
+            "vul_bin_function_num": self.vul_bin_function_num,
+            "repaired_bin_function_num": self.repaired_bin_function_num,
         }
 
 
@@ -675,11 +685,13 @@ class Vulnerability:
             "severity": self.severity,
             "description": self.description,
             "summary": {
+                "conclusion": self.conclusion,
                 "cause_function_num": self.cause_function_num,
                 "confirmed_cause_function_num": self.confirmed_cause_function_num,
-                "conclusion": self.conclusion
+                "function_summary": [cause_function.short_summary_serialize()
+                                     for cause_function in self.cause_functions],
             },
-            "cause_function": [cause_function.customer_serialize() for cause_function in self.cause_functions],
+            "cause_functions": [cause_function.customer_serialize() for cause_function in self.cause_functions],
         }
 
     def summary(self):
