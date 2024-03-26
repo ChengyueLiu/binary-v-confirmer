@@ -492,6 +492,39 @@ class DataItemForCodeSnippetConfirmModelMC:
             "wrong_src_codes": self.wrong_src_codes
         }
 
+    @classmethod
+    def get_special_tokens(cls):
+        return SpecialToken.get_asm_special_tokens()
+
+    @classmethod
+    def init_from_dict(cls, data: dict):
+        return cls(
+            asm_codes=data['asm_codes'],
+            right_src_codes=data['right_src_codes'],
+            wrong_src_codes=data['wrong_src_codes']
+        )
+
+    def get_question_text(self):
+        return " ".join(self.asm_codes)
+
+    def get_right_answer_text(self):
+        return remove_comments(" ".join(self.right_src_codes))
+
+    def get_wrong_answer_text(self):
+        return remove_comments(" ".join(self.wrong_src_codes))
+
+    def normalize(self):
+        self.src_codes = [normalized_line for line in self.src_codes
+                          if (normalized_line := line.strip())]
+
+        self.asm_codes = [normalized_code for code in self.asm_codes
+                          if (normalized_code := normalize_asm_code(code,
+                                                                    reg_token=SpecialToken.ASM_REG.value,
+                                                                    num_token=SpecialToken.ASM_NUM.value,
+                                                                    jump_token=SpecialToken.ASM_JUMP.value,
+                                                                    loc_token=SpecialToken.ASM_LOC.value,
+                                                                    mem_token=SpecialToken.ASM_MEM.value))]
+
 
 @dataclass
 class Patch:

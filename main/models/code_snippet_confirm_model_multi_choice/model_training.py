@@ -1,10 +1,10 @@
 import torch
 from loguru import logger
 from tqdm import tqdm
-from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
+from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForMultipleChoice
 
-from main.interface import DataItemForCodeSnippetConfirmModel
-from main.models.code_snippet_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
+from main.interface import DataItemForCodeSnippetConfirmModelMC
+from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import create_dataloaders, create_dataset
 
 
 def init_train(train_data_json_file_path,
@@ -34,11 +34,11 @@ def init_train(train_data_json_file_path,
 
     # tokenizer
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    for special_token in DataItemForCodeSnippetConfirmModel.get_special_tokens():
+    for special_token in DataItemForCodeSnippetConfirmModelMC.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
     # model
-    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+    model = RobertaForMultipleChoice.from_pretrained(model_name, num_labels=num_labels)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 
@@ -81,11 +81,11 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 
         outputs = model(input_ids, attention_mask=attention_mask, labels=labels)
 
-        loss = outputs[0]
+        loss = outputs.loss
         # 下面两行是为了适配多GPU训练
         if loss.dim() > 0:  # 如果损失不是标量
             loss = loss.mean()  # 计算所有损失的平均值确保是标量
-        logits = outputs[1]
+        logits = outputs.logits
 
         if is_train:
             loss.backward()
