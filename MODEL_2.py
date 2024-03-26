@@ -44,7 +44,7 @@ def train_model_2():
     train_data_save_path = "TestCases/model_train/model_2/final_train_data_items/train_data.json"
     val_data_save_path = "TestCases/model_train/model_2/final_train_data_items/valid_data.json"
     test_data_save_path = "TestCases/model_train/model_2/final_train_data_items/test_data.json"
-    model_save_path = r"Resources/model_weights/model_2_weights.pth"
+    model_save_path = r"Resources/model_weights/model_2_weights_GCB.pth"
     run_train(train_data_save_path,
               val_data_save_path,
               test_data_save_path,
