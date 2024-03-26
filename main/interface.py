@@ -520,7 +520,7 @@ class PossibleAsmSnippet:
     asm_codes_text: str
     match_type: int
     probability: float
-    scores:List
+    scores: List[float]
 
     def customer_serialize(self):
         return {
@@ -528,7 +528,7 @@ class PossibleAsmSnippet:
             "asm_codes_text": self.asm_codes_text,
             "match_type": self.match_type,
             "probability": self.probability,
-            "scores": self.scores
+            "scores": [float(score) for score in self.scores]
         }
 
 
@@ -541,9 +541,12 @@ class PossibleBinFunction:
     match_possibility: float
     asm_codes: List[str] = dataclasses.field(default_factory=list)
     possible_vul_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
-    possible_patch_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
     confirmed_vul_snippet_count: int = 0
+    vul_score:float = 0.0
+
+    possible_patch_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
     confirmed_patch_snippet_count: int = 0
+    patch_score:float = 0.0
 
     has_vul_snippet: bool = False
     has_patch_snippet: bool = False
@@ -558,13 +561,15 @@ class PossibleBinFunction:
             "match_possibility": self.match_possibility,
             "has_vul_snippet": self.has_vul_snippet,
             "confirmed_vul_snippet_count": self.confirmed_vul_snippet_count,
+            "vul_score": self.vul_score,
             "has_patch_snippet": self.has_patch_snippet,
             "confirmed_patch_snippet_count": self.confirmed_patch_snippet_count,
+            "patch_score": self.patch_score,
             "is_vul_function": self.is_vul_function,
             "is_repaired": self.is_repaired,
             "judge_reason": self.judge_reason,
 
-            "asm_codes": self.asm_codes,
+            # "asm_codes": self.asm_codes,
             "possible_vul_snippets": [possible_vul_snippet.customer_serialize() for possible_vul_snippet in
                                       self.possible_vul_snippets],
             "possible_patch_snippets": [possible_patch_snippet.customer_serialize() for possible_patch_snippet in
@@ -641,8 +646,8 @@ class CauseFunction:
             },
             "line_start": self.line_start,
             "line_end": self.line_end,
-            "normalized_src_codes": self.normalized_src_codes,
-            "patches": [patch.customer_serialize() for patch in self.patches],
+            # "normalized_src_codes": self.normalized_src_codes,
+            # "patches": [patch.customer_serialize() for patch in self.patches],
             "possible_bin_functions": [possible_bin_function.customer_serialize()
                                        for possible_bin_function in self.possible_bin_functions]
         }
