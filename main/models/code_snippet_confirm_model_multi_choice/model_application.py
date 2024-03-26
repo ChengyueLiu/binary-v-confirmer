@@ -10,7 +10,7 @@ from main.interface import DataItemForCodeSnippetConfirmModelMC
 from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import CodeSnippetConfirmDataset
 
 
-class SnippetConfirmer:
+class SnippetChoicer:
     def __init__(self, model_save_path: str = 'model_weights.pth', batch_size: int = 16):
         self.model_name = 'microsoft/graphcodebert-base'
         self.num_labels = 2

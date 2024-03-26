@@ -1,5 +1,5 @@
 from main.models.code_snippet_confirm_model_multi_choice.data_prepare import generate_data_items
-from main.models.code_snippet_confirm_model_multi_choice.model_application import SnippetConfirmer
+from main.models.code_snippet_confirm_model_multi_choice.model_application import SnippetChoicer
 from main.models.code_snippet_confirm_model_multi_choice.model_training import run_train
 
 
@@ -53,7 +53,7 @@ def test_model():
             "mov <REG>,[<REG>+bio] push [<REG>+str_details2] push [<REG>+str_details1] mov <REG>,<REG> mov <REG>,<REG> lea <REG>,assslength04lxs mov <REG>,<REG> mov eax,<NUM> call _bio_printf add <REG>,10h cmp [<REG>+len],<NUM> <JUMP> loc_cf4a3 mov <REG>,[<REG>+bio] lea <REG>,asc_106d72 mov <REG>,<REG> mov eax,<NUM> call _bio_printf mov <REG>,[<REG>+len] mov [<REG>+num],<REG> mov [<REG>+i],<NUM> <JUMP> short loc_cf44d mov <REG>,[<REG>+i] and eax,0fh test <REG>,<REG> <JUMP> short loc_cf413 cmp [<REG>+i],<NUM> <JUMP> short loc_cf413 mov <REG>,[<REG>+bio] lea <REG>,asc_106d76 mov <REG>,<REG> mov eax,<NUM> call _bio_printf mov <REG>,[<REG>+buf] mov <REG>,[<REG>+i] add <REG>,<REG> movzx eax,[<REG>] movzx edx,al mov <REG>,[<REG>+bio] lea <REG>,a02x_6 mov <REG>,<REG> mov eax,<NUM>",
             "and eax,0fh test <REG>,<REG> <JUMP> short loc_cf413 cmp [<REG>+i],<NUM> <JUMP> short loc_cf413 mov <REG>,[<REG>+bio] lea <REG>,asc_106d76 mov <REG>,<REG> mov eax,<NUM> call _bio_printf mov <REG>,[<REG>+buf] mov <REG>,[<REG>+i] add <REG>,<REG> movzx eax,[<REG>] movzx edx,al mov <REG>,[<REG>+bio] lea <REG>,a02x_6 mov <REG>,<REG> mov eax,<NUM> call _bio_printf add [<REG>+i],<NUM> mov <REG>,[<REG>+i] cmp <REG>,[<REG>+num] <JUMP> short loc_cf3df mov <REG>,[<REG>+i] cmp <REG>,[<REG>+len] jnb short loc_cf488 mov <REG>,[<REG>+bio] lea <REG>,asc_106d81 mov <REG>,<REG> mov eax,<NUM> call _bio_printf mov <REG>,[<REG>+bio] lea <REG>,asc_1062a2 mov <REG>,<REG> mov eax,<NUM> call _bio_printf mov <REG>,[<REG>+bio] mov ecx,<NUM> mov edx,<NUM> mov esi,0bh mov <REG>,<REG> call _bio_ctrl nop"
         ]
-    result = SnippetConfirmer(
+    result = SnippetChoicer(
         model_save_path="Resources/model_weights/model_3_weights.pth",
         batch_size=16
     ).confirm_vuls(src_codes_text, asm_codes_text_list)

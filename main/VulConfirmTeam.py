@@ -91,13 +91,14 @@ class VulConfirmTeam:
                                                     :POSSIBLE_BIN_FUNCTION_TOP_N]
 
             for i, possible_bin_function in enumerate(cause_function.possible_bin_functions, start=1):
-                # 2. Model 2 定位漏洞片段,vul_prediction: (pred, prob, (label_0_score, label_1_score))
+                # TODO 这里要修改成直接选择更像修复前，还是修复后
+                #  先定位，然后生成两个src_codes_text, 然后选择。明天做
+                # 2. Model 2 定位确认漏洞片段,vul_prediction: (pred, prob, (label_0_score, label_1_score))
                 vul_src_codes_text, vul_asm_codes_window_texts, vul_predictions = self.confirm_snippet(
                     cause_function,
                     possible_bin_function,
                     is_vul=True)
 
-                # 3. Model 3 确认漏洞片段
                 for asm_codes_window_text, (pred, prob, scores) in zip(vul_asm_codes_window_texts, vul_predictions):
                     pas = PossibleAsmSnippet(vul_src_codes_text, asm_codes_window_text, pred, prob, scores=scores)
                     possible_bin_function.possible_vul_snippets.append(pas)
@@ -106,13 +107,12 @@ class VulConfirmTeam:
                         possible_bin_function.confirmed_vul_snippet_count += 1
                         possible_bin_function.vul_score += scores[1]
 
-                # 4. Model 2 定位补丁片段
+                # 3. Model 2 定位确认补丁片段
                 patch_src_codes_text, patch_asm_codes_window_texts, patch_predictions = self.confirm_snippet(
                     cause_function,
                     possible_bin_function,
                     is_vul=False)
 
-                # 5. Model 4 确认补丁片段
                 for asm_codes_window_text, (pred, prob, scores) in zip(vul_asm_codes_window_texts, patch_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(patch_src_codes_text, asm_codes_window_text, pred, prob, scores=scores)
@@ -122,7 +122,7 @@ class VulConfirmTeam:
                         possible_bin_function.confirmed_patch_snippet_count += 1
                         possible_bin_function.patch_score += scores[1]
 
-                # 6. 判定是否是漏洞函数，并记录判定原因
+                # 4. 判定是否是漏洞函数，并记录判定原因
                 # 如果没有漏洞函数，判定为False
                 if possible_bin_function.has_vul_snippet:
                     possible_bin_function.is_vul_function = True
