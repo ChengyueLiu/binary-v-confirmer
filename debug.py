@@ -1,168 +1,30 @@
-from bintools.general.bin_tool import normalize_asm_code
-from bintools.general.file_tool import load_from_json_file
-from main.interface import SpecialToken
+import random
 
-demo = [
-    "endbr64",
-    "push    rbp",
-    "mov     rbp, rsp",
-    "sub     rsp, 20h",
-    "mov     [rbp+var_18], rdi",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+148h]",
-    "test    rax, rax",
-    "jz      short loc_4824",
-    "mov     rax, [rbp+var_18]",
-    "add     rax, 148h",
-    "mov     rdi, rax",
-    "call    IDAT_end",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+140h]",
-    "test    rax, rax",
-    "jz      short loc_4846",
-    "mov     rax, [rbp+var_18]",
-    "add     rax, 140h",
-    "mov     rdi, rax",
-    "call    chunk_end",
-    "mov     rax, [rbp+var_18]",
-    "mov     eax, [rax+18h]",
-    "mov     [rbp+var_8], eax",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+40h]",
-    "test    rax, rax",
-    "jz      short loc_486D",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+40h]",
-    "mov     rdi, rax; stream",
-    "call    _fclose",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+48h]",
-    "test    rax, rax",
-    "jz      short loc_48F7",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+48h]",
-    "mov     rdi, rax; stream",
-    "call    _fflush",
-    "test    eax, eax",
-    "jnz     short loc_48A2",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+48h]",
-    "mov     rdi, rax; stream",
-    "call    _ferror",
-    "test    eax, eax",
-    "jz      short loc_48A9",
-    "mov     eax, 1",
-    "jmp     short loc_48AE",
-    "mov     eax, 0",
-    "mov     [rbp+var_4], eax",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+48h]",
-    "mov     rdi, rax; stream",
-    "call    _fclose",
-    "test    eax, eax",
-    "jnz     short loc_48CB",
-    "cmp     [rbp+var_4], 0",
-    "jz      short loc_48F7",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax+10h]",
-    "mov     rdi, rax; s",
-    "call    _perror",
-    "mov     rax, [rbp+var_18]",
-    "lea     rdx, aOutputWriteErr; \"output write error\"",
-    "mov     esi, 5",
-    "mov     rdi, rax",
-    "call    emit_error",
-    "or      [rbp+var_8], 20h",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax]",
-    "mov     edx, [rax+8]",
-    "mov     rax, [rbp+var_18]",
-    "mov     rax, [rax]",
-    "or      edx, [rbp+var_8]",
-    "mov     [rax+8], edx",
-    "mov     rax, [rbp+var_18]",
-    "mov     esi, 160h",
-    "mov     rdi, rax",
-    "call    clear",
-    "mov     eax, [rbp+var_8]",
-    "leave",
-    "retn"]
-demo2 = [
-    "  36544f:\te8 de c0 ea ff       \tcall   211532 <ERR_new>",
-    "  365454:\t48 8d 15 95 9f 18 00 \tlea    rdx,[rip+0x189f95]        # 4ef3f0 <__func__.19847>",
-    "  36545b:\tbe 4e 00 00 00       \tmov    esi,0x4e",
-    "  365460:\t48 8d 3d 29 9f 18 00 \tlea    rdi,[rip+0x189f29]        # 4ef390 <__func__.21698+0x18>",
-    "  365467:\te8 14 c1 ea ff       \tcall   211580 <ERR_set_debug>",
-    "  36546c:\tba 00 00 00 00       \tmov    edx,0x0",
-    "  365471:\tbe 79 00 00 00       \tmov    esi,0x79",
-    "  365476:\tbf 23 00 00 00       \tmov    edi,0x23",
-    "  36547b:\tb8 00 00 00 00       \tmov    eax,0x0",
-    "  365480:\te8 4e c1 ea ff       \tcall   2115d3 <ERR_set_error>",
-    "  365485:\tb8 00 00 00 00       \tmov    eax,0x0",
-    "  36548a:\te9 8e 00 00 00       \tjmp    36551d <PKCS12_unpack_p7data+0xf6>",
-    "  36548f:\t48 8b 45 e8          \tmov    rax,QWORD PTR [rbp-0x18]",
-    "  365493:\t48 8b 40 20          \tmov    rax,QWORD PTR [rax+0x20]",
-    "  365497:\t48 85 c0             \ttest   rax,rax",
-    "  36549a:\t75 3d                \tjne    3654d9 <PKCS12_unpack_p7data+0xb2>",
-    "  36549c:\te8 91 c0 ea ff       \tcall   211532 <ERR_new>",
-    "  3654a1:\t48 8d 15 48 9f 18 00 \tlea    rdx,[rip+0x189f48]        # 4ef3f0 <__func__.19847>",
-    "  3654a8:\tbe 53 00 00 00       \tmov    esi,0x53",
-    "  3654ad:\t48 8d 3d dc 9e 18 00 \tlea    rdi,[rip+0x189edc]        # 4ef390 <__func__.21698+0x18>",
-    "  3654b4:\te8 c7 c0 ea ff       \tcall   211580 <ERR_set_debug>",
-    "  3654b9:\tba 00 00 00 00       \tmov    edx,0x0",
-    "  3654be:\tbe 65 00 00 00       \tmov    esi,0x65",
-    "  3654c3:\tbf 23 00 00 00       \tmov    edi,0x23",
-    "  3654c8:\tb8 00 00 00 00       \tmov    eax,0x0",
-    "  3654cd:\te8 01 c1 ea ff       \tcall   2115d3 <ERR_set_error>",
-    "  3654d2:\tb8 00 00 00 00       \tmov    eax,0x0",
-    "  3654d7:\teb 44                \tjmp    36551d <PKCS12_unpack_p7data+0xf6>",
-    "  3654d9:\t48 8b 45 e8          \tmov    rax,QWORD PTR [rbp-0x18]",
-    "  3654dd:\t48 83 c0 28          \tadd    rax,0x28",
-    "  3654e1:\t48 89 c7             \tmov    rdi,rax",
-    "  3654e4:\te8 22 ce 00 00       \tcall   37230b <ossl_pkcs7_ctx_get0_propq>",
-    "  3654e9:\t49 89 c4             \tmov    r12,rax",
-    "  3654ec:\t48 8b 45 e8          \tmov    rax,QWORD PTR [rbp-0x18]",
-    "  3654f0:\t48 83 c0 28          \tadd    rax,0x28",
-    "  3654f4:\t48 89 c7             \tmov    rdi,rax",
-    "  3654f7:\te8 ec cd 00 00       \tcall   3722e8 <ossl_pkcs7_ctx_get0_libctx>",
-    "  3654fc:\t48 89 c3             \tmov    rbx,rax",
-    "  3654ff:\te8 e3 09 00 00       \tcall   365ee7 <PKCS12_SAFEBAGS_it>",
-    "  365504:\t48 89 c6             \tmov    rsi,rax",
-    "  365507:\t48 8b 45 e8          \tmov    rax,QWORD PTR [rbp-0x18]",
-    "  36550b:\t48 8b 40 20          \tmov    rax,QWORD PTR [rax+0x20]",
-    "  36550f:\t4c 89 e1             \tmov    rcx,r12",
-    "  365512:\t48 89 da             \tmov    rdx,rbx",
-    "  365515:\t48 89 c7             \tmov    rdi,rax",
-    "  365518:\te8 be fb d7 ff       \tcall   e50db <ASN1_item_unpack_ex>",
-    "  36551d:\t48 83 c4 10          \tadd    rsp,0x10",
-    "  365521:\t5b                   \tpop    rbx",
-    "  365522:\t41 5c                \tpop    r12",
-    "  365524:\t5d                   \tpop    rbp",
-    "  365525:\tc3                   \tret",
-]
+def modify_list(str_list):
+    # 创建列表的副本，以便进行修改
+    modified_list = str_list.copy()
+    # 计算随机位置的数量，1-3
+    num_positions = random.randint(1, 3)
 
+    for _ in range(num_positions):
+        if modified_list:  # 确保列表不为空
+            # 选择一个随机位置
+            pos = random.randint(0, len(modified_list) - 1)
+            # 随机选择删除或插入
+            action = random.choice(['delete', 'insert'])
+            if action == 'delete':
+                # 执行删除操作
+                del modified_list[pos]
+            else:
+                # 执行插入操作
+                # 随机选择一个字符串来插入
+                string_to_insert = random.choice(str_list)
+                modified_list.insert(pos + 1, string_to_insert)
 
-def _normalize_asm_code(asm_code):
-    # 如果输入的是原始的行信息，要先分割一下
-    if "\t" in asm_code:
-        asm_line_parts = asm_code.split("\t")
-        if len(asm_line_parts) != 3:
-            return None
-        asm_code = asm_line_parts[-1]
-    asm_code = normalize_asm_code(asm_code,
-                                  reg_token=SpecialToken.ASM_REG.value,
-                                  num_token=SpecialToken.ASM_NUM.value,
-                                  jump_token=SpecialToken.ASM_JUMP.value,
-                                  loc_token=SpecialToken.ASM_LOC.value,
-                                  mem_token=SpecialToken.ASM_MEM.value)
-    return asm_code
+    return modified_list
 
-
-# for asm_code in demo:
-#     print(_normalize_asm_code(asm_code))
-#
-
-train_data_items = load_from_json_file("TestCases/model_train/model_1/train_data/openssl/train_data.json")
-for di in train_data_items:
-    if 7 <= len(di["src_codes"]) <= 7:
-        print(di["function_name"])
+# 示例使用
+str_list = ["line 1", "line 2", "line 3", "line 4"]
+modified_list = modify_list(str_list)
+print("Original List:", str_list)
+print("Modified List:", modified_list)

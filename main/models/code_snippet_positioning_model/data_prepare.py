@@ -81,13 +81,13 @@ def get_src_context(line_number, src_code_dict, previous_lines_range=2, next_lin
     previous_lines = []
     for i in range(line_number - previous_lines_range, line_number):
         current_line = src_code_dict.get(i)
-        if current_line:
+        if current_line is not None:
             previous_lines.append(current_line)
 
     next_lines = []
     for i in range(line_number + 1, line_number + next_lines_range + 1):
         current_line = src_code_dict.get(i)
-        if current_line:
+        if current_line is not None:
             next_lines.append(current_line)
 
     return previous_lines, next_lines
@@ -213,8 +213,7 @@ def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
     data_items = []
     # 遍历这些片段，构成训练数据
     for function_name, left_raw_data_items, current_raw_data_items, right_raw_data_items in train_data_items:
-        if function_name == "AES_ecb_encrypt":
-            print()
+
         # 匹配的汇编源代码
         # TODO 这里的源码不对，顺序不对，或者重复了，需要调整
         # src_codes = [current_raw_data_item["current_src_line"] for current_raw_data_item in current_raw_data_items]
