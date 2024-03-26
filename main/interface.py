@@ -473,6 +473,26 @@ class DataItemForCodeSnippetConfirmModel:
         return SpecialToken.get_asm_special_tokens()
 
 
+class DataItemForCodeSnippetConfirmModelMC:
+    """
+    训练数据项，用于代码片段确认模型
+    """
+
+    def __init__(self, asm_codes: List[str],
+                 right_src_codes: List[str],
+                 wrong_src_codes: List[str]):
+        self.asm_codes = asm_codes
+        self.right_src_codes = right_src_codes
+        self.wrong_src_codes = wrong_src_codes
+
+    def custom_serialize(self):
+        return {
+            "asm_codes": self.asm_codes,
+            "right_src_codes": self.right_src_codes,
+            "wrong_src_codes": self.wrong_src_codes
+        }
+
+
 @dataclass
 class Patch:
     """
@@ -542,11 +562,11 @@ class PossibleBinFunction:
     asm_codes: List[str] = dataclasses.field(default_factory=list)
     possible_vul_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
     confirmed_vul_snippet_count: int = 0
-    vul_score:float = 0.0
+    vul_score: float = 0.0
 
     possible_patch_snippets: List[PossibleAsmSnippet] = dataclasses.field(default_factory=list)
     confirmed_patch_snippet_count: int = 0
-    patch_score:float = 0.0
+    patch_score: float = 0.0
 
     has_vul_snippet: bool = False
     has_patch_snippet: bool = False
