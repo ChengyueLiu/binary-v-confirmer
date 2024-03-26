@@ -514,9 +514,10 @@ class DataItemForCodeSnippetConfirmModelMC:
         return remove_comments(" ".join(self.wrong_src_codes))
 
     def normalize(self):
-        self.src_codes = [normalized_line for line in self.src_codes
+        self.right_src_codes = [normalized_line for line in self.right_src_codes
                           if (normalized_line := line.strip())]
-
+        self.wrong_src_codes = [normalized_line for line in self.wrong_src_codes
+                          if (normalized_line := line.strip())]
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := normalize_asm_code(code,
                                                                     reg_token=SpecialToken.ASM_REG.value,
