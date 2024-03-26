@@ -3,14 +3,13 @@ from typing import List
 import torch
 from loguru import logger
 from torch.utils.data import DataLoader
-from tqdm import tqdm
-from transformers import AutoTokenizer, RobertaForQuestionAnswering
+from transformers import AutoTokenizer, AutoConfig, BigBirdForQuestionAnswering
 
 from main.interface import DataItemForCodeSnippetPositioningModel
-from main.models.code_snippet_positioning_model.dataset_and_data_provider import CodeSnippetPositioningDataset
+from main.models.code_snippet_positioning_model_bigbird.dataset_and_data_provider import CodeSnippetPositioningDataset
 
 
-def split_list_by_sliding_window(input_list, window_length=400, step=160):
+def split_list_by_sliding_window(input_list, window_length=50, step=20):
     # 初始化一个空列表来存放所有窗口
     windows = []
 
@@ -52,12 +51,13 @@ def remove_subsets(str_list):
     return result
 
 
-class SnippetPositioner:
+class SnippetPositioner_BB:
 
-    def __init__(self, model_save_path: str = 'model_weights.pth', batch_size: int = 16):
-        self.model_name = 'microsoft/graphcodebert-base'
+    def __init__(self, model_save_path: str = 'model_weights.pth', batch_size: int = 16,windows_length=200,step=80):
+        self.model_name = 'google/bigbird-roberta-base'
         self.num_labels = 2
-
+        self.window_length = windows_length
+        self.step = step
         self.model_save_path: str = model_save_path
         self.batch_size: int = batch_size
 
@@ -69,12 +69,14 @@ class SnippetPositioner:
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # tokenizer
-        tokenizer = AutoTokenizer.from_pretrained(self.model_name, use_fast=True)
+        # tokenizer 和 model 需要根据 BigBird 进行修改
+        config = AutoConfig.from_pretrained(self.model_name, attention_type="block_sparse", block_size=64,
+                                            num_random_blocks=3)
+        tokenizer = AutoTokenizer.from_pretrained(self.model_name, config=config)
         for special_token in DataItemForCodeSnippetPositioningModel.get_special_tokens():
             tokenizer.add_tokens(special_token)
 
-        # model
-        model = RobertaForQuestionAnswering.from_pretrained(self.model_name)
+        model = BigBirdForQuestionAnswering.from_pretrained(self.model_name, config=config)
         model.resize_token_embeddings(len(tokenizer))
         model = torch.nn.DataParallel(model).to(device)
         model.load_state_dict(torch.load(self.model_save_path))
@@ -90,7 +92,7 @@ class SnippetPositioner:
         :param asm_codes:
         :return:
         """
-        asm_codes_window_list = split_list_by_sliding_window(asm_codes, window_length=50, step=20)
+        asm_codes_window_list = split_list_by_sliding_window(asm_codes, window_length=self.window_length, step=self.step)
         data_items = []
         # step 1: 输入转换为DataItemForCodeSnippetPositioningModel
         for i, asm_codes_window in enumerate(asm_codes_window_list):

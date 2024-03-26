@@ -17,24 +17,11 @@ def get_answer_tokens_index(answer_start_char, answer_end_char, offset_mapping):
     :param offset_mapping: tokenizer 的返回值，表示每个token在原始文本中的开始和结束位置
     :return:
     """
-    # step 1, 找到答案部分的tokens
-    # 找到第三个(0, 0)的下一个位置，因为token的顺序是：<s> question </s> </s> context </s>
-    context_start_index = None
-    zero_count = 0
-    for i, (start, end) in enumerate(offset_mapping):
-        if start.item() == 0 and end.item() == 0:  # 非特殊token
-            zero_count += 1
-            if zero_count == 3:
-                context_start_index = i + 1
-                break
 
     # 初始化答案的token位置
     answer_start_token_index, answer_end_token_index = None, None
-
     # 遍历每个token的偏移量
-    for i, (start, end) in enumerate(offset_mapping[context_start_index:],
-                                     # 遍历context的token
-                                     start=context_start_index):
+    for i, (start, end) in enumerate(offset_mapping):
         # print(i, tokens[i], start, end, answer_start_char, answer_end_char)
         # 确定答案开始token的索引
         if (answer_start_token_index is None) and (start <= answer_start_char < end):
@@ -42,9 +29,6 @@ def get_answer_tokens_index(answer_start_char, answer_end_char, offset_mapping):
         # 确定答案结束token的索引
         if (answer_end_token_index is None) and (start < answer_end_char <= end):
             answer_end_token_index = i
-
-        if answer_start_token_index is not None and answer_end_token_index is not None:
-            break
 
     return answer_start_token_index, answer_end_token_index
 

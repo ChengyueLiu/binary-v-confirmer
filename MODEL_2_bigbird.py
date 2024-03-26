@@ -1,5 +1,5 @@
 from bintools.general.bin_tool import normalize_asm_code
-from main.models.code_snippet_positioning_model_bigbird.model_application import SnippetPositioner
+from main.models.code_snippet_positioning_model_bigbird.model_application import SnippetPositioner_BB
 from main.models.code_snippet_positioning_model_bigbird.model_training import run_train
 
 
@@ -14,9 +14,9 @@ def train_model_2():
               test_data_save_path,
               model_save_path,
               test_only=False,
-              epochs=1,
-              batch_size=8,
-              token_max_length=4096)
+              epochs=3,
+              batch_size=16,
+              token_max_length=2048)
 
 
 def test_model():
@@ -87,7 +87,7 @@ def test_model():
         "   79ddb:\t83 f8 01             \tcmp    eax,0x1",
         "   79dde:\t75 6b                \tjne    79e4b <print_ocsp_summary+0x295>"
     ]
-    code_snippet_positioner = SnippetPositioner(model_save_path="Resources/model_weights/model_2_weights.pth")
+    code_snippet_positioner = SnippetPositioner_BB(model_save_path="Resources/model_weights/model_2_weights.pth")
     question, predicted_answers = code_snippet_positioner.position("vul_function_name", src_codes, asm_codes)
     expected_answer = [ac.split("\t")[-1] for ac in asm_codes]
     expected_answer = [normalized_code for code in expected_answer if (normalized_code := normalize_asm_code(code))]
