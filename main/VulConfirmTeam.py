@@ -113,7 +113,7 @@ class VulConfirmTeam:
                     is_vul=False)
 
                 # 5. Model 4 确认补丁片段
-                for asm_codes_window_text, (pred, prob, scores) in zip(patch_asm_codes_window_texts, patch_predictions):
+                for asm_codes_window_text, (pred, prob, scores) in zip(vul_asm_codes_window_texts, patch_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
                     pas = PossibleAsmSnippet(patch_src_codes_text, asm_codes_window_text, pred, prob, scores=scores)
                     possible_bin_function.possible_patch_snippets.append(pas)
