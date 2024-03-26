@@ -66,8 +66,8 @@ class SnippetConfirmer:
 
             # 找到每个样本的最大概率及其索引
             max_probs, preds = torch.max(probabilities, dim=-1)
-            for pred, prob in zip(preds, max_probs):
-                predictions.append((pred, prob))
+            for pred, prob, scores in zip(preds, max_probs, logits):
+                predictions.append((pred.item(), prob.item(), scores.cpu().numpy()))
         return predictions
 
     def confirm_vuls(self, src_codes_text, asm_codes_text_list):

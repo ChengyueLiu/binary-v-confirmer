@@ -77,9 +77,16 @@ class VulConfirmTeam:
             # 全部的二进制函数数量
             cause_function.bin_function_num = bin_function_num
             # label为1且概率大于阈值的二进制函数, 按照概率排序，取前n个
-            cause_function.possible_bin_functions = sorted([pbf for pbf in possible_bin_functions
-                                                            if
-                                                            pbf.match_possibility > CAUSE_FUNCTION_SIMILARITY_THRESHOLD],
+            # label为1且概率大于阈值的二进制函数, 按照概率排序，取前n个
+            # 筛选
+            for possible_bin_function in possible_bin_functions:
+                if possible_bin_function.match_possibility <= CAUSE_FUNCTION_SIMILARITY_THRESHOLD:
+                    continue
+                if len(possible_bin_function.asm_codes) <= 3:
+                    continue
+                cause_function.possible_bin_functions.append(possible_bin_function)
+            # 排序，取前n个
+            cause_function.possible_bin_functions = sorted(cause_function.possible_bin_functions,
                                                            key=lambda x: x.match_possibility, reverse=True)[
                                                     :POSSIBLE_BIN_FUNCTION_TOP_N]
 
@@ -106,9 +113,10 @@ class VulConfirmTeam:
                     is_vul=False)
 
                 # 5. Model 4 确认补丁片段
-                for asm_codes_window_text, (pred, prob) in zip(patch_asm_codes_window_texts, patch_predictions):
+                for asm_codes_window_text, (pred, prob, scores) in zip(patch_asm_codes_window_texts, patch_predictions):
                     # logger.info(f"pred: {pred}, prob: {prob}")
-                    pas = PossibleAsmSnippet(patch_src_codes_text, asm_codes_window_text, pred.item(), prob.item())
+                    pas = PossibleAsmSnippet(patch_src_codes_text, asm_codes_window_text, pred.item(), prob.item(),
+                                             scores=scores)
                     possible_bin_function.possible_patch_snippets.append(pas)
                     if pred == 1:
                         possible_bin_function.has_patch_snippet = True
