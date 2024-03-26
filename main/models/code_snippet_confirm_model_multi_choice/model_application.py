@@ -1,11 +1,13 @@
+from typing import List
+
 import torch
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from transformers import RobertaTokenizer, RobertaForSequenceClassification
+from transformers import RobertaTokenizer, RobertaForMultipleChoice
 
-from main.interface import DataItemForCodeSnippetConfirmModel
-from main.models.code_snippet_confirm_model.dataset_and_data_provider import CodeSnippetConfirmDataset
+from main.interface import DataItemForCodeSnippetConfirmModelMC
+from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import CodeSnippetConfirmDataset
 
 
 class SnippetConfirmer:
@@ -19,18 +21,18 @@ class SnippetConfirmer:
         # init
         self.device, self.tokenizer, self.model = self._init_predict()
 
-    def _init_predict(self) -> (torch.device, RobertaTokenizer, RobertaForSequenceClassification):
+    def _init_predict(self) -> (torch.device, RobertaTokenizer, RobertaForMultipleChoice):
 
         # device
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
         # tokenizer
         tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
-        for special_token in DataItemForCodeSnippetConfirmModel.get_special_tokens():
+        for special_token in DataItemForCodeSnippetConfirmModelMC.get_special_tokens():
             tokenizer.add_tokens(special_token)
 
         # model
-        model = RobertaForSequenceClassification.from_pretrained(self.model_name, num_labels=self.num_labels)
+        model = RobertaForMultipleChoice.from_pretrained(self.model_name, num_labels=self.num_labels)
         model.resize_token_embeddings(len(tokenizer))
         model = torch.nn.DataParallel(model).to(device)
         model.load_state_dict(torch.load(self.model_save_path))
@@ -38,12 +40,15 @@ class SnippetConfirmer:
 
         return device, tokenizer, model
 
-    def _preprocess_data(self, src_codes_text: str, asm_codes_text_list: str):
-        texts = [f"{src_codes_text} {self.tokenizer.sep_token} {asm_codes_text}"
-                 for asm_codes_text in asm_codes_text_list]
-        labels = [0] * len(asm_codes_text_list)
-        dataset = CodeSnippetConfirmDataset(texts, labels, self.tokenizer)
-        train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+    def _preprocess_data(self, asm_code_texts: List[str], vul_src_code_text: str, patch_src_code_text: str):
+        vul_src_code_texts = [vul_src_code_text] * len(asm_code_texts)
+        patch_src_code_texts = [patch_src_code_text] * len(asm_code_texts)
+        dataset = CodeSnippetConfirmDataset(questions=asm_code_texts,
+                                            choice_1_list=vul_src_code_texts,
+                                            choice_2_list=patch_src_code_texts,
+                                            tokenizer=self.tokenizer,
+                                            shuffle_choices=False)
+        train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         return train_loader
 
     def _predict(self, dataloader):
@@ -70,13 +75,13 @@ class SnippetConfirmer:
                 predictions.append((pred.item(), prob.item(), list(scores.cpu().numpy())))
         return predictions
 
-    def confirm_vuls(self, src_codes_text, asm_codes_text_list):
+    def choice(self, asm_code_texts: List[str], vul_src_code_text: str, patch_src_code_text: str):
         """
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
 
         """
         # 预处理数据
-        dataloader = self._preprocess_data(src_codes_text, asm_codes_text_list)
+        dataloader = self._preprocess_data(asm_code_texts, vul_src_code_text, patch_src_code_text)
 
         # 预测
         predictions = self._predict(dataloader)

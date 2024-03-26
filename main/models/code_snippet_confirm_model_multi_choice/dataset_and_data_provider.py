@@ -10,27 +10,31 @@ import torch
 
 
 class CodeSnippetConfirmDataset(Dataset):
-    def __init__(self, questions, right_answers, wrong_answers, tokenizer, max_len=512):
+    def __init__(self, questions, choice_1_list, choice_2_list, tokenizer, max_len=512,shuffle_choices=True):
+        """
+        set choice 1 as the right answer when training
+        """
         self.questions = questions
-        self.right_answers = right_answers
-        self.wrong_answers = wrong_answers
+        self.choice_1_list = choice_1_list
+        self.choice_2_list = choice_2_list
         self.tokenizer = tokenizer
         self.max_len = max_len
-
+        self.shuffle_choices = shuffle_choices
     def __len__(self):
         return len(self.questions)
 
     def __getitem__(self, idx):
         question = self.questions[idx]
-        right_answer = self.right_answers[idx]
-        wrong_answer = self.wrong_answers[idx]
+        choice_1 = self.choice_1_list[idx]
+        choice_2 = self.choice_2_list[idx]
 
         # 将正确答案和错误答案合并到一个列表中
-        choices = [right_answer,wrong_answer]
+        choices = [choice_1,choice_2]
         # 打乱答案的顺序
-        random.shuffle(choices)
+        if self.shuffle_choices:
+            random.shuffle(choices)
         # 确定正确答案在打乱后的列表中的索引
-        label = choices.index(right_answer)
+        label = choices.index(choice_1)
 
         input_ids = []
         attention_masks = []

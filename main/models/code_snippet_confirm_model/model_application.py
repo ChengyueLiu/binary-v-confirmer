@@ -43,7 +43,7 @@ class SnippetConfirmer:
                  for asm_codes_text in asm_codes_text_list]
         labels = [0] * len(asm_codes_text_list)
         dataset = CodeSnippetConfirmDataset(texts, labels, self.tokenizer)
-        train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=True)
+        train_loader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         return train_loader
 
     def _predict(self, dataloader):
