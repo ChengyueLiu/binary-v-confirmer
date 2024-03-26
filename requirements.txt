@@ -3,3 +3,13 @@ loguru
 tqdm
 tree-sitter
 gitpython
+
+transformers
+# get a install command from https://pytorch.org/, DO NOT use pip directly, e.g.: pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+# torch
+# torchvision
+# torchaudio
+
+# bigbird
+sentencepiece
+protobuf
