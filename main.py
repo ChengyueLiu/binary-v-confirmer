@@ -171,6 +171,9 @@ def test_model():
     libcrypto_320 = "TestCases/binaries/openssl_3.2.0/libcrypto.so.3"
     libssl_320 = "TestCases/binaries/openssl_3.2.0/libssl.so.3"
 
+    # openssl 3.0.11
+    libcrypto_3011 = "TestCases/binaries/openssl_3.0.11/libcrypto.so.3"
+
     # openssl 3.2.1
     openssl_321 = "TestCases/binaries/openssl_3.2.1/openssl"
     libcrypto_321 = "TestCases/binaries/openssl_3.2.1/libcrypto.so.3"
@@ -188,16 +191,16 @@ def test_model():
     # save_path = "test_results/openssl_320_result.json"
     # vul_confirm_team.confirm(binary_path=openssl_320, vul=vulnerability)
     # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
-    #
+
     # # 有漏洞
-    save_path = "test_results/libcrypto_320_result.json"
-    vul_confirm_team.confirm(binary_path=libcrypto_320, vul=vulnerability)
+    save_path = "test_results/libcrypto_3011_result.json"
+    vul_confirm_team.confirm(binary_path=libcrypto_3011, vul=vulnerability)
     save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
-    #
+
     # # 有漏洞但是修复了
-    save_path = "test_results/libcrypto_321_result.json"
-    vul_confirm_team.confirm(binary_path=libcrypto_321, vul=vulnerability)
-    save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
+    # save_path = "test_results/libcrypto_321_result.json"
+    # vul_confirm_team.confirm(binary_path=libcrypto_321, vul=vulnerability)
+    # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
 
 if __name__ == '__main__':

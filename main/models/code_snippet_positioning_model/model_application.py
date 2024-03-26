@@ -179,4 +179,41 @@ class SnippetPositioner:
         # 使用模型预测
         predicted_answers = self._predict(dataloader)
 
-        return question, predicted_answers
+        # 合并字符串, 因为在处理数据的时候使用了滑动窗口，所以可能会有重叠的部分
+        merged_answer_lst = merge_strings(predicted_answers)
+        return question, merged_answer_lst
+
+
+def find_overlap(s1, s2):
+    # 初始化重叠部分长度为0
+    overlap_length = 0
+    # 从最短字符串的长度开始，逐步减小长度尝试匹配
+    for i in range(1, min(len(s1), len(s2)) + 1):
+        # 如果s1的后缀与s2的前缀匹配，则更新重叠长度
+        if s1[-i:] == s2[:i]:
+            overlap_length = i
+    # 返回重叠的部分
+    return s1[-overlap_length:] if overlap_length > 0 else ''
+
+
+def merge_strings(stc_lst):
+    merged_lst = []  # 用于存储合并后的字符串
+    i = 0  # 初始化索引
+    while i < len(stc_lst) - 1:  # 遍历列表，留出空间比较最后一个元素
+        current_str = stc_lst[i]
+        # 查找当前字符串与下一个字符串之间的重叠长度
+        overlap = find_overlap(current_str, stc_lst[i + 1])
+        overlap_length = len(overlap)
+        if overlap_length > 10:  # 如果重叠长度超过10
+            # 合并当前字符串和下一个字符串的非重叠部分
+            current_str += stc_lst[i + 1][overlap_length:]
+            i += 1  # 移动到下一个字符串进行检查
+        else:
+            # 如果没有足够的重叠，或已经是最后一个字符串，将当前字符串添加到结果列表中
+            merged_lst.append(current_str)
+            i += 1  # 移动到下一个字符串进行检查
+
+    if i == len(stc_lst) - 1:  # 检查是否有剩余的最后一个字符串需要添加
+        merged_lst.append(stc_lst[i])
+
+    return merged_lst
