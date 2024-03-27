@@ -51,7 +51,7 @@ def prepare_train_data_for_model_1():
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=5)
+                                           negative_ratio=10)
 
 
 def train_model_1():
@@ -69,7 +69,7 @@ def train_model_1():
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
         test_only=False,
-        epochs=3,
+        epochs=5,
         batch_size=100,
     )
 
