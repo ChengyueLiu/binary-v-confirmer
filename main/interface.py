@@ -312,7 +312,7 @@ class DataItemForFunctionConfirmModel:
 
         # 正规化处理字符串
         self.src_strings = list(set([normalized_string for string in self.src_strings
-                                     if (normalized_string := string.strip())]))
+                                     if len((normalized_string := string.strip())) >= 4]))
 
         # 正规化处理汇编代码
         self.asm_codes = [normalized_code for code in self.asm_codes
@@ -324,7 +324,7 @@ class DataItemForFunctionConfirmModel:
                                                                     mem_token=SpecialToken.ASM_MEM.value))]
         # 正规化处理字符串
         self.bin_strings = list(set([normalized_string for string in self.bin_strings
-                                     if (normalized_string := string.strip())]))
+                                     if len((normalized_string := string.strip())) >= 4]))
 
 
 @dataclass

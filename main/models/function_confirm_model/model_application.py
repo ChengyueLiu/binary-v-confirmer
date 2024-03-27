@@ -146,12 +146,23 @@ class FunctionFinder:
     def find_bin_function(self, src_function_feature: SrcFunctionFeature,
                           bin_function_features: List[BinFunctionFeature]) -> List[PossibleBinFunction]:
         data_items = convert_function_feature_to_model_input(src_function_feature, bin_function_features)
-        dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
+        # ------ 筛选 -------
+        filtered_data_items = []
+        min_ratio_threshold = 2
+        max_ratio_threshold = 10
+        for data_item in data_items:
+            ratio = round(len(data_item.asm_codes) / len(data_item.src_codes), 2)
+            if ratio < min_ratio_threshold or ratio > max_ratio_threshold:
+                continue
+            filtered_data_items.append(data_item)
+        # ------ 筛选结束 -------
+
+        dataset = create_dataset_from_model_input(filtered_data_items, self.tokenizer, max_len=512)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
         predictions = self._predict(dataloader)
 
         possible_bin_functions: List[PossibleBinFunction] = []
-        for data_item, (pred, prob) in zip(data_items, predictions):
+        for data_item, (pred, prob) in zip(filtered_data_items, predictions):
             if pred.item() == 1:
                 possible_bin_function = PossibleBinFunction(
                     function_name=data_item.bin_function_name,

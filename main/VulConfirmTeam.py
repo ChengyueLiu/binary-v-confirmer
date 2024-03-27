@@ -203,7 +203,10 @@ class VulConfirmTeam:
 
             # 1. 找到漏洞函数[这里会过滤一些很短的或者很长的汇编函数]
             vul_bin_functions = self.function_finder.find_bin_function(src_function_feature, bin_function_features)
-            print(f"\tpossible bin function num: {len(vul_bin_functions)}, function names: {[f.function_name for f in vul_bin_functions]}")
+            src_codes_length = len(src_function_feature.original_lines)
+            print(
+                f"\t all bin function num: {len(bin_function_features)}, possible bin function num: {len(vul_bin_functions)}, functions: {[f"{f.function_name} asm/src: {round(len(f.asm_codes) / src_codes_length, 2)}"
+                                                                                      for f in vul_bin_functions]}")
             if not vul_bin_functions:
                 continue
             vul_bin_function = vul_bin_functions[0]
@@ -231,6 +234,7 @@ class VulConfirmTeam:
         #     print(f"\t  vul(choice_index,score,prob): {prediction[0]}, \t  vul src code: {snippet_codes_text_before_commit}")
         #     print(f"\tpatch(choice_index,score,prob): {prediction[1]}, \tpatch src code: {snippet_codes_text_after_commit}")
         print()
+
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
     """

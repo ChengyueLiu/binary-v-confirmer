@@ -35,13 +35,14 @@ def prepare_train_data_for_model_1():
     2. 把函数特征转换成训练数据
     :return:
     """
-    # 提取原始特征
+
     src_bin_pairs = [
         (libcrypto_src_dir, libcrypto_bin_path),
         (openssl_src_dir, openssl_bin_path),
         (libssl_src_dir, libssl_bin_path),
         (libpng_src_dir, libssl_bin_path),
     ]
+    # 提取原始特征, 源代码和汇编代码函数名相同，且源代码函数大于8行
     extract_matched_function_feature(
         src_bin_pairs=src_bin_pairs,
         save_path=openssl_function_features_path,
@@ -69,7 +70,7 @@ def train_model_1():
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
         test_only=False,
-        epochs=5,
+        epochs=10,
         batch_size=100,
     )
 
