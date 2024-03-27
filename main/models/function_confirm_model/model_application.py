@@ -151,7 +151,11 @@ class FunctionFinder:
         min_ratio_threshold = 2
         max_ratio_threshold = 10
         for data_item in data_items:
-            ratio = round(len(data_item.asm_codes) / len(data_item.src_codes), 2)
+            effective_asm_codes_num = len(data_item.asm_codes) - 1
+            effective_src_codes_num = len(data_item.src_codes) - 3
+            if effective_src_codes_num <= 0:
+                effective_src_codes_num = 1
+            ratio = round(effective_asm_codes_num / effective_src_codes_num, 2)
             if ratio < min_ratio_threshold or ratio > max_ratio_threshold:
                 continue
             filtered_data_items.append(data_item)
