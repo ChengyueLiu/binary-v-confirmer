@@ -505,7 +505,8 @@ class DataItemForCodeSnippetConfirmModelMC:
         )
 
     def get_question_text(self):
-        return " ".join(self.asm_codes)
+        # 限制最多50行汇编代码
+        return " ".join(self.asm_codes[:50])
 
     def get_right_answer_text(self):
         return remove_comments(" ".join(self.right_src_codes))

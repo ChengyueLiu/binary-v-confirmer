@@ -30,14 +30,14 @@ def train_model_3():
     train_data_save_path = "TestCases/model_train/model_3_multi_choice/data_items/train_data.json"
     val_data_save_path = "TestCases/model_train/model_3_multi_choice/data_items/valid_data.json"
     test_data_save_path = "TestCases/model_train/model_3_multi_choice/data_items/test_data.json"
-    model_save_path = "model_weights/model_weights/model_3_weights_MC.pth"
+    model_save_path = "Resources/model_weights/model_3_weights_MC.pth"
     run_train(train_data_save_path,
               val_data_save_path,
               test_data_save_path,
               model_save_path,
               test_only=False,
               epochs=3,
-              batch_size=100)
+              batch_size=48)
 
 
 def test_model():

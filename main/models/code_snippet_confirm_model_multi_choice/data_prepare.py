@@ -36,7 +36,6 @@ def generate_data_items(file_path: str, save_path: str):
     # step 3: 生成训练例子
     train_data_items = []
     for positive_item in model_2_train_data_items:
-
         # 生成完全不相干的例子
         # 随机选择一个不同的条目作为负例的源
         while True:

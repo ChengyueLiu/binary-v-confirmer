@@ -206,3 +206,6 @@ def test_model():
 if __name__ == '__main__':
     train()
     test_model()
+
+    # TODO 几个问题
+    #   1. 那个移除子集的函数，要换成新的合并区间的函数。必须计算出来一个区间。不能是多个区间。
