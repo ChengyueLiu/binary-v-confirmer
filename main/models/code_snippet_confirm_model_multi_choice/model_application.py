@@ -52,27 +52,24 @@ class SnippetChoicer:
         return train_loader
 
     def _predict(self, dataloader):
-        """
-
-        :param dataloader:
-        :return: [(pred, prob,[no_score,yes_score]), ...]
-        """
-        # predict
         predictions = []
         for batch in dataloader:
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
             with torch.no_grad():
-                # model: RobertaForSequenceClassification
                 outputs = self.model(input_ids, attention_mask=attention_mask)
             logits = outputs.logits
-            # 使用softmax计算概率
             probabilities = F.softmax(logits, dim=-1)
 
-            # 找到每个样本的最大概率及其索引
-            max_probs, preds = torch.max(probabilities, dim=-1)
-            for pred, prob, scores in zip(preds, max_probs, logits):
-                predictions.append((pred.item(), prob.item(), list(scores.cpu().numpy())))
+            # 对每个问题处理，提取每个选项的信息
+            for i in range(logits.size(0)):  # 遍历batch中的每个样本，即每个问题
+                question_predictions = []
+                for option_index in range(logits.size(1)):  # 遍历该问题的每个选项
+                    score = round(logits[i, option_index].item(), 4)  # 该选项的得分
+                    prob = round(probabilities[i, option_index].item(), 4)  # 该选项的概率
+                    question_predictions.append((option_index, score, prob))
+                predictions.append(question_predictions)
+
         return predictions
 
     def choice(self, asm_code_texts: List[str], vul_src_code_text: str, patch_src_code_text: str):
@@ -85,6 +82,4 @@ class SnippetChoicer:
 
         # 预测
         predictions = self._predict(dataloader)
-        for prediction in predictions:
-            print(prediction)
-        return True
+        return predictions

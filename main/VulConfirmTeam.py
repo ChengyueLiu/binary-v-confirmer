@@ -194,15 +194,20 @@ class VulConfirmTeam:
             2. 找到漏洞片段
             3. 判断是否已经被修复
         """
+        print(binary_path)
         for cause_function in vul.cause_functions:
             src_function_feature, bin_function_features = extract_features(cause_function.file_path,
                                                                            cause_function.function_name,
                                                                            binary_path)
+            print(cause_function.function_name)
+
             # 1. 找到漏洞函数
             vul_bin_functions = self.function_finder.find_bin_function(src_function_feature, bin_function_features)
+            print(f"\tpossible bin function num: {len(vul_bin_functions)}, function names: {[f.function_name for f in vul_bin_functions]}")
             if not vul_bin_functions:
-                return False
+                continue
             vul_bin_function = vul_bin_functions[0]
+            print(f"\tmost possible bin function name: {vul_bin_function.function_name}")
 
             # 2. 定位代码片段
             patch = cause_function.patches[0]
@@ -211,16 +216,17 @@ class VulConfirmTeam:
                 src_codes=patch.snippet_codes_before_commit,
                 asm_codes=vul_bin_function.asm_codes)
             if not asm_codes_window_texts:
-                return False
-            asm_codes_window_text = asm_codes_window_texts[0]
+                print(f"\tno bin snippet")
+                continue
+            asm_codes_window_texts = asm_codes_window_texts[:1]
 
-            # 判断更像修复前，还是修复后
+            # 3. 判断更像修复前，还是修复后
             snippet_codes_text_after_commit = generate_src_codes_text(patch.snippet_codes_after_commit)
-            is_repaired = self.snippet_choicer.choice(asm_codes_window_text,
+            predictions = self.snippet_choicer.choice(asm_codes_window_texts,
                                                       snippet_codes_text_before_commit,
                                                       snippet_codes_text_after_commit)
-            return is_repaired
-
+            print("\t", predictions)
+        print()
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
     """

@@ -202,11 +202,15 @@ def test_model():
     # vul_confirm_team.confirm(binary_path=libcrypto_321, vul=vulnerability)
     # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
 
-    save_path = "test_results/libcrypto_3011_result.json"
+    # new test
+    vul_confirm_team.new_confirm(binary_path=libpng16, vul=vulnerability)
+    vul_confirm_team.new_confirm(binary_path=openssl_320, vul=vulnerability)
     vul_confirm_team.new_confirm(binary_path=libcrypto_3011, vul=vulnerability)
-    save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
+    vul_confirm_team.new_confirm(binary_path=libcrypto_321, vul=vulnerability)
+
+
 if __name__ == '__main__':
-    train()
+    # train()
     test_model()
 
     # TODO 几个问题
