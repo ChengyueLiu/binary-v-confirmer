@@ -206,7 +206,9 @@ class VulConfirmTeam:
             src_codes_length = len(src_function_feature.original_lines)
             print(
                 f"\t all bin function num: {len(bin_function_features)}, possible bin function num: {len(vul_bin_functions)}, functions: {[f"{f.function_name} asm/src: {round(len(f.asm_codes) / src_codes_length, 2)}"
-                                                                                      for f in vul_bin_functions]}")
+                                                                                                                                           for f in vul_bin_functions]}")
+            save_to_json_file([vbf.customer_serialize() for vbf in vul_bin_functions],
+                              f"test_results/{cause_function.function_name}.json")
             if not vul_bin_functions:
                 continue
             vul_bin_function = vul_bin_functions[0]

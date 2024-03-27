@@ -628,7 +628,7 @@ class PossibleBinFunction:
             "is_repaired": self.is_repaired,
             "judge_reason": self.judge_reason,
 
-            # "asm_codes": self.asm_codes,
+            "asm_codes": self.asm_codes,
             "possible_vul_snippets": [possible_vul_snippet.customer_serialize() for possible_vul_snippet in
                                       self.possible_vul_snippets],
             "possible_patch_snippets": [possible_patch_snippet.customer_serialize() for possible_patch_snippet in
