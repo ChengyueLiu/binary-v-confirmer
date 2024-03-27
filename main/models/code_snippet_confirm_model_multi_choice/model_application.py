@@ -85,5 +85,6 @@ class SnippetChoicer:
 
         # 预测
         predictions = self._predict(dataloader)
-
-        return predictions
+        for prediction in predictions:
+            print(prediction)
+        return True

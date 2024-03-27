@@ -10,7 +10,7 @@ from transformers import RobertaTokenizer, RobertaForSequenceClassification
 from bintools.general.file_tool import load_from_json_file
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
 from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, PossibleBinFunction, \
-    CauseFunction
+    CauseFunction, SrcFunctionFeature
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataset_from_model_input
 import torch.nn.functional as F
@@ -65,7 +65,8 @@ class FunctionFinder:
         # bin_function_features = extract_bin_feature(binary_file_abs_path)
         # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
         if "TestCases/binaries" in binary_file_abs_path:
-            IDA_PRO_OUTPUT_PATH = binary_file_abs_path.replace("TestCases/binaries/", "TestCases/binary_function_features/") + ".json"
+            IDA_PRO_OUTPUT_PATH = binary_file_abs_path.replace("TestCases/binaries/",
+                                                               "TestCases/binary_function_features/") + ".json"
         results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
         # 转换成外部的数据结构
         bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
@@ -108,6 +109,8 @@ class FunctionFinder:
                                    function_name,
                                    binary_file_abs_path: str):
         """
+        deprecated
+
         输入一个源代码函数代码，和一个二进制文件，返回二进制文件中与源代码函数相似的汇编函数
             step 1: 提取源代码, 二进制文件特征
             step 2: 使用模型预测
@@ -139,3 +142,23 @@ class FunctionFinder:
         possible_bin_functions.sort(key=lambda x: x.match_possibility, reverse=True)
 
         return normalized_src_codes, len(predictions), possible_bin_functions
+
+    def find_bin_function(self, src_function_feature: SrcFunctionFeature,
+                          bin_function_features: List[BinFunctionFeature])->List[PossibleBinFunction]:
+        data_items = convert_function_feature_to_model_input(src_function_feature, bin_function_features)
+        dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        predictions = self._predict(dataloader)
+
+        possible_bin_functions: List[PossibleBinFunction] = []
+        for data_item, (pred, prob) in zip(data_items, predictions):
+            if pred.item() == 1:
+                possible_bin_function = PossibleBinFunction(
+                    function_name=data_item.bin_function_name,
+                    match_possibility=prob.item(),
+                    asm_codes=data_item.asm_codes,
+                )
+                possible_bin_functions.append(possible_bin_function)
+        possible_bin_functions.sort(key=lambda x: x.match_possibility, reverse=True)
+
+        return possible_bin_functions

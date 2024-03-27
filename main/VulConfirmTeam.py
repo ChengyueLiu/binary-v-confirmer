@@ -1,20 +1,64 @@
 import os
 import time
+from typing import Optional, List
 
 from loguru import logger
 
-from bintools.general.file_tool import save_to_json_file
-from main.interface import Vulnerability, PossibleAsmSnippet
+from bintools.general.file_tool import save_to_json_file, load_from_json_file
+from bintools.general.src_tool import remove_comments
+from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
+from main.interface import Vulnerability, PossibleAsmSnippet, PossibleBinFunction, BinFunctionFeature, \
+    SrcFunctionFeature
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
+from main.models.code_snippet_confirm_model_multi_choice.model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder
 from setting.settings import CAUSE_FUNCTION_SIMILARITY_THRESHOLD, POSSIBLE_BIN_FUNCTION_TOP_N
+
+
+def extract_features(src_file_path, cause_function_name, binary_file_abs_path) -> (
+        SrcFunctionFeature, List[BinFunctionFeature]):
+    """
+    预处理，主要是一些模型需要的参数
+    """
+    # 提取源代码特征
+    src_function_feature: SrcFunctionFeature = extract_src_feature_for_specific_function(file_path=src_file_path,
+                                                                                         vul_function_name=cause_function_name)
+    # 提取二进制特征
+    # bin_function_features = extract_bin_feature(binary_file_abs_path)
+    # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
+    if "TestCases/binaries" in binary_file_abs_path:
+        IDA_PRO_OUTPUT_PATH = binary_file_abs_path.replace("TestCases/binaries/",
+                                                           "TestCases/binary_function_features/") + ".json"
+    results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
+    # 转换成外部的数据结构
+    bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
+                                                       for json_item in results]
+    # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
+    # ---------- 以上是临时代码 ----------
+
+    return src_function_feature, bin_function_features
+
+
+def generate_src_codes_text(src_codes: List[str]):
+    """
+    保证这里和snippet_positioner的代码一致
+    """
+    normalized_src_codes = []
+    for line in src_codes:
+        if line.startswith(("+", "-")):
+            line = line[1:]
+        if not (normalized_line := line.strip()):
+            continue
+        normalized_src_codes.append(normalized_line)
+    return remove_comments(" ".join(normalized_src_codes))
 
 
 class VulConfirmTeam:
     def __init__(self, function_confirm_model_pth_path=r"Resources/model_weights/model_1_weights.pth",
                  snippet_positioning_model_pth_path=r"Resources/model_weights/model_2_weights_GCB.pth",
                  snippet_confirm_model_pth_path=r"Resources/model_weights/model_3_weights.pth",
+                 snippet_choice_model_pth_path=r"Resources/model_weights/model_3_weights_MC.pth",
                  batch_size=16):
         # 定位漏洞函数
         logger.info("init function_finder")
@@ -24,6 +68,9 @@ class VulConfirmTeam:
                                                     batch_size=batch_size)
         logger.info("init snippet_confirmer")
         self.snippet_confirmer = SnippetConfirmer(model_save_path=snippet_confirm_model_pth_path, batch_size=batch_size)
+
+        logger.info("init SnippetChoicer")
+        self.snippet_choicer = SnippetChoicer(model_save_path=snippet_choice_model_pth_path, batch_size=batch_size)
         logger.info("VulConfirmTeam init done")
 
     def confirm_snippet(self, cause_function, possible_bin_function, is_vul=True):
@@ -139,6 +186,40 @@ class VulConfirmTeam:
             cause_function.summary()
         vul.summary()
         logger.info(f"Confirm Done, Time cost: {round(time.perf_counter() - start_at, 2)}s")
+
+    def new_confirm(self, binary_path, vul: Vulnerability):
+        """
+        新的确认方法
+            1. 找到漏洞函数
+            2. 找到漏洞片段
+            3. 判断是否已经被修复
+        """
+        for cause_function in vul.cause_functions:
+            src_function_feature, bin_function_features = extract_features(cause_function.file_path,
+                                                                           cause_function.function_name,
+                                                                           binary_path)
+            # 1. 找到漏洞函数
+            vul_bin_functions = self.function_finder.find_bin_function(src_function_feature, bin_function_features)
+            if not vul_bin_functions:
+                return False
+            vul_bin_function = vul_bin_functions[0]
+
+            # 2. 定位代码片段
+            patch = cause_function.patches[0]
+            snippet_codes_text_before_commit, asm_codes_window_texts = self.snippet_positioner.position(
+                vul_function_name=cause_function.function_name,
+                src_codes=patch.snippet_codes_before_commit,
+                asm_codes=vul_bin_function.asm_codes)
+            if not asm_codes_window_texts:
+                return False
+            asm_codes_window_text = asm_codes_window_texts[0]
+
+            # 判断更像修复前，还是修复后
+            snippet_codes_text_after_commit = generate_src_codes_text(patch.snippet_codes_after_commit)
+            is_repaired = self.snippet_choicer.choice(asm_codes_window_text,
+                                                      snippet_codes_text_before_commit,
+                                                      snippet_codes_text_after_commit)
+            return is_repaired
 
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
