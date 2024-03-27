@@ -263,9 +263,9 @@ class DataItemForFunctionConfirmModel:
         src_code_text = remove_comments(" ".join(self.src_codes[:15]))
 
         # 过长过短的字符串不要,限制最多10个字符串，取长度最长的
-        src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)  #
+        src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
-        src_strings = " ".join([self.function_name, *src_string_list])
+        src_strings = " ".join(src_string_list)
 
         # 保留最长的10个数字
         src_numbers = " ".join(sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])
@@ -307,8 +307,8 @@ class DataItemForFunctionConfirmModel:
                           if (normalized_line := line.strip())]
 
         # 正规化处理字符串
-        self.src_strings = [normalized_string for string in self.src_strings
-                            if (normalized_string := string.strip())]
+        self.src_strings = list(set([normalized_string for string in self.src_strings
+                                     if (normalized_string := string.strip())]))
 
         # 正规化处理汇编代码
         self.asm_codes = [normalized_code for code in self.asm_codes
@@ -319,8 +319,8 @@ class DataItemForFunctionConfirmModel:
                                                                     loc_token=SpecialToken.ASM_LOC.value,
                                                                     mem_token=SpecialToken.ASM_MEM.value))]
         # 正规化处理字符串
-        self.bin_strings = [normalized_string for string in self.bin_strings
-                            if (normalized_string := string.strip())]
+        self.bin_strings = list(set([normalized_string for string in self.bin_strings
+                                     if (normalized_string := string.strip())]))
 
 
 @dataclass
@@ -516,9 +516,9 @@ class DataItemForCodeSnippetConfirmModelMC:
 
     def normalize(self):
         self.right_src_codes = [normalized_line for line in self.right_src_codes
-                          if (normalized_line := line.strip())]
+                                if (normalized_line := line.strip())]
         self.wrong_src_codes = [normalized_line for line in self.wrong_src_codes
-                          if (normalized_line := line.strip())]
+                                if (normalized_line := line.strip())]
         self.asm_codes = [normalized_code for code in self.asm_codes
                           if (normalized_code := normalize_asm_code(code,
                                                                     reg_token=SpecialToken.ASM_REG.value,

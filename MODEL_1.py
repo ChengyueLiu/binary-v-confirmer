@@ -29,7 +29,6 @@ val_data_save_path = r"TestCases/model_train/model_1/train_data/val_data.json"
 test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
 
 
-
 def prepare_train_data_for_model_1():
     """
     1. 从源代码和二进制文件中提取函数特征: 需要准备源代码和对应的二进制文件，需要保持版本一致。
@@ -38,7 +37,7 @@ def prepare_train_data_for_model_1():
     """
     # 提取原始特征
     src_bin_pairs = [
-        (libcrypto_src_dir,libcrypto_bin_path),
+        (libcrypto_src_dir, libcrypto_bin_path),
         (openssl_src_dir, openssl_bin_path),
         (libssl_src_dir, libssl_bin_path),
         (libpng_src_dir, libssl_bin_path),
@@ -77,10 +76,7 @@ def train_model_1():
 
 if __name__ == '__main__':
     # Done
-    prepare_train_data_for_model_1()
+    # prepare_train_data_for_model_1()
 
     # Done
-    # train_model_1()
-
-    # Done
-    # test_model_1_by_openssl()
+    train_model_1()

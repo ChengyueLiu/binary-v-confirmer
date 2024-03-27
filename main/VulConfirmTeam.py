@@ -215,17 +215,21 @@ class VulConfirmTeam:
                 vul_function_name=cause_function.function_name,
                 src_codes=patch.snippet_codes_before_commit,
                 asm_codes=vul_bin_function.asm_codes)
+            print(f"\tpossible snippet num: {len(asm_codes_window_texts)}")
             if not asm_codes_window_texts:
                 print(f"\tno bin snippet")
                 continue
             asm_codes_window_texts = asm_codes_window_texts[:1]
+            print(f"\tmost possible bin snippet: {asm_codes_window_texts[0]}")
 
             # 3. 判断更像修复前，还是修复后
             snippet_codes_text_after_commit = generate_src_codes_text(patch.snippet_codes_after_commit)
             predictions = self.snippet_choicer.choice(asm_codes_window_texts,
                                                       snippet_codes_text_before_commit,
                                                       snippet_codes_text_after_commit)
-            print("\t", predictions)
+            prediction = predictions[0]
+            print(f"\t  vul(choice_index,score,prob): {prediction[0]}, \t  vul src code: {snippet_codes_text_before_commit}")
+            print(f"\tpatch(choice_index,score,prob): {prediction[1]}, \tpatch src code: {snippet_codes_text_after_commit}")
         print()
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
