@@ -69,7 +69,7 @@ def train_model_1():
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
         test_only=False,
-        epochs=5,
+        epochs=3,
         batch_size=100,
     )
 
