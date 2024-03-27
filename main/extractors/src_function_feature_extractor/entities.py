@@ -204,6 +204,7 @@ class NodeType(enum.Enum):
 
     function_declarator = "function_declarator"  # 函数声明
     function_definition = "function_definition"  # 函数定义
+    pointer_declarator = "pointer_declarator"  # 指针声明
     string_literal = 'string_literal'  # 字符串节点
     string_content = 'string_content'  # 字符串内容
     escape_sequence = 'escape_sequence'  # 字符串内容

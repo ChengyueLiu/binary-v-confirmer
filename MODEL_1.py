@@ -42,7 +42,8 @@ def prepare_train_data_for_model_1():
         (libssl_src_dir, libssl_bin_path),
         (libpng_src_dir, libssl_bin_path),
     ]
-    # 提取原始特征, 源代码和汇编代码函数名相同，且源代码函数大于8行
+
+    # 提取函数特征, 注意，这里有筛选，只提取长度在7-100之间的函数
     extract_matched_function_feature(
         src_bin_pairs=src_bin_pairs,
         save_path=openssl_function_features_path,
@@ -52,7 +53,7 @@ def prepare_train_data_for_model_1():
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=10)
+                                           negative_ratio=5)
 
 
 def train_model_1():
@@ -70,7 +71,7 @@ def train_model_1():
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
         test_only=False,
-        epochs=10,
+        epochs=3,
         batch_size=100,
     )
 

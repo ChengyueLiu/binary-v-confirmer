@@ -23,41 +23,34 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
     :return:
     """
     results = []
+    bin_function_names = {}
+    src_function_names = {}
     for src_dir_path, binary_file_path in tqdm(src_bin_pairs):
         # 提取源码特征
         src_function_features = extract_src_feature_for_project(src_dir_path)
+        src_function_names[src_dir_path] = sorted([f"{f.file_path}: {f.name}" for f in src_function_features])
 
         # 提取二进制特征
         bin_function_features = extract_bin_feature(binary_file_path)
+        bin_function_names[binary_file_path] = sorted([f.name for f in bin_function_features])
 
         # 找到相同的函数，从而能够合并特征
-        skipped_function_names = set()
-        matched_function_names = set()
-        unmatched_function_names = set()
         function_feature_dict = {}
-        for bin_function_feature in bin_function_features:
-            for src_function_feature in src_function_features:
-                # 跳过太短的函数
-                if len(src_function_feature.original_lines) < 8 or len(src_function_feature.original_lines) >100:
-                    skipped_function_names.add(src_function_feature.name)
-                    continue
-
+        for src_function_feature in src_function_features:
+            # 跳过太短的函数
+            if len(src_function_feature.original_lines) < 7 or len(src_function_feature.original_lines) > 100:
+                continue
+            for bin_function_feature in bin_function_features:
                 if src_function_feature.name == bin_function_feature.name:
-                    matched_function_names.add(src_function_feature.name)
                     function_feature_dict[src_function_feature.name] = FunctionFeature(
                         function_name=src_function_feature.name,
                         bin_function_feature=bin_function_feature,
                         src_function_features=[src_function_feature]
                     )
-                else:
-                    unmatched_function_names.add(src_function_feature.name)
-
-        logger.debug(f"Skipped function num: {len(skipped_function_names)}")
-        logger.debug(f"Matched function num: {len(matched_function_names)}")
-        logger.debug(f"Unmatched function num: {len(unmatched_function_names)}")
         result = [f.custom_serialize() for f in function_feature_dict.values()]
         results.extend(result)
-
+    save_to_json_file(bin_function_names,"TestCases/feature_extraction/openssl_feature/bin_function_names.json")
+    save_to_json_file(src_function_names,"TestCases/feature_extraction/openssl_feature/src_function_names.json")
     # 保存结果
     save_to_json_file(results, save_path)
 
@@ -77,7 +70,7 @@ def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
     src_function_features: List[SrcFunctionFeature] = []
     for file_feature in extractor.result.file_features:
         for node_feature in file_feature.node_features:
-            if node_feature.type not in [NodeType.function_declarator.value, NodeType.function_definition.value]:
+            if node_feature.type not in [NodeType.function_declarator.value, NodeType.function_definition.value,NodeType.pointer_declarator.value]:
                 continue
             src_function_feature = SrcFunctionFeature.init_from_node_feature(file_path=file_feature.file_path,
                                                                              node_feature=node_feature)

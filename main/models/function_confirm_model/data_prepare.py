@@ -2,6 +2,8 @@ import copy
 import random
 from typing import List
 
+from loguru import logger
+
 from bintools.general.file_tool import save_to_json_file
 from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature
 
@@ -69,6 +71,7 @@ def convert_function_feature_to_train_data(function_feature_path: str,
 
     test_data_items = generate_data_items(test_function_features, negative_ratio)
     save_to_json_file(test_data_items, test_data_items_save_path)
+    logger.info(f"Train data items: {len(train_data_items)}, Val data items: {len(val_data_items)}, Test data items: {len(test_data_items)}")
 
 
 def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFeature,

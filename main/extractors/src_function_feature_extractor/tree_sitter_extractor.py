@@ -519,6 +519,7 @@ class ProjectFeatureExtractor:
             for file in files:
                 # check extensions
                 if file.endswith(tuple(SUPPORTED_EXTENSION_SET)):
+
                     file_path = os.path.join(root, file)
                     if (
                             os.path.exists(file_path)
@@ -585,6 +586,8 @@ class ProjectFeatureExtractor:
         # t = tqdm(self.filtered_target_file_paths, desc="extract_file_feature")
         for path in self.filtered_target_file_paths:
             # t.set_postfix({"processing:": self.progress_info})
+            if "p12_add.c" in path:
+                print("find")
             file_feature = extract_file_feature(path)
             if file_feature:
                 self.file_feature_list.append(file_feature)
