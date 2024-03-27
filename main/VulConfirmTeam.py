@@ -201,7 +201,7 @@ class VulConfirmTeam:
                                                                            binary_path)
             print(cause_function.function_name)
 
-            # 1. 找到漏洞函数
+            # 1. 找到漏洞函数[这里会过滤一些很短的或者很长的汇编函数]
             vul_bin_functions = self.function_finder.find_bin_function(src_function_feature, bin_function_features)
             print(f"\tpossible bin function num: {len(vul_bin_functions)}, function names: {[f.function_name for f in vul_bin_functions]}")
             if not vul_bin_functions:

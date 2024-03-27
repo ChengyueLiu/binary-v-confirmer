@@ -88,15 +88,16 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
         function_features.append(function_feature)
 
     model_input = []
-    ratio_threshold = 2
+    min_ratio_threshold = 2
+    max_ratio_threshold = 20
     ratios = []
     min_ratio = 0
     max_ratio = 0
     for ff in function_features:
         data_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
         data_item.normalize()
-        ratio = round(len(data_item.asm_codes) / len(data_item.src_codes),2)
-        if ratio < ratio_threshold:
+        ratio = round(len(data_item.asm_codes) / len(data_item.src_codes), 2)
+        if ratio < min_ratio_threshold or ratio > max_ratio_threshold:
             continue
         if ratio < min_ratio:
             min_ratio = ratio
