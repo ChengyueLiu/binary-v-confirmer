@@ -41,6 +41,9 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
             if len(src_function_feature.original_lines) < 7 or len(src_function_feature.original_lines) > 100:
                 continue
             for bin_function_feature in bin_function_features:
+                # 跳过太短的汇编函数
+                if len(bin_function_feature.asm_codes) < 10:
+                    continue
                 src_function_name = src_function_feature.name
                 if src_function_name.startswith("*"):
                     src_function_name = src_function_name[1:]
@@ -52,8 +55,8 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
                     )
         result = [f.custom_serialize() for f in function_feature_dict.values()]
         results.extend(result)
-    save_to_json_file(bin_function_names,"TestCases/feature_extraction/openssl_feature/bin_function_names.json")
-    save_to_json_file(src_function_names,"TestCases/feature_extraction/openssl_feature/src_function_names.json")
+    save_to_json_file(bin_function_names, "TestCases/feature_extraction/openssl_feature/bin_function_names.json")
+    save_to_json_file(src_function_names, "TestCases/feature_extraction/openssl_feature/src_function_names.json")
     # 保存结果
     save_to_json_file(results, save_path)
 
@@ -73,7 +76,8 @@ def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
     src_function_features: List[SrcFunctionFeature] = []
     for file_feature in extractor.result.file_features:
         for node_feature in file_feature.node_features:
-            if node_feature.type not in [NodeType.function_declarator.value, NodeType.function_definition.value,NodeType.pointer_declarator.value]:
+            if node_feature.type not in [NodeType.function_declarator.value, NodeType.function_definition.value,
+                                         NodeType.pointer_declarator.value]:
                 continue
             src_function_feature = SrcFunctionFeature.init_from_node_feature(file_path=file_feature.file_path,
                                                                              node_feature=node_feature)
