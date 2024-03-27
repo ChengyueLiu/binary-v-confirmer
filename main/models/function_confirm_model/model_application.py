@@ -144,7 +144,7 @@ class FunctionFinder:
         return normalized_src_codes, len(predictions), possible_bin_functions
 
     def find_bin_function(self, src_function_feature: SrcFunctionFeature,
-                          bin_function_features: List[BinFunctionFeature])->List[PossibleBinFunction]:
+                          bin_function_features: List[BinFunctionFeature]) -> List[PossibleBinFunction]:
         data_items = convert_function_feature_to_model_input(src_function_feature, bin_function_features)
         dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
         dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)

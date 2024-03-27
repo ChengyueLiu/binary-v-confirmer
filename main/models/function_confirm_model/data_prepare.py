@@ -84,11 +84,26 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
         function_feature = FunctionFeature(function_name=src_function_feature.name,
                                            bin_function_feature=bin_function_feature,
                                            src_function_features=[src_function_feature])
+
         function_features.append(function_feature)
 
     model_input = []
+    ratio_threshold = 2
+    ratios = []
+    min_ratio = 0
+    max_ratio = 0
     for ff in function_features:
         data_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
         data_item.normalize()
+        ratio = len(data_item.asm_codes) / len(data_item.src_codes)
+        if ratio < ratio_threshold:
+            continue
+        if ratio < min_ratio:
+            min_ratio = ratio
+        if ratio > max_ratio:
+            max_ratio = ratio
+        ratios.append(ratio)
         model_input.append(data_item)
+    avg_ratio = sum(ratios) / len(ratios) if len(ratios) > 0 else 0
+    print(avg_ratio, min_ratio, max_ratio)
     return model_input
