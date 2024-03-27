@@ -32,13 +32,32 @@ def generate_data_items(function_features: List[FunctionFeature], negative_ratio
 
     # negative examples
     wrong_match_function_features = []
-    for i, function_feature in enumerate(function_features):
-        sample_function_features = random.sample(function_features, negative_ratio)
-        for sample_function_feature in sample_function_features:
+
+    # 对每个function_feature，生成指定数量的负例
+    for function_feature in function_features:
+        generated_negatives = 0  # 当前function_feature生成的负例数量
+        attempts = 0  # 尝试的次数，以避免无限循环
+
+        while generated_negatives < negative_ratio and attempts < len(function_features) * 2:
+            attempts += 1
+            # 从function_features中随机选择一个样本作为潜在的负例
+            sample_function_feature = random.choice(function_features)
+            # 确保选取的样本不是当前的function_feature
             if sample_function_feature != function_feature:
+                # 计算长度比例
+                sample_asm_length = len(sample_function_feature.bin_function_feature.asm_codes)
+                wrong_item_original_asm_length = len(function_feature.bin_function_feature.asm_codes)
+                ratio = sample_asm_length / wrong_item_original_asm_length
+
+                # 如果长度比例不在接受的范围内，继续尝试
+                if ratio > 1.5 or ratio < 0.5:
+                    continue
+
+                # 深拷贝当前的function_feature，并更新其bin_function_feature
                 wrong_match_function_feature = copy.deepcopy(function_feature)
                 wrong_match_function_feature.bin_function_feature = sample_function_feature.bin_function_feature
                 wrong_match_function_features.append(wrong_match_function_feature)
+                generated_negatives += 1
     negative_train_data_items = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=0) for ff in
                                  wrong_match_function_features]
 
@@ -71,7 +90,8 @@ def convert_function_feature_to_train_data(function_feature_path: str,
 
     test_data_items = generate_data_items(test_function_features, negative_ratio)
     save_to_json_file(test_data_items, test_data_items_save_path)
-    logger.info(f"Train data items: {len(train_data_items)}, Val data items: {len(val_data_items)}, Test data items: {len(test_data_items)}")
+    logger.info(
+        f"Train data items: {len(train_data_items)}, Val data items: {len(val_data_items)}, Test data items: {len(test_data_items)}")
 
 
 def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFeature,
