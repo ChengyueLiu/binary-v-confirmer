@@ -13,58 +13,53 @@ from main.interface import SrcFunctionFeature, BinFunctionFeature, FunctionFeatu
 from setting.paths import IDA_PRO_PATH, IDA_PRO_SCRIPT_PATH, IDA_PRO_OUTPUT_PATH
 
 
-def extract_matched_function_feature(project_path: str, binary_file_paths: List[str], save_path: str):
+def extract_matched_function_feature(src_bin_pairs, save_path: str):
     """
     同时提取源码和二进制文件的特征，并把相同函数的特征，保存到指定路径，后续可以用于训练模型
 
-    :param project_path:
+    :param src_dir_path:
     :param binary_file_paths:
     :param save_path:
     :return:
     """
-    # 提取源码特征
-    src_function_features = extract_src_feature_for_project(project_path)
+    results = []
+    for src_dir_path, binary_file_path in tqdm(src_bin_pairs):
+        # 提取源码特征
+        src_function_features = extract_src_feature_for_project(src_dir_path)
 
-    # 提取二进制特征
-    bin_function_features = []
-    for binary_file_path in tqdm(binary_file_paths, desc="Extracting binary features"):
-        bin_function_features.extend(extract_bin_feature(binary_file_path))
+        # 提取二进制特征
+        bin_function_features = extract_bin_feature(binary_file_path)
 
-    # 找到相同的函数，从而能够合并特征
-    matched_function_names = set()
-    unmatched_function_names = set()
-    function_feature_dict = {}
-    for bin_function_feature in bin_function_features:
-        for src_function_feature in src_function_features:
-            if src_function_feature.name == bin_function_feature.name:
-                matched_function_names.add(src_function_feature.name)
-                if (function_feature := function_feature_dict.get(f"{src_function_feature.name}")) is None:
-                    function_feature_dict[f"{src_function_feature.name}"] = function_feature = FunctionFeature(
+        # 找到相同的函数，从而能够合并特征
+        skipped_function_names = set()
+        matched_function_names = set()
+        unmatched_function_names = set()
+        function_feature_dict = {}
+        for bin_function_feature in bin_function_features:
+            for src_function_feature in src_function_features:
+                # 跳过太短的函数
+                if len(src_function_feature.original_lines) < 8:
+                    skipped_function_names.add(src_function_feature.name)
+                    continue
+
+                if src_function_feature.name == bin_function_feature.name:
+                    matched_function_names.add(src_function_feature.name)
+                    function_feature_dict[src_function_feature.name] = FunctionFeature(
                         function_name=src_function_feature.name,
                         bin_function_feature=bin_function_feature,
                         src_function_features=[src_function_feature]
                     )
-                # 重复性检查
-                redundant = False
-                for ssf in function_feature.src_function_features:
-                    if src_function_feature.hash_value == ssf.hash_value:
-                        redundant = True
-                        break
-                if not redundant:
-                    function_feature.src_function_features.append(src_function_feature)
-            else:
-                unmatched_function_names.add(src_function_feature.name)
-    count = 0
-    for function_feature in function_feature_dict.values():
-        if len(function_feature.src_function_features) == 1:
-            count += len(function_feature.src_function_features)
-    print(f"matched_function_names num: {len(matched_function_names)}\n"
-          f"unmatched_function_names num: {len(unmatched_function_names)}\n"
-          f"count: {count}")
+                else:
+                    unmatched_function_names.add(src_function_feature.name)
+
+        logger.debug(f"Skipped function num: {len(skipped_function_names)}")
+        logger.debug(f"Matched function num: {len(matched_function_names)}")
+        logger.debug(f"Unmatched function num: {len(unmatched_function_names)}")
+        result = [f.custom_serialize() for f in function_feature_dict.values()]
+        results.extend(result)
 
     # 保存结果
-    save_data = [f.custom_serialize() for f in function_feature_dict.values()]
-    save_to_json_file(save_data, save_path)
+    save_to_json_file(results, save_path)
 
 
 def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
