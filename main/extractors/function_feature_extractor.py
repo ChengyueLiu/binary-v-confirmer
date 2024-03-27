@@ -38,7 +38,7 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
         for bin_function_feature in bin_function_features:
             for src_function_feature in src_function_features:
                 # 跳过太短的函数
-                if len(src_function_feature.original_lines) < 8:
+                if len(src_function_feature.original_lines) < 8 or len(src_function_feature.original_lines) >100:
                     skipped_function_names.add(src_function_feature.name)
                     continue
 
