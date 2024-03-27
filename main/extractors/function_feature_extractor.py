@@ -41,7 +41,10 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
             if len(src_function_feature.original_lines) < 7 or len(src_function_feature.original_lines) > 100:
                 continue
             for bin_function_feature in bin_function_features:
-                if src_function_feature.name == bin_function_feature.name:
+                src_function_name = src_function_feature.name
+                if src_function_name.startswith("*"):
+                    src_function_name = src_function_name[1:]
+                if src_function_name == bin_function_feature.name:
                     function_feature_dict[src_function_feature.name] = FunctionFeature(
                         function_name=src_function_feature.name,
                         bin_function_feature=bin_function_feature,
