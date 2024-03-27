@@ -260,7 +260,7 @@ class DataItemForFunctionConfirmModel:
         :return:
         """
         # 限制最多15行源代码
-        src_code_text = remove_comments(" ".join(self.src_codes[:20]))
+        src_code_text = remove_comments(" ".join(self.src_codes[:15]))
         # # 去掉函数头的部分
         # if "{" in src_code_text:
         #     src_code_text = src_code_text.split("{", 1)[1]
@@ -270,39 +270,32 @@ class DataItemForFunctionConfirmModel:
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join(src_string_list)
 
-        # 保留最长的10个数字
-        src_numbers = " ".join(sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])
-
         # 构成源码text
         src_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {src_code_text}"
-        if src_strings:
-            src_text = f"{src_strings} {SpecialToken.SRC_STRING_SEPARATOR.value} {src_text}"
-        # if src_numbers:
-        #     src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
+        src_str_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings}"
 
         # 限制最多20条汇编指令
-        asm_code_text = " ".join(self.asm_codes[:50])
+        asm_code_text = " ".join(self.asm_codes[:30])
 
         # 限制最多10个字符串，过长过短都不要
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
         bin_string_list = [string for string in bin_string_list if 4 < len(string.split()) < 20][:10]
         bin_strings = " ".join(bin_string_list)
 
-        # 保留最长的10个数字
-        bin_numbers = " ".join(sorted([str(num) for num in self.bin_numbers], key=lambda x: len(x), reverse=True)[:10])
-
         # 构成汇编码text
-        bin_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {asm_code_text}"
-        if bin_strings:
-            bin_text = f"{bin_strings} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_text}"
-        # if bin_numbers:
-        #     bin_text += f" {SpecialToken.BIN_NUMBER_SEPARATOR.value} {bin_numbers}"
+        bin_text = f"{SpecialToken.ASM_CODE_SEPARATOR.value} {asm_code_text}"
+        bin_str_text = f"{SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings}"
 
         # 合并源码和汇编码
-        if separator:
-            merged_text = f"{src_text} {separator} {bin_text}"
-        else:
-            merged_text = f"{src_text} {bin_text}"
+        merged_text = ""
+        if bin_text:
+            merged_text +=f"{bin_str_text} {separator}"
+        # if src_str_text:
+        #     merged_text += f"{src_str_text} {separator}"
+        if bin_text:
+            merged_text += f"{bin_text} {separator}"
+        if src_text:
+            merged_text += f"{src_text}"
         return merged_text
 
     def normalize(self):

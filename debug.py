@@ -1,30 +1,78 @@
-import random
+from transformers import RobertaTokenizer
 
-def modify_list(str_list):
-    # 创建列表的副本，以便进行修改
-    modified_list = str_list.copy()
-    # 计算随机位置的数量，1-3
-    num_positions = random.randint(1, 3)
+from bintools.general.file_tool import load_from_json_file
+from main.interface import DataItemForFunctionConfirmModel
+from main.models.function_confirm_model.model_training import init_train
+from tqdm import tqdm
 
-    for _ in range(num_positions):
-        if modified_list:  # 确保列表不为空
-            # 选择一个随机位置
-            pos = random.randint(0, len(modified_list) - 1)
-            # 随机选择删除或插入
-            action = random.choice(['delete', 'insert'])
-            if action == 'delete':
-                # 执行删除操作
-                del modified_list[pos]
-            else:
-                # 执行插入操作
-                # 随机选择一个字符串来插入
-                string_to_insert = random.choice(str_list)
-                modified_list.insert(pos + 1, string_to_insert)
+def check_token_length():
+    model_name = 'microsoft/graphcodebert-base'
+    tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
+        tokenizer.add_tokens(special_token)
 
-    return modified_list
+    train_data_json = load_from_json_file("TestCases/model_train/model_1/train_data/train_data.json")
+    data_items = []
+    for item in train_data_json:
+        data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
+        data_item.normalize()
+        data_items.append(data_item)
 
-# 示例使用
-str_list = ["line 1", "line 2", "line 3", "line 4"]
-modified_list = modify_list(str_list)
-print("Original List:", str_list)
-print("Modified List:", modified_list)
+    for data_item in data_items:
+        text = data_item.get_train_text(tokenizer.sep_token)
+
+        encoding = tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            # max_length=512,
+            # padding='max_length',
+            # truncation=True,
+            return_attention_mask=True,
+            return_tensors='pt',
+        )
+
+        if len(encoding['input_ids'][0]) > 512:
+            print()
+            print(data_item.function_name, len(encoding['input_ids'][0]))
+
+from transformers import BigBirdTokenizer
+
+from bintools.general.file_tool import load_from_json_file
+from main.interface import DataItemForFunctionConfirmModel
+from main.models.function_confirm_model.model_training import init_train
+from tqdm import tqdm
+
+def check_token_length_bigbird():
+    model_name = 'google/bigbird-roberta-base'  # 使用BigBird的预训练模型名称
+    tokenizer = BigBirdTokenizer.from_pretrained(model_name)
+    for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
+        tokenizer.add_tokens(special_token)
+
+    train_data_json = load_from_json_file("TestCases/model_train/model_1/train_data/train_data.json")
+    data_items = []
+    for item in train_data_json:
+        data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
+        data_item.normalize()
+        data_items.append(data_item)
+
+    for data_item in data_items:
+        text = data_item.get_train_text(tokenizer.sep_token)
+
+        encoding = tokenizer.encode_plus(
+            text,
+            add_special_tokens=True,
+            # BigBird支持的最大长度更长，但是这里不设置max_length就不会应用截断
+            return_attention_mask=True,
+            return_tensors='pt',
+            padding='max_length',
+        )
+
+        # 由于BigBird支持的长度比Roberta更长，这里的阈值可以相应调整
+        # BigBird原论文提到支持的长度可达到4096个tokens
+        if len(encoding['input_ids'][0]) < 700:
+            print()
+            print(data_item.function_name, len(encoding['input_ids'][0]))
+
+# check_token_length()
+#
+check_token_length_bigbird()
