@@ -44,6 +44,7 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
                 # 跳过太短的汇编函数
                 if len(bin_function_feature.asm_codes) < 10:
                     continue
+                # 判断是否是同一个
                 src_function_name = src_function_feature.name
                 if src_function_name.startswith("*"):
                     src_function_name = src_function_name[1:]
