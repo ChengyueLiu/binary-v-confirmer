@@ -1,7 +1,8 @@
 import torch
 from loguru import logger
 from tqdm import tqdm
-from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification
+from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification, \
+    RobertaConfig
 
 from main.interface import DataItemForFunctionConfirmModel
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
@@ -38,7 +39,11 @@ def init_train(train_data_json_file_path,
         tokenizer.add_tokens(special_token)
 
     # model
-    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+    config = RobertaConfig.from_pretrained(model_name,
+                                           num_labels=num_labels,
+                                           hidden_dropout_prob=0.1,  # 调整为适当的dropout比例
+                                           attention_probs_dropout_prob=0.1)
+    model = RobertaForSequenceClassification(config)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 
@@ -54,7 +59,7 @@ def init_train(train_data_json_file_path,
                                                                batch_size=batch_size)
 
     # optimizer
-    optimizer = AdamW(model.parameters(), lr=learn_rate)
+    optimizer = AdamW(model.parameters(), lr=learn_rate, weight_decay=0.01)  # 添加权重衰减
 
     total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)

@@ -39,7 +39,9 @@ train_data_save_path = r"TestCases/model_train/model_1/train_data/train_data.jso
 val_data_save_path = r"TestCases/model_train/model_1/train_data/val_data.json"
 test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
 
-
+linux_kernel_train_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/train_data.json"
+linux_kernel_val_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/val_data.json"
+linux_kernel_test_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/test_data.json"
 def prepare_train_data_for_model_1():
     """
     1. 从源代码和二进制文件中提取函数特征: 需要准备源代码和对应的二进制文件，需要保持版本一致。
@@ -65,7 +67,17 @@ def prepare_train_data_for_model_1():
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=5)
+                                           negative_ratio=10)
+
+    # linux_kernel train data
+    # convert_function_feature_to_train_data(openssl_function_features_path,
+    #                                        linux_kernel_train_data_save_path,
+    #                                        linux_kernel_val_data_save_path,
+    #                                        linux_kernel_test_data_save_path,
+    #                                        negative_ratio=5)
+
+
+
 
 
 def train_model_1():

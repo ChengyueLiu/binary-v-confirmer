@@ -29,7 +29,7 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
         print(f"start extract {src_dir_path} and {binary_file_path}")
         # 提取二进制特征
         bin_function_features = extract_bin_feature(binary_file_path)
-        bin_function_names[binary_file_path] = sorted([f.name for f in bin_function_features])
+        bin_function_names[binary_file_path] = [f.name for f in bin_function_features]
         print(f"bin_function_features num: {len(bin_function_features)}")
 
         # 提取源码特征
@@ -75,7 +75,7 @@ def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
     """
     # 提取特征
     extractor = ProjectFeatureExtractor(project_path)
-    extractor.extract(use_multiprocessing=False)
+    extractor.extract(use_multiprocessing=True)
 
     # 转换成外部的数据结构
     src_function_features: List[SrcFunctionFeature] = []

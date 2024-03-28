@@ -110,9 +110,9 @@ class FileFeature:
         self.string_num_difference = len([s for s in set(all_strings) - set(self.node_strings) if s != 'C'])
 
         # 如果有错误行，且差异过大，日志提醒
-        if self.parse_error_line_number_list and self.string_num_difference > 30:
-            logger.debug(
-                f"{self.file_path} may path failed. the difference between all string num and node string num is {self.string_num_difference}")
+        # if self.parse_error_line_number_list and self.string_num_difference > 30:
+        #     logger.debug(
+        #         f"{self.file_path} may path failed. the difference between all string num and node string num is {self.string_num_difference}")
 
         self.all_strings = all_strings
         self.node_features: List[NodeFeature] = node_features
