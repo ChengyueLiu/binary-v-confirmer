@@ -14,7 +14,7 @@ openssl_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\a
 libssl_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\ssl"
 libpng_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\libpng"
 
-#arch/：特定于架构的代码，如x86、ARM等。
+# arch/：特定于架构的代码，如x86、ARM等。
 # kernel/：内核的核心功能，如进程管理和调度。
 # mm/：内存管理相关的代码。
 # fs/：文件系统的实现。
@@ -22,7 +22,6 @@ libpng_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\libpng"
 # drivers/：设备驱动程序。
 # lib/：一些基本库函数。
 linux_kernel_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\linux-6.8.2_for_extraction"
-
 
 # bin
 libcrypto_bin_path = r"TestCases/binaries/openssl_3.2.1/libcrypto.so.3"
@@ -42,6 +41,8 @@ test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
 linux_kernel_train_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/train_data.json"
 linux_kernel_val_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/val_data.json"
 linux_kernel_test_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/test_data.json"
+
+
 def prepare_train_data_for_model_1():
     """
     1. 从源代码和二进制文件中提取函数特征: 需要准备源代码和对应的二进制文件，需要保持版本一致。
@@ -71,13 +72,14 @@ def prepare_train_data_for_model_1():
     正负1：3   0.5的相似度阈值，正在测试中
     正负1:5   0.2的相似度阈值，97%准确率
     正负1:5   0.5的相似度阈值，
-    正负1:10  0.5的相似度阈值。比例过高不行，直接记住标签了
+    正负1:10  0.5的相似度阈值。
     """
     convert_function_feature_to_train_data(openssl_function_features_path,
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=3)
+                                           negative_ratio=3,
+                                           similarity_threshold=0.5)
 
     # linux_kernel train data
     # convert_function_feature_to_train_data(openssl_function_features_path,
@@ -85,9 +87,6 @@ def prepare_train_data_for_model_1():
     #                                        linux_kernel_val_data_save_path,
     #                                        linux_kernel_test_data_save_path,
     #                                        negative_ratio=5)
-
-
-
 
 
 def train_model_1():

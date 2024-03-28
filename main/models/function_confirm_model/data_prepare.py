@@ -47,7 +47,7 @@ def levenshtein_distance(asm_codes_1: List[str], asm_codes_2: List[str]):
     return difflib.SequenceMatcher(None, s1, s2).ratio()
 
 
-def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3):
+def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3,similarity_threshold = 0.5):
     all_train_data_items = []
 
     for i, ff in tqdm(enumerate(function_features), desc="Generate data items"):
@@ -68,7 +68,7 @@ def generate_data_items(function_features: List[FunctionFeature], negative_ratio
             sample_normalized_asm_codes = this_normalize_asm_code(
                 other_ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
             similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
-            if similarity < 0.5:
+            if similarity < similarity_threshold:
                 similarities.append((similarity, other_ff))
                 count += 1
             if count >= negative_ratio:
@@ -96,7 +96,8 @@ def convert_function_feature_to_train_data(function_feature_path: str,
                                            train_data_items_save_path: str,
                                            val_data_items_save_path: str,
                                            test_data_items_save_path: str,
-                                           negative_ratio: int = 3):
+                                           negative_ratio: int = 3,
+                                           similarity_threshold=0.5):
     """
     把匹配的源代码函数和二进制函数特征转换成训练数据，同时生成负样本，并保存到指定路径
 
@@ -109,13 +110,13 @@ def convert_function_feature_to_train_data(function_feature_path: str,
 
     train_function_features, val_function_features, test_function_features = split_dataset(function_features)
 
-    train_data_items = generate_data_items(train_function_features, negative_ratio)
+    train_data_items = generate_data_items(train_function_features, negative_ratio,similarity_threshold)
     save_to_json_file(train_data_items, train_data_items_save_path)
 
-    val_data_items = generate_data_items(val_function_features, negative_ratio)
+    val_data_items = generate_data_items(val_function_features, negative_ratio,similarity_threshold)
     save_to_json_file(val_data_items, val_data_items_save_path)
 
-    test_data_items = generate_data_items(test_function_features, negative_ratio)
+    test_data_items = generate_data_items(test_function_features, negative_ratio,similarity_threshold)
     save_to_json_file(test_data_items, test_data_items_save_path)
     logger.info(
         f"Train data items: {len(train_data_items)}, Val data items: {len(val_data_items)}, Test data items: {len(test_data_items)}")
