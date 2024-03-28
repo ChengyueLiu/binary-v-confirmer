@@ -63,7 +63,7 @@ def generate_data_items(function_features: List[FunctionFeature], negative_ratio
                 sample_normalized_asm_codes = this_normalize_asm_code(other_ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
                 similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
                 similarities.append((similarity, other_ff))
-                if similarity < 0.05:
+                if similarity < 0.1:
                     count +=1
                 if count >=5:
                     break
