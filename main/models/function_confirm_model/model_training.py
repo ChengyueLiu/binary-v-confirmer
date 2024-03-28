@@ -130,7 +130,7 @@ def run_train(train_data_json_file_path,
         batch_size=batch_size,
         epochs=epochs)
     if not test_only:
-        logger.info('inited, start train, epochs: 3, batch_size: 32...')
+        logger.info(f'inited, start train, epochs: {epochs}, batch_size: {batch_size}...')
         # train scheduler
         best_valid_loss = float('inf')  # 初始化最佳验证损失
         no_improvement_count = 0  # 用于跟踪验证损失未改进的epoch数
