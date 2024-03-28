@@ -205,7 +205,7 @@ def test_model():
     # new test
     vul_confirm_team.new_confirm(binary_path=libpng16, vul=vulnerability)
     vul_confirm_team.new_confirm(binary_path=openssl_320, vul=vulnerability)
-    vul_confirm_team.new_confirm(binary_path=libcrypto_3011, vul=vulnerability)
+    vul_confirm_team.new_confirm(binary_path=libcrypto_320, vul=vulnerability)
     vul_confirm_team.new_confirm(binary_path=libcrypto_321, vul=vulnerability)
 
 

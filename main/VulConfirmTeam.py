@@ -196,23 +196,18 @@ class VulConfirmTeam:
         """
         print(binary_path)
         for cause_function in vul.cause_functions:
-            src_function_feature, bin_function_features = extract_features(cause_function.file_path,
+            vul_src_function_feature, bin_function_features = extract_features(cause_function.file_path,
                                                                            cause_function.function_name,
                                                                            binary_path)
             print(cause_function.function_name)
 
-            # 1. 找到漏洞函数[这里会过滤一些很短的或者很长的汇编函数]
-            vul_bin_functions = self.function_finder.find_bin_function(src_function_feature, bin_function_features)
-            src_codes_length = len(src_function_feature.original_lines)
-            print(
-                f"\t all bin function num: {len(bin_function_features)}, possible bin function num: {len(vul_bin_functions)}, functions: {[f"{f.function_name} asm/src: {round(len(f.asm_codes) / src_codes_length, 2)}"
-                                                                                                                                           for f in vul_bin_functions]}")
-            save_to_json_file([vbf.customer_serialize() for vbf in vul_bin_functions],
-                              f"test_results/{cause_function.function_name}.json")
-            if not vul_bin_functions:
+            # 1. 找到漏洞函数(这里会过滤一些很短的或者很长的汇编函数)
+            possible_vul_bin_functions = self.function_finder.find_bin_function(vul_src_function_feature, bin_function_features)
+            print(f"\t possible bin function num: {len(possible_vul_bin_functions)}/{{len(bin_function_features)}},\n"
+                  f"\t possible bin functions: {[f"{pvbf.function_name}({pvbf.match_possibility})" for pvbf in possible_vul_bin_functions]}")
+            if not possible_vul_bin_functions:
                 continue
-            vul_bin_function = vul_bin_functions[0]
-            print(f"\tmost possible bin function name: {vul_bin_function.function_name}")
+            vul_bin_function = possible_vul_bin_functions[0]
 
         #     # 2. 定位代码片段
         #     patch = cause_function.patches[0]
