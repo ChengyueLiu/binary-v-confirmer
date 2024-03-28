@@ -199,6 +199,7 @@ class DataItemForFunctionConfirmModel:
         从原始特征中初始化训练数据
         :param function_feature:
         """
+        self.id = 0
         self.function_name = function_name
         self.src_codes: List[str] = src_codes
         self.src_strings: List[str] = src_strings
@@ -211,6 +212,7 @@ class DataItemForFunctionConfirmModel:
 
     def custom_serialize(self):
         return {
+            "id": self.id,
             "function_name": self.function_name,
             "src_codes": self.src_codes,
             "src_strings": self.src_strings,
@@ -223,7 +225,7 @@ class DataItemForFunctionConfirmModel:
 
     @classmethod
     def init_from_dict(cls, json_data_item):
-        return cls(
+        obj = cls(
             json_data_item['function_name'],
             json_data_item['src_codes'],
             json_data_item['src_strings'],
@@ -233,6 +235,8 @@ class DataItemForFunctionConfirmModel:
             json_data_item['bin_numbers'],
             label=json_data_item['label']
         )
+        obj.id = json_data_item.get('id', 0)
+        return obj
 
     @classmethod
     def init_from_function_feature(cls, function_feature: FunctionFeature, label=1):
@@ -260,7 +264,7 @@ class DataItemForFunctionConfirmModel:
         :return:
         """
         # 限制最多15行源代码
-        src_code_text = remove_comments(" ".join(self.src_codes[:20]))
+        src_code_text = remove_comments(" ".join(self.src_codes[:15]))
         # # 去掉函数头的部分
         # if "{" in src_code_text:
         #     src_code_text = src_code_text.split("{", 1)[1]
@@ -281,7 +285,7 @@ class DataItemForFunctionConfirmModel:
         #     src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
 
         # 限制最多20条汇编指令
-        asm_code_text = " ".join(self.asm_codes[:50])
+        asm_code_text = " ".join(self.asm_codes[:20])
 
         # 限制最多10个字符串，过长过短都不要
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]

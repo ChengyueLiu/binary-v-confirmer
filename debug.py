@@ -1,30 +1,54 @@
-import random
+import difflib
+from typing import List
 
-def modify_list(str_list):
-    # 创建列表的副本，以便进行修改
-    modified_list = str_list.copy()
-    # 计算随机位置的数量，1-3
-    num_positions = random.randint(1, 3)
+from bintools.general.bin_tool import normalize_asm_code
+from main.interface import SpecialToken
 
-    for _ in range(num_positions):
-        if modified_list:  # 确保列表不为空
-            # 选择一个随机位置
-            pos = random.randint(0, len(modified_list) - 1)
-            # 随机选择删除或插入
-            action = random.choice(['delete', 'insert'])
-            if action == 'delete':
-                # 执行删除操作
-                del modified_list[pos]
-            else:
-                # 执行插入操作
-                # 随机选择一个字符串来插入
-                string_to_insert = random.choice(str_list)
-                modified_list.insert(pos + 1, string_to_insert)
+asm_codes_1 = [
+            "endbr64",
+            "sub     rsp, 8",
+            "xor     edx, edx",
+            "xor     ecx, ecx",
+            "mov     esi, 0Dh",
+            "call    _BIO_ctrl",
+            "xor     edx, edx",
+            "test    rax, rax",
+            "cmovs   rax, rdx",
+            "add     rsp, 8",
+            "xor     edx, edx",
+            "xor     ecx, ecx",
+            "xor     esi, esi",
+            "xor     edi, edi",
+            "retn"
+        ]
+asm_codes_2 = [
+            "endbr64",
+            "xor     eax, eax",
+            "cmp     qword ptr [rdi+38h], 0",
+            "jz      short loc_228598",
+            "xor     esi, esi",
+            "xor     edi, edi",
+            "retn",
+            "mov     [rdi+38h], rsi",
+            "mov     eax, 1",
+            "xor     esi, esi",
+            "xor     edi, edi",
+            "retn"
+        ]
 
-    return modified_list
+def this_normalize_asm_code(asm_codes):
+    return [normalized_code for code in asm_codes
+            if (normalized_code := normalize_asm_code(code,
+                                                      reg_token=SpecialToken.ASM_REG.value,
+                                                      num_token=SpecialToken.ASM_NUM.value,
+                                                      jump_token=SpecialToken.ASM_JUMP.value,
+                                                      loc_token=SpecialToken.ASM_LOC.value,
+                                                      mem_token=SpecialToken.ASM_MEM.value))]
+def levenshtein_distance(asm_codes_1:List[str], asm_codes_2:List[str]):
+    s1 = " ".join(this_normalize_asm_code(asm_codes_1[:20]))
+    s2 = " ".join(this_normalize_asm_code(asm_codes_2[:20]))
 
-# 示例使用
-str_list = ["line 1", "line 2", "line 3", "line 4"]
-modified_list = modify_list(str_list)
-print("Original List:", str_list)
-print("Modified List:", modified_list)
+    return difflib.SequenceMatcher(None, s1, s2).ratio()
+
+
+print("Levenshtein Distance:", levenshtein_distance(asm_codes_1, asm_codes_2))
