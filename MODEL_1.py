@@ -63,11 +63,21 @@ def prepare_train_data_for_model_1():
         save_path=openssl_function_features_path,
     )
     # 转换成训练数据 1:5, 0.2的相似度，效果很好 97%准确率
+    """
+    多进行几次实验，争取找到最好的训练样本比例和相似度阈值
+    正负1:1   0.2的相似度阈值，
+    正负1:1   0.5的相似度阈值，
+    正负1：3   0.2的相似度阈值，
+    正负1：3   0.5的相似度阈值，正在测试中
+    正负1:5   0.2的相似度阈值，97%准确率
+    正负1:5   0.5的相似度阈值，
+    正负1:10  0.5的相似度阈值。比例过高不行，直接记住标签了
+    """
     convert_function_feature_to_train_data(openssl_function_features_path,
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=10)
+                                           negative_ratio=3)
 
     # linux_kernel train data
     # convert_function_feature_to_train_data(openssl_function_features_path,
@@ -102,7 +112,7 @@ def train_model_1():
 
 if __name__ == '__main__':
     # Done
-    # prepare_train_data_for_model_1()
+    prepare_train_data_for_model_1()
 
     # Done
-    train_model_1()
+    # train_model_1()
