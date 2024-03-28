@@ -199,6 +199,7 @@ class DataItemForFunctionConfirmModel:
         从原始特征中初始化训练数据
         :param function_feature:
         """
+        self.id = 0
         self.function_name = function_name
         self.src_codes: List[str] = src_codes
         self.src_strings: List[str] = src_strings
@@ -211,6 +212,7 @@ class DataItemForFunctionConfirmModel:
 
     def custom_serialize(self):
         return {
+            "id": self.id,
             "function_name": self.function_name,
             "src_codes": self.src_codes,
             "src_strings": self.src_strings,
@@ -223,7 +225,7 @@ class DataItemForFunctionConfirmModel:
 
     @classmethod
     def init_from_dict(cls, json_data_item):
-        return cls(
+        obj = cls(
             json_data_item['function_name'],
             json_data_item['src_codes'],
             json_data_item['src_strings'],
@@ -233,6 +235,8 @@ class DataItemForFunctionConfirmModel:
             json_data_item['bin_numbers'],
             label=json_data_item['label']
         )
+        obj.id = json_data_item.get('id', 0)
+        return obj
 
     @classmethod
     def init_from_function_feature(cls, function_feature: FunctionFeature, label=1):
@@ -270,32 +274,39 @@ class DataItemForFunctionConfirmModel:
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join(src_string_list)
 
+        # 保留最长的10个数字
+        src_numbers = " ".join(sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])
+
         # 构成源码text
         src_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {src_code_text}"
-        src_str_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings}"
+        if src_strings:
+            src_text = f"{src_strings} {SpecialToken.SRC_STRING_SEPARATOR.value} {src_text}"
+        # if src_numbers:
+        #     src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
 
         # 限制最多20条汇编指令
-        asm_code_text = " ".join(self.asm_codes[:30])
+        asm_code_text = " ".join(self.asm_codes[:20])
 
         # 限制最多10个字符串，过长过短都不要
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
         bin_string_list = [string for string in bin_string_list if 4 < len(string.split()) < 20][:10]
         bin_strings = " ".join(bin_string_list)
 
+        # 保留最长的10个数字
+        bin_numbers = " ".join(sorted([str(num) for num in self.bin_numbers], key=lambda x: len(x), reverse=True)[:10])
+
         # 构成汇编码text
-        bin_text = f"{SpecialToken.ASM_CODE_SEPARATOR.value} {asm_code_text}"
-        bin_str_text = f"{SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings}"
+        bin_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {asm_code_text}"
+        if bin_strings:
+            bin_text = f"{bin_strings} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_text}"
+        # if bin_numbers:
+        #     bin_text += f" {SpecialToken.BIN_NUMBER_SEPARATOR.value} {bin_numbers}"
 
         # 合并源码和汇编码
-        merged_text = ""
-        if bin_text:
-            merged_text +=f"{bin_str_text} {separator}"
-        # if src_str_text:
-        #     merged_text += f"{src_str_text} {separator}"
-        if bin_text:
-            merged_text += f"{bin_text} {separator}"
-        if src_text:
-            merged_text += f"{src_text}"
+        if separator:
+            merged_text = f"{src_text} {separator} {bin_text}"
+        else:
+            merged_text = f"{src_text} {bin_text}"
         return merged_text
 
     def normalize(self):

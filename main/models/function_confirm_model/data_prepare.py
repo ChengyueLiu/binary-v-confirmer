@@ -1,11 +1,15 @@
 import copy
+import difflib
 import random
 from typing import List
 
 from loguru import logger
+from tqdm import tqdm
 
+from bintools.general.bin_tool import normalize_asm_code
 from bintools.general.file_tool import save_to_json_file
-from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature
+from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature, \
+    SpecialToken
 
 """
 这个文件的作用就是生成 TrainDataItemForFunctionConfirmModel
@@ -25,43 +29,59 @@ def split_dataset(function_features: List[FunctionFeature], ratios=(0.8, 0.1, 0.
     return train_set, val_set, test_set
 
 
+def this_normalize_asm_code(asm_codes):
+    return [normalized_code for code in asm_codes
+            if (normalized_code := normalize_asm_code(code,
+                                                      reg_token=SpecialToken.ASM_REG.value,
+                                                      num_token=SpecialToken.ASM_NUM.value,
+                                                      jump_token=SpecialToken.ASM_JUMP.value,
+                                                      loc_token=SpecialToken.ASM_LOC.value,
+                                                      mem_token=SpecialToken.ASM_MEM.value))]
+
+def levenshtein_distance(asm_codes_1:List[str], asm_codes_2:List[str]):
+    s1 = " ".join(this_normalize_asm_code(asm_codes_1))
+    s2 = " ".join(this_normalize_asm_code(asm_codes_2))
+
+    return difflib.SequenceMatcher(None, s1, s2).ratio()
+
+
 def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3):
-    # positive examples
-    positive_train_data_items = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
-                                 for ff in function_features]
+    all_train_data_items = []
 
-    # negative examples
-    wrong_match_function_features = []
+    for i, ff in tqdm(enumerate(function_features),desc="Generate data items"):
+        # 正例子
+        positive_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
+        all_train_data_items.append(positive_item)
 
-    # 对每个function_feature，生成指定数量的负例
-    for function_feature in function_features:
-        generated_negatives = 0  # 当前function_feature生成的负例数量
-        attempts = 0  # 尝试的次数，以避免无限循环
+        # 计算相似度并排序
+        similarities = []
+        original_normalized_asm_codes = this_normalize_asm_code(ff.bin_function_feature.asm_codes[:20])
+        count = 0
+        for j, other_ff in enumerate(function_features):
+            if i != j:  # 排除自己
+                sample_normalized_asm_codes = this_normalize_asm_code(other_ff.bin_function_feature.asm_codes[:20])
+                similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
+                similarities.append((similarity, other_ff))
+                if similarity > 0.3:
+                    count +=1
+                if count >=5:
+                    break
 
-        while generated_negatives < negative_ratio and attempts < len(function_features) * 2:
-            attempts += 1
-            # 从function_features中随机选择一个样本作为潜在的负例
-            sample_function_feature = random.choice(function_features)
-            # 确保选取的样本不是当前的function_feature
-            if sample_function_feature != function_feature:
-                # 计算长度比例
-                sample_asm_length = len(sample_function_feature.bin_function_feature.asm_codes)
-                wrong_item_original_asm_length = len(function_feature.bin_function_feature.asm_codes)
-                ratio = sample_asm_length / wrong_item_original_asm_length
+        # 按相似度排序，相似度高的在前
+        sorted_similarities = sorted(similarities, key=lambda x: x[0], reverse=True)
 
-                # 如果长度比例不在接受的范围内，继续尝试
-                if ratio > 1.5 or ratio < 0.5:
-                    continue
+        # 生成负例
+        for _, sample_function_feature in sorted_similarities[:negative_ratio]:
+            wrong_match_function_feature = copy.deepcopy(ff)
+            wrong_match_function_feature.bin_function_feature = sample_function_feature.bin_function_feature
+            negative_item = DataItemForFunctionConfirmModel.init_from_function_feature(wrong_match_function_feature,
+                                                                                       label=0)
+            all_train_data_items.append(negative_item)
 
-                # 深拷贝当前的function_feature，并更新其bin_function_feature
-                wrong_match_function_feature = copy.deepcopy(function_feature)
-                wrong_match_function_feature.bin_function_feature = sample_function_feature.bin_function_feature
-                wrong_match_function_features.append(wrong_match_function_feature)
-                generated_negatives += 1
-    negative_train_data_items = [DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=0) for ff in
-                                 wrong_match_function_features]
-
-    train_data_json = [item.custom_serialize() for item in positive_train_data_items + negative_train_data_items]
+    # 给一个id ，方便调试
+    for i, item in enumerate(all_train_data_items):
+        item.id = i
+    train_data_json = [item.custom_serialize() for item in all_train_data_items]
     return train_data_json
 
 

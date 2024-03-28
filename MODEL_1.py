@@ -53,7 +53,7 @@ def prepare_train_data_for_model_1():
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=5)
+                                           negative_ratio=3)
 
 
 def train_model_1():
