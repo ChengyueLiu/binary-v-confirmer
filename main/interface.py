@@ -279,8 +279,8 @@ class DataItemForFunctionConfirmModel:
 
         # 构成源码text
         src_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {src_code_text}"
-        if src_strings:
-            src_text = f"{src_strings} {SpecialToken.SRC_STRING_SEPARATOR.value} {src_text}"
+        # if src_strings:
+        #     src_text = f"{src_strings} {SpecialToken.SRC_STRING_SEPARATOR.value} {src_text}"
         # if src_numbers:
         #     src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
 
