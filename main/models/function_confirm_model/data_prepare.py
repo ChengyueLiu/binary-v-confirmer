@@ -39,7 +39,8 @@ def this_normalize_asm_code(asm_codes):
                                                       loc_token=SpecialToken.ASM_LOC.value,
                                                       mem_token=SpecialToken.ASM_MEM.value))]
 
-def levenshtein_distance(asm_codes_1:List[str], asm_codes_2:List[str]):
+
+def levenshtein_distance(asm_codes_1: List[str], asm_codes_2: List[str]):
     s1 = " ".join(this_normalize_asm_code(asm_codes_1))
     s2 = " ".join(this_normalize_asm_code(asm_codes_2))
 
@@ -49,27 +50,32 @@ def levenshtein_distance(asm_codes_1:List[str], asm_codes_2:List[str]):
 def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3):
     all_train_data_items = []
 
-    for i, ff in tqdm(enumerate(function_features),desc="Generate data items"):
+    for i, ff in tqdm(enumerate(function_features), desc="Generate data items"):
         # 正例子
         positive_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
         all_train_data_items.append(positive_item)
 
-        # 计算相似度并排序
-        similarities = []
-        original_normalized_asm_codes = this_normalize_asm_code(ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
-        count = 0
-        for j, other_ff in enumerate(function_features):
-            if i != j:  # 排除自己
-                sample_normalized_asm_codes = this_normalize_asm_code(other_ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
-                similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
-                similarities.append((similarity, other_ff))
-                if similarity < 0.1:
-                    count +=1
-                if count >=5:
-                    break
+        # 打乱function_features列表以随机化选择负例过程
+        # 创建一个除了当前元素之外的列表副本
+        other_function_features = function_features[:i] + function_features[i+1:]
+        random.shuffle(other_function_features)  # 随机打乱列表
 
-        # 按相似度排序，相似度高的在前
-        sorted_similarities = sorted(similarities, key=lambda x: x[0], reverse=True)
+        # 计算相似度
+        similarities = []
+        count = 0
+        original_normalized_asm_codes = this_normalize_asm_code(ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
+        for other_ff in other_function_features:
+            sample_normalized_asm_codes = this_normalize_asm_code(
+                other_ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
+            similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
+            if similarity < 0.3:
+                similarities.append((similarity, other_ff))
+                count += 1
+            if count >= negative_ratio:
+                break
+
+        # 按相似度排序，选择相似度最低的
+        sorted_similarities = sorted(similarities, key=lambda x: x[0])
 
         # 生成负例
         for _, sample_function_feature in sorted_similarities[:negative_ratio]:

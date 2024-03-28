@@ -12,13 +12,24 @@ from main.models.function_confirm_model.model_application import FunctionFinder
 libcrypto_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\crypto"
 openssl_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\apps"
 libssl_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\ssl"
-libpng_src_path = r"C:\Users\liuchengyue\Desktop\projects\GithubProjects\libpng"
+libpng_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\libpng"
+
+#arch/：特定于架构的代码，如x86、ARM等。
+# kernel/：内核的核心功能，如进程管理和调度。
+# mm/：内存管理相关的代码。
+# fs/：文件系统的实现。
+# net/：网络协议和功能的实现。
+# drivers/：设备驱动程序。
+# lib/：一些基本库函数。
+linux_kernel_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\linux-6.8.2_for_extraction"
+
 
 # bin
 libcrypto_bin_path = r"TestCases/binaries/openssl_3.2.1/libcrypto.so.3"
 openssl_bin_path = r"TestCases/binaries/openssl_3.2.1/openssl"
 libssl_bin_path = r"TestCases/binaries/openssl_3.2.1/libssl.so.3"
-libpng_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\libpng"
+libpng_src_path = r"C:\Users\liuchengyue\Desktop\projects\GithubProjects\libpng"
+linux_kernel_path = "TestCases/binaries/linux_kernel_6.8.2/vmlinux"
 
 # openssl matched_function_feature
 openssl_function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
@@ -41,6 +52,7 @@ def prepare_train_data_for_model_1():
         (openssl_src_dir, openssl_bin_path),
         (libssl_src_dir, libssl_bin_path),
         (libpng_src_dir, libssl_bin_path),
+        # (linux_kernel_dir, linux_kernel_path),
     ]
 
     # 提取函数特征, 注意，这里有筛选，只提取长度在7-100之间的函数

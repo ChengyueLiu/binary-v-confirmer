@@ -26,13 +26,16 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
     bin_function_names = {}
     src_function_names = {}
     for src_dir_path, binary_file_path in tqdm(src_bin_pairs):
-        # 提取源码特征
-        src_function_features = extract_src_feature_for_project(src_dir_path)
-        src_function_names[src_dir_path] = sorted([f"{f.file_path}: {f.name}" for f in src_function_features])
-
+        print(f"start extract {src_dir_path} and {binary_file_path}")
         # 提取二进制特征
         bin_function_features = extract_bin_feature(binary_file_path)
         bin_function_names[binary_file_path] = sorted([f.name for f in bin_function_features])
+        print(f"bin_function_features num: {len(bin_function_features)}")
+
+        # 提取源码特征
+        src_function_features = extract_src_feature_for_project(src_dir_path)
+        src_function_names[src_dir_path] = sorted([f"{f.file_path}: {f.name}" for f in src_function_features])
+        print(f"src_function_features num: {len(src_function_features)}")
 
         # 找到相同的函数，从而能够合并特征
         function_feature_dict = {}
@@ -55,6 +58,7 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
                         src_function_features=[src_function_feature]
                     )
         result = [f.custom_serialize() for f in function_feature_dict.values()]
+        print(binary_file_path, len(result))
         results.extend(result)
     save_to_json_file(bin_function_names, "TestCases/feature_extraction/openssl_feature/bin_function_names.json")
     save_to_json_file(src_function_names, "TestCases/feature_extraction/openssl_feature/src_function_names.json")
@@ -71,7 +75,7 @@ def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
     """
     # 提取特征
     extractor = ProjectFeatureExtractor(project_path)
-    extractor.extract()
+    extractor.extract(use_multiprocessing=False)
 
     # 转换成外部的数据结构
     src_function_features: List[SrcFunctionFeature] = []

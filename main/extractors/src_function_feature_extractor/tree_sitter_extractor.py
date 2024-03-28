@@ -15,6 +15,7 @@ from typing import List
 
 import git
 from loguru import logger
+from tqdm import tqdm
 from tree_sitter import Language, Parser, Node
 
 from main.extractors.src_function_feature_extractor.constants import C_EXTENSION_SET, CPP_EXTENSION_SET, \
