@@ -62,7 +62,7 @@ def prepare_train_data_for_model_1():
         src_bin_pairs=src_bin_pairs,
         save_path=openssl_function_features_path,
     )
-    # 转换成训练数据
+    # 转换成训练数据 1:5, 0.2的相似度，效果很好 97%准确率
     convert_function_feature_to_train_data(openssl_function_features_path,
                                            train_data_save_path,
                                            val_data_save_path,
