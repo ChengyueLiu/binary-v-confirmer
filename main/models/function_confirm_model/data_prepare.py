@@ -10,6 +10,7 @@ from bintools.general.bin_tool import normalize_asm_code
 from bintools.general.file_tool import save_to_json_file
 from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature, \
     SpecialToken
+from setting.settings import ASM_CODE_NUM
 
 """
 这个文件的作用就是生成 TrainDataItemForFunctionConfirmModel
@@ -55,14 +56,14 @@ def generate_data_items(function_features: List[FunctionFeature], negative_ratio
 
         # 计算相似度并排序
         similarities = []
-        original_normalized_asm_codes = this_normalize_asm_code(ff.bin_function_feature.asm_codes[:20])
+        original_normalized_asm_codes = this_normalize_asm_code(ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
         count = 0
         for j, other_ff in enumerate(function_features):
             if i != j:  # 排除自己
-                sample_normalized_asm_codes = this_normalize_asm_code(other_ff.bin_function_feature.asm_codes[:20])
+                sample_normalized_asm_codes = this_normalize_asm_code(other_ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
                 similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
                 similarities.append((similarity, other_ff))
-                if similarity > 0.3:
+                if similarity < 0.05:
                     count +=1
                 if count >=5:
                     break

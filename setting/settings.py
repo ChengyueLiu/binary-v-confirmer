@@ -12,3 +12,8 @@ if not GITHUB_TOKEN:
 # Cause Function Similarity Threshold
 CAUSE_FUNCTION_SIMILARITY_THRESHOLD = env.float("CAUSE_FUNCTION_SIMILARITY_THRESHOLD", 0.95)
 POSSIBLE_BIN_FUNCTION_TOP_N = env.int("POSSIBLE_BIN_FUNCTION_TOP_N", 1)
+
+
+
+# AsmCodeNum 取多长的汇编代码，判断是否相似
+ASM_CODE_NUM = env.int("ASM_CODE_NUM", 35)
