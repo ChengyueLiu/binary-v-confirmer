@@ -8,7 +8,8 @@ from main.interface import DataItemForFunctionConfirmModel
 
 
 class FunctionConfirmDataset(Dataset):
-    def __init__(self, texts, labels, tokenizer, max_len=512):
+    def __init__(self, ids, texts, labels, tokenizer, max_len=512):
+        self.ids = ids # 用于记录原始数据的id, 方便调试
         self.texts = texts
         self.labels = labels
         self.tokenizer = tokenizer
@@ -32,6 +33,7 @@ class FunctionConfirmDataset(Dataset):
         )
 
         return {
+            'item_ids': self.ids[idx],
             'input_ids': encoding['input_ids'].flatten(),
             'attention_mask': encoding['attention_mask'].flatten(),
             'labels': torch.tensor(label, dtype=torch.long)
@@ -41,12 +43,13 @@ class FunctionConfirmDataset(Dataset):
 def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmModel], tokenizer, max_len=512):
     texts = []
     labels = []
-
+    item_ids = []
     for data_item in data_items:
+        item_ids.append(data_item.id)
         texts.append(data_item.get_train_text(tokenizer.sep_token))
         labels.append(data_item.label)
 
-    dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
+    dataset = FunctionConfirmDataset(item_ids, texts, labels, tokenizer, max_len)
     return dataset
 
 
@@ -60,13 +63,15 @@ def create_dataset(file_path, tokenizer, max_len=512):
 
     texts = []
     labels = []
+    item_ids = []
     for data_item in data_items:
+        item_ids.append(data_item.id)
         texts.append(data_item.get_train_text(tokenizer.sep_token))
         labels.append(data_item.label)
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
-    dataset = FunctionConfirmDataset(texts, labels, tokenizer, max_len)
+    dataset = FunctionConfirmDataset(item_ids,texts, labels, tokenizer, max_len)
     return dataset
 
 
