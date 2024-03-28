@@ -285,7 +285,7 @@ class DataItemForFunctionConfirmModel:
         #     src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
 
         # 限制最多20条汇编指令
-        asm_code_text = " ".join(self.asm_codes[:20])
+        asm_code_text = " ".join(self.asm_codes[:30])
 
         # 限制最多10个字符串，过长过短都不要
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
