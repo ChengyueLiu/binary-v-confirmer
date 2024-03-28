@@ -39,10 +39,8 @@ def init_train(train_data_json_file_path,
         tokenizer.add_tokens(special_token)
 
     # model
-    config = RobertaConfig.from_pretrained(model_name,
-                                           num_labels=num_labels,
-                                           attention_probs_dropout_prob=0.1)
-    model = RobertaForSequenceClassification(config)
+    # 不要用哪个config去初始化，会导致模型变差很多。
+    model = RobertaForSequenceClassification.from_pretrained(model_name,num_labels=num_labels)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 
