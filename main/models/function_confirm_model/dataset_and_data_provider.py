@@ -66,8 +66,8 @@ def create_dataset(file_path, tokenizer, max_len=512):
     item_ids = []
     for data_item in data_items:
         item_ids.append(data_item.id)
-        texts.append(data_item.get_train_text(tokenizer.sep_token))
         labels.append(data_item.label)
+        texts.append(data_item.get_train_text(tokenizer.sep_token))
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})

@@ -7,7 +7,7 @@ from bintools.general.normalize import normalized_asm_lines, normalize_asm_code,
     normalize_strings
 from bintools.general.file_tool import load_from_json_file
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
-from setting.settings import ASM_CODE_NUM, SRC_CODE_NUM
+from setting.settings import ASM_CODE_NUM, SRC_CODE_WORD_NUM_LIMIT, SRC_CODE_NUM
 
 
 @dataclass
@@ -257,59 +257,47 @@ class DataItemForFunctionConfirmModel:
     def get_special_tokens(cls):
         return SpecialToken.get_all_special_tokens()
 
-    def get_train_text(self, separator=None):
+    def get_train_text(self, separator):
         """
         生成text, 用于训练
         内容包括源代码、汇编代码、字符串、数字，以及特殊标记，主要用源码和汇编码的开头部分，以及字符串和数字
         :param separator:
         :return:
         """
-        # 限制最多15行源代码
-        src_code_text = remove_comments(" ".join(self.src_codes[:SRC_CODE_NUM]))
-        # # 去掉函数头的部分
-        # if "{" in src_code_text:
-        #     src_code_text = src_code_text.split("{", 1)[1]
-
-        # 过长过短的字符串不要,限制最多10个字符串，取长度最长的
+        # 源代码字符串
         src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join(src_string_list)
+        if src_strings:
+            final_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings} {SpecialToken.SRC_CODE_SEPARATOR.value} "
+        else:
+            final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} "
 
-        # 保留最长的10个数字
-        src_numbers = " ".join(sorted([str(num) for num in self.src_numbers], key=lambda x: len(x), reverse=True)[:10])
+        # 源代码, 不超过20行，60个单词，500个字符
+        src_code_word_num = len(src_strings)
+        src_codes = []
+        for src_code in self.src_codes:
+            src_codes.append(src_code)
+            src_code_word_num += len(src_code.split())
+            if src_code_word_num > SRC_CODE_WORD_NUM_LIMIT or len(src_codes) >= SRC_CODE_NUM or len(" ".join(src_codes)) > 500:
+                break
+        final_text += remove_comments(" ".join(src_codes))
 
-        # 构成源码text
-        src_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {src_code_text}"
-        # if src_strings:
-        #     src_text = f"{src_strings} {SpecialToken.SRC_STRING_SEPARATOR.value} {src_text}"
-        # if src_numbers:
-        #     src_text += f" {SpecialToken.SRC_NUMBER_SEPARATOR.value} {src_numbers}"
-
-        # 限制最多20条汇编指令
-        asm_code_text = " ".join(self.asm_codes[:ASM_CODE_NUM])
-
-        # 限制最多10个字符串，过长过短都不要
+        # 汇编代码字符串
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
         bin_string_list = [string for string in bin_string_list if 4 < len(string.split()) < 20][:10]
         bin_strings = " ".join(bin_string_list)
-
-        # 保留最长的10个数字
-        bin_numbers = " ".join(sorted([str(num) for num in self.bin_numbers], key=lambda x: len(x), reverse=True)[:10])
-
-        # 构成汇编码text
-        bin_text = f"{SpecialToken.ASM_CODE_SEPARATOR.value} {asm_code_text}"
         if bin_strings:
-            bin_str_text = f"{SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings}"
-            bin_text = f"{bin_str_text} {bin_text}"
-        # if bin_numbers:
-        #     bin_text += f" {SpecialToken.BIN_NUMBER_SEPARATOR.value} {bin_numbers}"
-
-        # 合并源码和汇编码
-        if separator:
-            merged_text = f"{src_text} {separator} {bin_text}"
+            final_text += f" {separator} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings} {SpecialToken.ASM_CODE_SEPARATOR.value}"
         else:
-            merged_text = f"{src_text} {bin_text}"
-        return merged_text
+            final_text += f" {separator} {SpecialToken.ASM_CODE_SEPARATOR.value}"
+        # 汇编代码
+        for asm_code in self.asm_codes:
+            final_text += f" {asm_code}"
+            if len(final_text) > 1000:
+                break
+
+        return final_text
 
     def normalize(self):
         # 正规化处理源代码
