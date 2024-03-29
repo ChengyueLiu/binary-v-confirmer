@@ -40,7 +40,7 @@ def init_train(train_data_json_file_path,
 
     # model
     # 不要用哪个config去初始化，会导致模型变差很多。
-    model = RobertaForSequenceClassification.from_pretrained(model_name,num_labels=num_labels)
+    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 
@@ -73,6 +73,7 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
     epoch_loss = 0
     total_correct = 0
     total_instances = 0
+    incorrect_id_list = []
     for batch in tqdm(iterator, desc="train_or_evaluate"):
         item_ids = batch['item_ids'].to(device)
         input_ids = batch['input_ids'].to(device)
@@ -102,14 +103,15 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
         total_correct += correct_predictions.sum().item()
         total_instances += labels.size(0)
 
-        # if not is_train:
-        #     # 打印出评估时被错误分类的样本ID
-        #     incorrect_indices = (predicted_classes != labels).nonzero(as_tuple=False).squeeze()
-        #     incorrect_ids = item_ids[incorrect_indices]
-        #     for i_id in incorrect_ids:
-        #         print(f"Incorrect ID: {i_id.item()}")
-
+        if not is_train:
+            incorrect_indices = (predicted_classes != labels).nonzero(as_tuple=False).squeeze()
+            # 如果只有一个不正确的预测，确保它是可迭代的
+            if incorrect_indices.dim() == 0:
+                incorrect_indices = incorrect_indices.unsqueeze(0)
+            incorrect_ids = item_ids[incorrect_indices].tolist()
+            incorrect_id_list.extend(incorrect_ids)  # 收集错误的ID
     epoch_acc = total_correct / total_instances
+    print(incorrect_id_list)
     return epoch_loss / len(iterator), epoch_acc
 
 

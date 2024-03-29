@@ -119,7 +119,7 @@ def train_model_1():
 
 if __name__ == '__main__':
     # Done
-    prepare_train_data_for_model_1()
+    # prepare_train_data_for_model_1()
 
     # Done
-    # train_model_1()
+    train_model_1()

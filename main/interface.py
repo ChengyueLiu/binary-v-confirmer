@@ -763,3 +763,42 @@ class Vulnerability:
         self.confirmed_cause_function_num = len(
             [cause_function for cause_function in self.cause_functions if cause_function.conclusion])
         self.conclusion = self.confirmed_cause_function_num > 0
+
+
+@dataclass
+class CauseFunctionAnalysisInfo:
+    cause_function_name: str
+    confirmed_bin_function_name: str = None
+    possible_bin_function_names: List[str] = dataclasses.field(default_factory=list)
+
+    def customer_serialize(self):
+        return {
+            "cause_function_name": self.cause_function_name,
+            "confirmed_bin_function_name": self.confirmed_bin_function_name,
+            "possible_bin_function_names": self.possible_bin_function_names
+        }
+
+
+@dataclass
+class BinaryAnalysisInfo:
+    binary_path: str
+    bin_function_num: int
+
+    def customer_serialize(self):
+        return {
+            "binary_path": self.binary_path,
+            "bin_function_num": self.bin_function_num
+        }
+
+
+@dataclass
+class VulAnalysisInfo:
+    binary_analysis_info: BinaryAnalysisInfo
+    cause_function_analysis_infos: List[CauseFunctionAnalysisInfo] = dataclasses.field(default_factory=list)
+
+    def customer_serialize(self):
+        return {
+            "binary_analysis_info": self.binary_analysis_info.customer_serialize(),
+            "cause_function_analysis_infos": [cause_function_analysis_info.customer_serialize()
+                                              for cause_function_analysis_info in self.cause_function_analysis_infos]
+        }

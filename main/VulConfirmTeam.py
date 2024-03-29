@@ -7,37 +7,13 @@ from loguru import logger
 from bintools.general.file_tool import save_to_json_file, load_from_json_file
 from bintools.general.normalize import remove_comments
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
-from main.interface import Vulnerability, PossibleAsmSnippet, PossibleBinFunction, BinFunctionFeature, \
-    SrcFunctionFeature
+from main.interface import Vulnerability, PossibleAsmSnippet, BinFunctionFeature, SrcFunctionFeature, VulAnalysisInfo, CauseFunctionAnalysisInfo, BinaryAnalysisInfo
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_confirm_model_multi_choice.model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder
 from setting.settings import CAUSE_FUNCTION_SIMILARITY_THRESHOLD, POSSIBLE_BIN_FUNCTION_TOP_N
 
-
-def extract_features(src_file_path, cause_function_name, binary_file_abs_path) -> (
-        SrcFunctionFeature, List[BinFunctionFeature]):
-    """
-    预处理，主要是一些模型需要的参数
-    """
-    # 提取源代码特征
-    src_function_feature: SrcFunctionFeature = extract_src_feature_for_specific_function(file_path=src_file_path,
-                                                                                         vul_function_name=cause_function_name)
-    # 提取二进制特征
-    # bin_function_features = extract_bin_feature(binary_file_abs_path)
-    # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
-    if "TestCases/binaries" in binary_file_abs_path:
-        IDA_PRO_OUTPUT_PATH = binary_file_abs_path.replace("TestCases/binaries/",
-                                                           "TestCases/binary_function_features/") + ".json"
-    results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
-    # 转换成外部的数据结构
-    bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
-                                                       for json_item in results]
-    # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
-    # ---------- 以上是临时代码 ----------
-
-    return src_function_feature, bin_function_features
 
 
 def generate_src_codes_text(src_codes: List[str]):
@@ -194,20 +170,42 @@ class VulConfirmTeam:
             2. 找到漏洞片段
             3. 判断是否已经被修复
         """
-        print(binary_path)
+        # 提取二进制特征
+        # bin_function_features = extract_bin_feature(binary_file_abs_path)
+        # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
+        if "TestCases/binaries" in binary_path:
+            IDA_PRO_OUTPUT_PATH = binary_path.replace("TestCases/binaries/",
+                                                      "TestCases/binary_function_features/") + ".json"
+        results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
+        # 转换成外部的数据结构
+        bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
+                                                           for json_item in results]
+        # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
+        # ---------- 以上是临时代码 ----------
+
+        binary_analysis_info = BinaryAnalysisInfo(binary_path, len(bin_function_features))
+        vul_analysis_info = VulAnalysisInfo(binary_analysis_info)
         for cause_function in vul.cause_functions:
-            vul_src_function_feature, bin_function_features = extract_features(cause_function.file_path,
-                                                                           cause_function.function_name,
-                                                                           binary_path)
-            print(cause_function.function_name)
+            cause_function_analysis_info = CauseFunctionAnalysisInfo(cause_function.function_name)
+            vul_analysis_info.cause_function_analysis_infos.append(cause_function_analysis_info)
+
+            # 提取源代码特征
+            vul_src_function_feature: SrcFunctionFeature = extract_src_feature_for_specific_function(
+                cause_function.file_path,
+                cause_function.function_name)
 
             # 1. 找到漏洞函数(这里会过滤一些很短的或者很长的汇编函数)
-            possible_vul_bin_functions = self.function_finder.find_bin_function(vul_src_function_feature, bin_function_features)
-            print(f"\t possible bin function num: {len(possible_vul_bin_functions)}/{{len(bin_function_features)}},\n"
-                  f"\t possible bin functions: {[f"{pvbf.function_name}({pvbf.match_possibility})" for pvbf in possible_vul_bin_functions]}")
+            possible_vul_bin_functions = self.function_finder.find_bin_function(vul_src_function_feature,
+                                                                                bin_function_features)
+
+            cause_function_analysis_info.possible_bin_function_names = [
+                f"{pvbf.function_name}({pvbf.match_possibility})"
+                for pvbf in possible_vul_bin_functions]
+
             if not possible_vul_bin_functions:
                 continue
             vul_bin_function = possible_vul_bin_functions[0]
+            cause_function_analysis_info.confirmed_bin_function_name = vul_bin_function.function_name
 
         #     # 2. 定位代码片段
         #     patch = cause_function.patches[0]
@@ -230,8 +228,7 @@ class VulConfirmTeam:
         #     prediction = predictions[0]
         #     print(f"\t  vul(choice_index,score,prob): {prediction[0]}, \t  vul src code: {snippet_codes_text_before_commit}")
         #     print(f"\tpatch(choice_index,score,prob): {prediction[1]}, \tpatch src code: {snippet_codes_text_after_commit}")
-        print()
-
+        return vul_analysis_info
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
     """

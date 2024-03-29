@@ -18,7 +18,7 @@ def train():
         logger.info("Start training model 3")
         # train_model_3()
         logger.info("Training finished")
-
+0
 
 def test_model():
     # patch
@@ -166,53 +166,48 @@ def test_model():
     )
     vul_confirm_team = VulConfirmTeam(batch_size=100)
 
-    # openssl 3.2.0
-    openssl_320 = "TestCases/binaries/openssl_3.2.0/openssl"
-    libcrypto_320 = "TestCases/binaries/openssl_3.2.0/libcrypto.so.3"
-    libssl_320 = "TestCases/binaries/openssl_3.2.0/libssl.so.3"
-
     # openssl 3.0.11
-    libcrypto_3011 = "TestCases/binaries/openssl_3.0.11/libcrypto.so.3"
+    libcrypto_3011 = "TestCases/binaries/debian/openssl_3.0.11/libcrypto.so.3"
+
+
+    # openssl 3.2.0
+    openssl_320 = "TestCases/binaries/debian/openssl_3.2.0/openssl"
+    libcrypto_320 = "TestCases/binaries/debian/openssl_3.2.0/libcrypto.so.3"
+    libssl_320 = "TestCases/binaries/debian/openssl_3.2.0/libssl.so.3"
 
     # openssl 3.2.1
-    openssl_321 = "TestCases/binaries/openssl_3.2.1/openssl"
-    libcrypto_321 = "TestCases/binaries/openssl_3.2.1/libcrypto.so.3"
-    libssl_321 = "TestCases/binaries/openssl_3.2.1/libssl.so.3"
+    openssl_321 = "TestCases/binaries/debian/openssl_3.2.1/openssl"
+    libcrypto_321 = "TestCases/binaries/debian/openssl_3.2.1/libcrypto.so.3"
+    libssl_321 = "TestCases/binaries/debian/openssl_3.2.1/libssl.so.3"
 
     # libpng
-    libpng16 = "TestCases/binaries/libpng/libpng16.so.16.43.0"
+    libpng16 = "TestCases/binaries/debian/libpng/libpng16.so.16.43.0"
 
-    # # # 完全不相干
-    # save_path = "test_results/libpng_16_result.json"
-    # vul_confirm_team.confirm(binary_path=libpng16, vul=vulnerability)
-    # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
-    #
-    # # 同一个项目但是没有漏洞
-    # save_path = "test_results/openssl_320_result.json"
-    # vul_confirm_team.confirm(binary_path=openssl_320, vul=vulnerability)
-    # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
-    #
-    # # # 有漏洞
-    # save_path = "test_results/libcrypto_3011_result.json"
-    # vul_confirm_team.confirm(binary_path=libcrypto_3011, vul=vulnerability)
-    # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
-    #
-    # # # 有漏洞但是修复了
-    # save_path = "test_results/libcrypto_321_result.json"
-    # vul_confirm_team.confirm(binary_path=libcrypto_321, vul=vulnerability)
-    # save_to_json_file(vulnerability.customer_serialize(), save_path, output_log=True)
+    # self compiled openssl, libpng, O0
+    # openssl 3.2.0
+    self_compiled_openssl_320 = "TestCases/binaries/self_compiled/openssl_3.2.0/O0/openssl"
+    self_compiled_libcrypto_320 = "TestCases/binaries/self_compiled/openssl_3.2.0/O0/libcrypto.so.3"
+    self_compiled_libssl_320 = "TestCases/binaries/self_compiled/openssl_3.2.0/O0/libssl.so.3"
 
-    # new test
-    vul_confirm_team.new_confirm(binary_path=libpng16, vul=vulnerability)
-    vul_confirm_team.new_confirm(binary_path=openssl_320, vul=vulnerability)
-    vul_confirm_team.new_confirm(binary_path=libcrypto_320, vul=vulnerability)
-    vul_confirm_team.new_confirm(binary_path=libcrypto_321, vul=vulnerability)
+    # openssl 3.2.1
+    self_compiled_openssl_321 = "TestCases/binaries/self_compiled/openssl_3.2.1/O0/openssl"
+    self_compiled_libcrypto_321 = "TestCases/binaries/self_compiled/openssl_3.2.1/O0/libcrypto.so.3"
+    self_compiled_libssl_321 = "TestCases/binaries/self_compiled/openssl_3.2.1/O0/libssl.so.3"
+
+    # libpng
+    self_compiled_libpng16 = "TestCases/binaries/self_compiled/libpng_master/libpng16.so.16.44.0"
+
+    # 新的逻辑
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libpng16, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/libpng_16_result.json", output_log=True)
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_openssl_320, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/openssl_320_result.json", output_log=True)
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_320, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_320_result.json", output_log=True)
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_321, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_321_result.json", output_log=True)
 
 
 if __name__ == '__main__':
     # train()
     test_model()
-
-    # TODO
-    # 1. 先彻底搞定函数定位的事情，要足够精准，超过99的准确率最好。测试数据，要包括100个函数。
-    # 2. 然后再搞定patch的问题，要足够精准，100次，只有一个错误。
