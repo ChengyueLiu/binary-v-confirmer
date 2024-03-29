@@ -77,7 +77,7 @@ def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
     """
     # 提取特征
     extractor = ProjectFeatureExtractor(project_path)
-    extractor.extract(use_multiprocessing=True)
+    extractor.extract(use_multiprocessing=False)
 
     # 转换成外部的数据结构
     src_function_features: List[SrcFunctionFeature] = []
