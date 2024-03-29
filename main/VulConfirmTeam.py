@@ -5,7 +5,7 @@ from typing import Optional, List
 from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file, load_from_json_file
-from bintools.general.src_tool import remove_comments
+from bintools.general.normalize import remove_comments
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
 from main.interface import Vulnerability, PossibleAsmSnippet, PossibleBinFunction, BinFunctionFeature, \
     SrcFunctionFeature

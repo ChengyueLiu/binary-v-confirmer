@@ -3,9 +3,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
-from bintools.general.bin_tool import normalize_asm_code
+from bintools.general.normalize import normalized_asm_lines, normalize_asm_code, normalize_src_lines, remove_comments, \
+    normalize_strings
 from bintools.general.file_tool import load_from_json_file
-from bintools.general.src_tool import remove_comments, normalize_src_lines
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
 from setting.settings import ASM_CODE_NUM
 
@@ -316,20 +316,13 @@ class DataItemForFunctionConfirmModel:
         self.src_codes = normalize_src_lines(self.src_codes)
 
         # 正规化处理字符串
-        self.src_strings = list(set([normalized_string for string in self.src_strings
-                                     if len((normalized_string := string.strip())) >= 4]))
+        self.src_strings = normalize_strings(self.src_strings)
 
         # 正规化处理汇编代码
-        self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := normalize_asm_code(code,
-                                                                    reg_token=SpecialToken.ASM_REG.value,
-                                                                    num_token=SpecialToken.ASM_NUM.value,
-                                                                    jump_token=SpecialToken.ASM_JUMP.value,
-                                                                    loc_token=SpecialToken.ASM_LOC.value,
-                                                                    mem_token=SpecialToken.ASM_MEM.value))]
+        self.asm_codes = normalized_asm_lines(self.asm_codes)
+
         # 正规化处理字符串
-        self.bin_strings = list(set([normalized_string for string in self.bin_strings
-                                     if len((normalized_string := string.strip())) >= 4]))
+        self.bin_strings = normalize_strings(self.bin_strings)
 
 
 @dataclass

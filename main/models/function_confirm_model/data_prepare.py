@@ -6,7 +6,7 @@ from typing import List
 from loguru import logger
 from tqdm import tqdm
 
-from bintools.general.bin_tool import normalize_asm_code
+from bintools.general.normalize import normalize_asm_code
 from bintools.general.file_tool import save_to_json_file
 from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature, \
     SpecialToken

@@ -1,4 +1,4 @@
-from bintools.general.bin_tool import normalize_asm_code
+from bintools.general.normalize import normalize_asm_code
 from main.models.code_snippet_positioning_model.data_prepare import convert_mapping_to_json, \
     convert_json_to_raw_train_data, convert_raw_train_data_to_train_data
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
