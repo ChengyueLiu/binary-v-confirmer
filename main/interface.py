@@ -274,7 +274,7 @@ class DataItemForFunctionConfirmModel:
             final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} "
 
         # 源代码, 不超过20行，60个单词，500个字符
-        src_code_word_num = len(src_strings)
+        src_code_word_num = len(src_strings.split())
         src_codes = []
         start_flag = False
         for src_code in self.src_codes:
