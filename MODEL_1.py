@@ -31,9 +31,9 @@ libpng_bin_path = r"TestCases/binaries/debian/libpng/libpng16.so.16.43.0"
 linux_kernel_path = "TestCases/binaries/linux_kernel_6.8.2/vmlinux"
 
 # self compiled bin
-O0_libcrypto_bin_path = r"TestCases/binaries/self_compiled/opensl_3.2.1/O0/libcrypto.so.3"
-O0_openssl_bin_path = r"TestCases/binaries/self_compiled/opensl_3.2.1/O0/openssl"
-O0_libssl_bin_path = r"TestCases/binaries/self_compiled/opensl_3.2.1/O0/libssl.so.3"
+O0_libcrypto_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/libcrypto.so.3"
+O0_openssl_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/openssl"
+O0_libssl_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/libssl.so.3"
 
 # openssl matched_function_feature
 openssl_function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"

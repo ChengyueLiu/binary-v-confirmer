@@ -5,7 +5,7 @@ from typing import List
 
 from bintools.general.bin_tool import normalize_asm_code
 from bintools.general.file_tool import load_from_json_file
-from bintools.general.src_tool import remove_comments
+from bintools.general.src_tool import remove_comments, normalize_src_lines
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
 from setting.settings import ASM_CODE_NUM
 
@@ -313,8 +313,7 @@ class DataItemForFunctionConfirmModel:
 
     def normalize(self):
         # 正规化处理源代码
-        self.src_codes = [normalized_line for line in self.src_codes
-                          if (normalized_line := line.strip())]
+        self.src_codes = normalize_src_lines(self.src_codes)
 
         # 正规化处理字符串
         self.src_strings = list(set([normalized_string for string in self.src_strings

@@ -1,6 +1,18 @@
 import re
 
 
+def normalize_src_lines(lines):
+    """
+    移除注释行和空行，移除两端空白字符
+    """
+    normalized_lines = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith(("/*", "* ", "//")) or line.endswith("*/") or line == "":
+            continue
+        normalized_lines.append(line)
+    return normalized_lines
+
 
 def remove_comments(text):
     """ remove c-style comments.

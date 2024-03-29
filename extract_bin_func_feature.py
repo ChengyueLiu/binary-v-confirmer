@@ -22,6 +22,6 @@ def pre_extract_bin_func_features(bin_dir, root_save_dir):
 
 
 if __name__ == '__main__':
-    bin_dir = 'TestCases/binaries'
-    save_dir = 'TestCases/binary_function_features'
+    bin_dir = 'TestCases/binaries/self_compiled'
+    save_dir = 'TestCases/binary_function_features/self_compiled'
     pre_extract_bin_func_features(bin_dir, save_dir)
