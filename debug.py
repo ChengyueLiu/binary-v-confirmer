@@ -43,6 +43,8 @@
 #     src_length, src_words_num, src_token_length = get_token_length(src_code)
 #     asm_length, asm_words_num, asm_token_length = get_token_length(asm_code)
 #     print(f"{data_item.id}, src: {src_length}, {src_words_num}, {src_token_length}, {round(src_token_length/src_words_num)}, asm: {asm_length}, {asm_words_num}, {asm_token_length}, {round(asm_token_length/asm_words_num)}, total: {text_length}, {words_num}, {token_length}, {round(token_length/words_num)}")
+from bintools.general.file_tool import load_from_json_file
+from main.interface import DataItemForCodeSnippetPositioningModel
 
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
@@ -53,18 +55,15 @@ test_item_dict = {item["id"]: item for item in test_items}
 label_0 = 0
 label_1 = 0
 failed_id_list = \
-    [0, 121, 165, 297, 472, 638, 747, 808, 809, 857, 978, 979, 1023, 1100, 1155, 1309, 1573, 1584, 1693, 1726, 1936,
-     1947, 1974, 2035, 2068, 2134, 2239, 2244, 2462, 2695, 2706, 2728, 2915, 3069, 3102, 3142, 3143, 3144, 3283, 3300,
-     3388, 3431, 3718, 3813, 3817, 3902, 3949, 3998, 4003, 4092, 4103, 4125, 4163, 4168, 4399, 4518, 4595, 4615, 4619,
-     4653, 4664, 4906, 5005, 5258, 5291, 5500, 5587, 5594, 5598, 5786, 5811, 5981, 6092, 6258, 6501, 6666, 6721, 6842,
-     6861, 6952, 7007, 7073]
+    [0, 121, 165, 373, 461, 554, 626, 638, 746, 747, 757, 759, 805, 849, 857, 968, 1001, 1005, 1023, 1073, 1087, 1111, 1115, 1225, 1309, 1417, 1430, 1573, 1691, 1693, 1726, 1804, 1811, 1879, 1936, 1947, 1974, 1975, 1978, 2023, 2035, 2049, 2134, 2197, 2237, 2239, 2244, 2386, 2462, 2571, 2692, 2695, 2713, 2728, 2912, 2915, 2942, 3023, 3034, 3102, 3105, 3170, 3173, 3177, 3223, 3234, 3278, 3285, 3300, 3320, 3349, 3388, 3431, 3504, 3505, 3509, 3513, 3629, 3639, 3748, 3806, 3817, 3831, 3894, 3949, 3993, 4010, 4062, 4092, 4110, 4163, 4168, 4179, 4201, 4256, 4327, 4374, 4399, 4403, 4417, 4430, 4497, 4547, 4584, 4595, 4606, 4609, 4653, 4664, 4865, 4905, 4927, 5005, 5119, 5203, 5210, 5231, 5291, 5495, 5500, 5577, 5588, 5594, 5598, 5607, 5621, 5786, 5810, 5811, 5815, 5981, 6038, 6073, 6092, 6106, 6135, 6227, 6258, 6335, 6488, 6666, 6686, 6755, 6841, 6842, 6853, 6861, 6870, 6952, 7007, 7022, 7073]
+
 
 for id in failed_id_list:
-    demo = DataItemForFunctionConfirmModel.init_from_dict(test_item_dict[id])
+    demo = DataItemForFunctionConfirmModel.init_from_dict(test_item_dict[7073])
     effective_line_num = count_function_effective_lines(demo.src_codes)
     demo.normalize()
-    asm_strings = demo.get_train_text("<s>").split("[ASM_CODE]")[1]
-    print(id,demo.label, demo.get_train_text("<s>"))
+    src_string, asm_string = demo.get_train_text("<s>").split("<s>")
+    print(id, demo.label, f"\n\t{src_string.strip()}\n\t{asm_string.strip()}\n\t{demo.src_codes}\n\t{demo.asm_codes}")
     if demo.label == 0:
         label_0 += 1
     else:
@@ -72,3 +71,10 @@ for id in failed_id_list:
     # print(asm_strings)
 
 print(len(failed_id_list), label_0, label_1)
+
+#
+# test_items = load_from_json_file("TestCases/model_train/model_2/final_train_data_items/test_data.json")
+# for item in test_items:
+#     demo = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
+#     demo.normalize()
+#     print(demo.id, f"\n\tQ：{demo.get_question_text()}\n\tC:{demo.get_context_text()}\n\tA:{demo.get_answer_text()}")

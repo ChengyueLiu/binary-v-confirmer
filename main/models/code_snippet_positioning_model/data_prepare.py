@@ -140,10 +140,7 @@ def convert_json_to_raw_train_data(original_mapping_file_dir, raw_train_data_jso
         for function in functions:
             raw_train_data_items = []
             function_name = function["function_name"]
-            if function_name == "mock_srv_ctx_free":
-                print(1)
             sub_functions = function["sub_functions"]
-            asm_codes = []
             # 第一轮遍历，找到所有的源代码
             src_code_dict = get_src_lines(sub_functions, start_path)
             # 第二轮编译，每行源代码和对应的汇编代码变成一条训练数据
@@ -156,11 +153,9 @@ def convert_json_to_raw_train_data(original_mapping_file_dir, raw_train_data_jso
                     real_file_path, line_number, is_discriminator = get_snippet_position(snippet, start_path)
 
                     # 代码片段
-                    src_lines = snippet["src_lines"]
-                    asm_lines = snippet["asm_lines"]
+                    asm_lines = [line.split("\t")[-1] for line in snippet["asm_lines"]]
 
                     # 转换成训练数据
-                    asm_codes.extend(asm_lines)
                     current_src_line = src_code_dict.get(sub_function_name, {})["src_codes"].get(line_number, None)
                     if current_src_line is None:
                         continue
@@ -212,11 +207,9 @@ def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
 
     data_items = []
     # 遍历这些片段，构成训练数据
+    item_id = 0
     for function_name, left_raw_data_items, current_raw_data_items, right_raw_data_items in train_data_items:
 
-        # 匹配的汇编源代码
-        # TODO 这里的源码不对，顺序不对，或者重复了，需要调整
-        # src_codes = [current_raw_data_item["current_src_line"] for current_raw_data_item in current_raw_data_items]
         src_dict, min_line, max_line = process_src_codes(current_raw_data_items)
         if not src_dict:
             continue
@@ -242,14 +235,16 @@ def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
         succeed = check_effective(src_codes, asm_codes)
         if not succeed:
             continue
-
-        data_items.append(DataItemForCodeSnippetPositioningModel(
+        data_item = DataItemForCodeSnippetPositioningModel(
             function_name=function_name,
             src_codes=src_codes,
             asm_codes=asm_codes,
             answer_start_index=answer_start_index,
             answer_end_index=answer_end_index,
-        ))
+        )
+        data_item.id = item_id
+        data_items.append(data_item)
+        item_id += 1
     return data_items
 
 
@@ -271,8 +266,6 @@ def merge_discriminators(raw_train_data):
 def random_select_snippets(max_src_lines, raw_train_data, max_num=3):
     train_data_items = []
     for function_name, raw_data_items in raw_train_data.items():
-        if function_name == "AES_ecb_encrypt":
-            print()
         if len(raw_data_items) < max_src_lines:
             train_data_items.append((function_name, [], raw_data_items, []))
             continue

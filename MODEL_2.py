@@ -32,8 +32,6 @@ def prepare_data():
     # convert_json_to_raw_train_data(json_mapping_files, all_raw_train_data_items_dir)
 
     # step 5: raw train data ---> train data
-    # TODO 现在模型的输入可能非常长，汇编代码肯定是要截断的。怎么个截断策略？
-    #   先不考虑那些比例很奇怪的数据
     convert_raw_train_data_to_train_data(test_raw_train_data_items_dir,
                                          train_data_json,
                                          valid_data_json,

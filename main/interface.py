@@ -268,10 +268,8 @@ class DataItemForFunctionConfirmModel:
         src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)
         src_string_list = [string.strip() for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join(src_string_list)
-        if src_strings:
-            final_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings} {SpecialToken.SRC_CODE_SEPARATOR.value} "
-        else:
-            final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} "
+        final_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings} {SpecialToken.SRC_CODE_SEPARATOR.value} "
+
 
         # 源代码, 不超过20行，60个单词，500个字符
         src_code_word_num = len(src_strings.split())
@@ -292,10 +290,8 @@ class DataItemForFunctionConfirmModel:
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
         bin_string_list = [string for string in bin_string_list if 4 < len(string.split()) < 20][:10]
         bin_strings = " ".join(bin_string_list)
-        if bin_strings:
-            final_text += f" {separator} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings} {SpecialToken.ASM_CODE_SEPARATOR.value}"
-        else:
-            final_text += f" {separator} {SpecialToken.ASM_CODE_SEPARATOR.value}"
+        final_text += f" {separator} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings} {SpecialToken.ASM_CODE_SEPARATOR.value}"
+
         # 汇编代码
         for asm_code in self.asm_codes:
             final_text += f" {asm_code}"
@@ -329,6 +325,7 @@ class DataItemForCodeSnippetPositioningModel:
                  asm_codes: List[str],
                  answer_start_index: int,
                  answer_end_index: int):
+        self.id = 0
         self.function_name = function_name
         self.src_codes = src_codes
         self.asm_codes = asm_codes
@@ -342,6 +339,7 @@ class DataItemForCodeSnippetPositioningModel:
 
     def custom_serialize(self):
         return {
+            "id": self.id,
             "function_name": self.function_name,
             "src_length": self.src_length,
             "asm_length": self.asm_length,
@@ -354,13 +352,15 @@ class DataItemForCodeSnippetPositioningModel:
 
     @classmethod
     def init_from_dict(cls, data: dict):
-        return cls(
+        obj = cls(
             function_name=data['function_name'],
             src_codes=data['src_codes'],
             asm_codes=data['asm_codes'],
             answer_start_index=data['answer_start_index'],
             answer_end_index=data['answer_end_index'],
         )
+        obj.id = data.get('id', 0)
+        return obj
 
     @classmethod
     def get_special_tokens(cls):
@@ -387,7 +387,7 @@ class DataItemForCodeSnippetPositioningModel:
         for line in self.src_codes:
             if line.startswith(("+", "-")):
                 line = line[1:]
-                lines.append(line.strip())
+            lines.append(line.strip())
         self.src_codes = normalize_src_lines(lines)
 
         # 正规化处理汇编代码
