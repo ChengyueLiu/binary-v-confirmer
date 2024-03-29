@@ -3,15 +3,17 @@ import difflib
 import random
 from typing import List
 
+import rapidfuzz.fuzz
 from loguru import logger
 from tqdm import tqdm
 
-from bintools.general.normalize import normalize_asm_code
+from bintools.general.normalize import normalize_asm_code, normalize_src_lines
 from bintools.general.file_tool import save_to_json_file
 from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature, \
     SpecialToken
-from setting.settings import ASM_CODE_NUM
-
+from setting.settings import ASM_CODE_NUM, SRC_CODE_NUM
+from rapidfuzz import fuzz
+from rapidfuzz import process
 """
 这个文件的作用就是生成 TrainDataItemForFunctionConfirmModel
 """
@@ -47,38 +49,38 @@ def levenshtein_distance(asm_codes_1: List[str], asm_codes_2: List[str]):
     return difflib.SequenceMatcher(None, s1, s2).ratio()
 
 
-def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3,similarity_threshold = 0.5):
+def generate_data_items(function_features: List[FunctionFeature], negative_ratio: int = 3,similarity_threshold = 0.1):
     all_train_data_items = []
-
+    src_text_dict = {" ".join(normalize_src_lines(ff.src_function_features[0].original_lines[:SRC_CODE_NUM])):ff for ff in function_features}
+    src_text_list = list(src_text_dict.keys())
     for i, ff in tqdm(enumerate(function_features), desc="Generate data items"):
         # 正例子
         positive_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
         all_train_data_items.append(positive_item)
 
-        # 打乱function_features列表以随机化选择负例过程
-        # 创建一个除了当前元素之外的列表副本
-        other_function_features = function_features[:i] + function_features[i+1:]
-        random.shuffle(other_function_features)  # 随机打乱列表
-
         # 计算相似度
-        similarities = []
-        count = 0
-        original_normalized_asm_codes = this_normalize_asm_code(ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
-        for other_ff in other_function_features:
-            sample_normalized_asm_codes = this_normalize_asm_code(
-                other_ff.bin_function_feature.asm_codes[:ASM_CODE_NUM])
-            similarity = levenshtein_distance(original_normalized_asm_codes, sample_normalized_asm_codes)
-            if similarity < similarity_threshold:
-                similarities.append((similarity, other_ff))
-                count += 1
-            if count >= negative_ratio:
-                break
+        target_src_text = " ".join(normalize_src_lines(ff.src_function_features[0].original_lines)[:SRC_CODE_NUM])
+        # 最相似的5个
+        top_n_negative_num = negative_ratio // 2
+        top_n_similar_texts = process.extract(target_src_text, src_text_list, scorer=fuzz.ratio, limit=top_n_negative_num+1)
 
-        # 按相似度排序，选择相似度最低的
-        sorted_similarities = sorted(similarities, key=lambda x: x[0])
+        # 最不相似的5个
+        count = negative_ratio - top_n_negative_num
+        least_n_similar_texts = []
+        for j,(other_ff_text,other_ff) in enumerate(src_text_dict.items()):
+            if i==j:
+                continue
+            similarity = rapidfuzz.fuzz.ratio(target_src_text,other_ff_text)
+            if similarity < similarity_threshold:
+                least_n_similar_texts.append((other_ff_text,similarity,j))
+                if count>=5:
+                    break
+
 
         # 生成负例
-        for _, sample_function_feature in sorted_similarities[:negative_ratio]:
+        negative_similarities = top_n_similar_texts[1:] + least_n_similar_texts
+        for text,similarity,index in negative_similarities:
+            sample_function_feature = src_text_dict[text]
             wrong_match_function_feature = copy.deepcopy(ff)
             wrong_match_function_feature.bin_function_feature = sample_function_feature.bin_function_feature
             negative_item = DataItemForFunctionConfirmModel.init_from_function_feature(wrong_match_function_feature,
@@ -97,7 +99,7 @@ def convert_function_feature_to_train_data(function_feature_path: str,
                                            val_data_items_save_path: str,
                                            test_data_items_save_path: str,
                                            negative_ratio: int = 3,
-                                           similarity_threshold=0.5):
+                                           similarity_threshold=0.1):
     """
     把匹配的源代码函数和二进制函数特征转换成训练数据，同时生成负样本，并保存到指定路径
 
