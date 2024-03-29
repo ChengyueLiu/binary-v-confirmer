@@ -15,5 +15,11 @@ POSSIBLE_BIN_FUNCTION_TOP_N = env.int("POSSIBLE_BIN_FUNCTION_TOP_N", 1)
 
 
 
+# Model 1
+# 训练数据源代码有效代码最小行数
+MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM = env.int("MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM", 7)
+# 训练数据汇编码最小行数
+MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM = env.int("MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM", 10)
+
 # AsmCodeNum 取多长的汇编代码，判断是否相似
 ASM_CODE_NUM = env.int("ASM_CODE_NUM", 35)

@@ -12,6 +12,7 @@ from main.extractors.src_function_feature_extractor.tree_sitter_extractor import
     FileFeatureExtractor
 from main.interface import SrcFunctionFeature, BinFunctionFeature, FunctionFeature
 from setting.paths import IDA_PRO_PATH, IDA_PRO_SCRIPT_PATH, IDA_PRO_OUTPUT_PATH
+from setting.settings import MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM, MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM
 
 
 def extract_matched_function_feature(src_bin_pairs, save_path: str):
@@ -42,11 +43,11 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
         function_feature_dict = {}
         for src_function_feature in src_function_features:
             effective_line_num = count_function_effective_lines(src_function_feature.original_lines)
-            if effective_line_num < 7 or effective_line_num > 100:
+            if effective_line_num < MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM:
                 continue
             for bin_function_feature in bin_function_features:
                 # 跳过太短的汇编函数
-                if len(bin_function_feature.asm_codes) < 10:
+                if len(bin_function_feature.asm_codes) < MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM:
                     continue
                 # 判断是否是同一个
                 src_function_name = src_function_feature.name

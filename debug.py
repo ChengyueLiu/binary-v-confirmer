@@ -33,12 +33,15 @@
 #     if token_length>512:
 #         print(token_length)
 from bintools.general.file_tool import load_from_json_file
+from bintools.general.src_tool import count_function_effective_lines
 from main.interface import DataItemForFunctionConfirmModel
 
 test_items = load_from_json_file("TestCases/model_train/model_1/train_data/test_data.json")
 test_item_dict = {item["id"]: item for item in test_items}
 for id, item in test_item_dict.items():
-    demo = DataItemForFunctionConfirmModel.init_from_dict(test_item_dict[id])
+    demo = DataItemForFunctionConfirmModel.init_from_dict(test_item_dict[7583])
+    effective_line_num = count_function_effective_lines(demo.src_codes)
     demo.normalize()
     asm_strings = demo.get_train_text().split("[ASM_CODE]")[1]
-    print(id, demo.get_train_text())
+    if effective_line_num < 10:
+        print(id, demo.get_train_text())
