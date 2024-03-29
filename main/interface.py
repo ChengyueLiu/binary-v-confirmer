@@ -278,11 +278,10 @@ class DataItemForFunctionConfirmModel:
         src_codes = []
         start_flag = False
         for src_code in self.src_codes:
-            if "{" in src_code:
-                start_flag = True
-                continue
-            if not start_flag:
-                continue
+            # if "{" in src_code:
+            #     start_flag = True
+            # if not start_flag:
+            #     continue
             src_codes.append(src_code)
             src_code_word_num += len(src_code.split())
             if src_code_word_num > SRC_CODE_WORD_NUM_LIMIT or len(src_codes) >= SRC_CODE_NUM or len(" ".join(src_codes)) > 500:
