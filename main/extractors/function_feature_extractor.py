@@ -6,6 +6,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file, check_file_path, save_to_json_file
+from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.src_function_feature_extractor.entities import ProjectFeature, NodeType
 from main.extractors.src_function_feature_extractor.tree_sitter_extractor import ProjectFeatureExtractor, \
     FileFeatureExtractor
@@ -40,8 +41,8 @@ def extract_matched_function_feature(src_bin_pairs, save_path: str):
         # 找到相同的函数，从而能够合并特征
         function_feature_dict = {}
         for src_function_feature in src_function_features:
-            # 跳过太短的函数
-            if len(src_function_feature.original_lines) < 7 or len(src_function_feature.original_lines) > 100:
+            effective_line_num = count_function_effective_lines(src_function_feature.original_lines)
+            if effective_line_num < 7 or effective_line_num > 100:
                 continue
             for bin_function_feature in bin_function_features:
                 # 跳过太短的汇编函数
