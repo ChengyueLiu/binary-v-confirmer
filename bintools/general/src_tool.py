@@ -8,4 +8,8 @@ def count_function_effective_lines(lines):
         if "{" in line:
             start_index = i
             break
-    return len(lines[start_index:])
+    count = 0
+    for line in lines[start_index:]:
+        if len(line.split()) > 1:
+            count += 1
+    return count
