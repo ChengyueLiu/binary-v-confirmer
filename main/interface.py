@@ -7,7 +7,7 @@ from bintools.general.normalize import normalized_asm_lines, normalize_asm_code,
     normalize_strings
 from bintools.general.file_tool import load_from_json_file
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
-from setting.settings import ASM_CODE_NUM
+from setting.settings import ASM_CODE_NUM, SRC_CODE_NUM
 
 
 @dataclass
@@ -265,7 +265,7 @@ class DataItemForFunctionConfirmModel:
         :return:
         """
         # 限制最多15行源代码
-        src_code_text = remove_comments(" ".join(self.src_codes[:15]))
+        src_code_text = remove_comments(" ".join(self.src_codes[:SRC_CODE_NUM]))
         # # 去掉函数头的部分
         # if "{" in src_code_text:
         #     src_code_text = src_code_text.split("{", 1)[1]
