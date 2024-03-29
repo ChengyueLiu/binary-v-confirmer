@@ -92,7 +92,7 @@ def save_to_json_file(data, file_path, encoding='utf-8', output_log=False):
         logger.info(f"Saving data to {file_path}")
 
     with open(file_path, 'w', encoding=encoding) as f:
-        json.dump(data, f, indent=4)
+        json.dump(data, f, indent=4, ensure_ascii=False)
 
     if output_log:
         logger.info(f"Data saved to {file_path}")
