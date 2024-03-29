@@ -266,7 +266,7 @@ class DataItemForFunctionConfirmModel:
         """
         # 源代码字符串
         src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)
-        src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
+        src_string_list = [string.strip() for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join(src_string_list)
         if src_strings:
             final_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings} {SpecialToken.SRC_CODE_SEPARATOR.value} "
@@ -367,7 +367,7 @@ class DataItemForCodeSnippetPositioningModel:
         return SpecialToken.get_asm_special_tokens()
 
     def get_question_text(self):
-        return remove_comments(" ".join(self.src_codes))
+        return " ".join(self.src_codes)
 
     def get_context_text(self):
         return " ".join(self.asm_codes)
@@ -383,37 +383,18 @@ class DataItemForCodeSnippetPositioningModel:
 
     def normalize(self):
         # 正规化处理源代码
-        self.normalize_src_codes()
-
-        # 正规化处理汇编代码
-        self.normalize_asm_codes()
-
-    def normalize_src_codes(self):
-        normalized_src_codes = []
+        lines = []
         for line in self.src_codes:
             if line.startswith(("+", "-")):
                 line = line[1:]
-            if not (normalized_line := line.strip()):
-                continue
-            normalized_src_codes.append(normalized_line)
-        self.src_codes = normalized_src_codes
+                lines.append(line.strip())
+        self.src_codes = normalize_src_lines(lines)
 
-    def normalize_asm_codes(self):
-        self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := normalize_asm_code(code,
-                                                                    reg_token=SpecialToken.ASM_REG.value,
-                                                                    num_token=SpecialToken.ASM_NUM.value,
-                                                                    jump_token=SpecialToken.ASM_JUMP.value,
-                                                                    loc_token=SpecialToken.ASM_LOC.value,
-                                                                    mem_token=SpecialToken.ASM_MEM.value))]
+        # 正规化处理汇编代码
+        self.asm_codes = normalized_asm_lines(self.asm_codes)
 
-        self.answer_asm_codes = [normalized_code for code in self.answer_asm_codes
-                                 if (normalized_code := normalize_asm_code(code,
-                                                                           reg_token=SpecialToken.ASM_REG.value,
-                                                                           num_token=SpecialToken.ASM_NUM.value,
-                                                                           jump_token=SpecialToken.ASM_JUMP.value,
-                                                                           loc_token=SpecialToken.ASM_LOC.value,
-                                                                           mem_token=SpecialToken.ASM_MEM.value))]
+        self.answer_asm_codes = normalized_asm_lines(self.answer_asm_codes)
+
 
 
 class DataItemForCodeSnippetConfirmModel:

@@ -135,5 +135,11 @@ def normalize_strings(strs):
     """
     去重，并去除长度小于4的字符串
     """
-    return list(set([normalized_string for string in strs
-                     if len((normalized_string := string.strip())) >= 4]))
+    normalized_strings = []
+    for string in strs:
+        normalized_string = string.strip()
+        if normalized_string.endswith("\\n"):
+            normalized_string = normalized_string[:-2]
+        if len(normalized_string) >= 4:
+            normalized_strings.append(normalized_string)
+    return list(set(normalized_strings))
