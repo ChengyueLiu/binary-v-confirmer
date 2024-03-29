@@ -268,6 +268,7 @@ class DataItemForFunctionConfirmModel:
         src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)
         src_string_list = [string for string in src_string_list if 4 < len(string.split()) < 20][:10]
         src_strings = " ".join(src_string_list)
+        src_strings = ""
         if src_strings:
             final_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings} {SpecialToken.SRC_CODE_SEPARATOR.value} "
         else:
@@ -287,6 +288,7 @@ class DataItemForFunctionConfirmModel:
         bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
         bin_string_list = [string for string in bin_string_list if 4 < len(string.split()) < 20][:10]
         bin_strings = " ".join(bin_string_list)
+        bin_strings = ""
         if bin_strings:
             final_text += f" {separator} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings} {SpecialToken.ASM_CODE_SEPARATOR.value}"
         else:
