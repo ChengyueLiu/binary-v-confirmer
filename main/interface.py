@@ -6,6 +6,7 @@ from typing import List
 from bintools.general.normalize import normalized_asm_lines, normalize_asm_code, normalize_src_lines, remove_comments, \
     normalize_strings
 from bintools.general.file_tool import load_from_json_file
+from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
 from setting.settings import ASM_CODE_NUM, SRC_CODE_WORD_NUM_LIMIT, SRC_CODE_NUM
 
@@ -323,31 +324,31 @@ class DataItemForCodeSnippetPositioningModel:
     def __init__(self, function_name: str,
                  src_codes: List[str],
                  asm_codes: List[str],
-                 answer_start_index: int,
-                 answer_end_index: int):
+                 answer_asm_codes: List[str],):
         self.id = 0
         self.function_name = function_name
         self.src_codes = src_codes
         self.asm_codes = asm_codes
-        self.answer_start_index = answer_start_index
-        self.answer_end_index = answer_end_index
-        self.answer_asm_codes = self.asm_codes[self.answer_start_index:self.answer_end_index + 1]
+        self.answer_asm_codes = answer_asm_codes
 
-        self.answer_length = len(self.asm_codes[self.answer_start_index:self.answer_end_index + 1])  # 结束位置的索引是闭区间
         self.src_length = len(self.src_codes)
+        self.effective_src_length = count_function_effective_lines(self.src_codes)
         self.asm_length = len(self.asm_codes)
+        self.answer_length = len(self.answer_asm_codes)
+
+
 
     def custom_serialize(self):
         return {
             "id": self.id,
             "function_name": self.function_name,
             "src_length": self.src_length,
+            "effective_src_length": self.effective_src_length,
             "asm_length": self.asm_length,
             "answer_length": self.answer_length,
-            "answer_start_index": self.answer_start_index,
-            "answer_end_index": self.answer_end_index,
             "src_codes": self.src_codes,
             "asm_codes": self.asm_codes,
+            "answer_asm_codes": self.answer_asm_codes,
         }
 
     @classmethod
@@ -356,8 +357,7 @@ class DataItemForCodeSnippetPositioningModel:
             function_name=data['function_name'],
             src_codes=data['src_codes'],
             asm_codes=data['asm_codes'],
-            answer_start_index=data['answer_start_index'],
-            answer_end_index=data['answer_end_index'],
+            answer_asm_codes=data['answer_asm_codes']
         )
         obj.id = data.get('id', 0)
         return obj

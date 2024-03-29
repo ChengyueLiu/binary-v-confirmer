@@ -9,6 +9,7 @@ from loguru import logger
 from tqdm import tqdm
 
 from bintools.general.file_tool import find_files_in_dir, save_to_json_file, load_from_json_file
+from bintools.general.src_tool import count_function_effective_lines
 from main.interface import DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_positioning_model.mapping_parser import MappingParser
 
@@ -159,7 +160,7 @@ def convert_json_to_raw_train_data(original_mapping_file_dir, raw_train_data_jso
                     current_src_line = src_code_dict.get(sub_function_name, {})["src_codes"].get(line_number, None)
                     if current_src_line is None:
                         continue
-                    previous_src_lines, next_src_lines = get_src_context(line_number, current_src_code_dict)
+                    # previous_src_lines, next_src_lines = get_src_context(line_number, current_src_code_dict)
 
                     raw_train_data_items.append({
                         "function_name": function_name,
@@ -167,9 +168,7 @@ def convert_json_to_raw_train_data(original_mapping_file_dir, raw_train_data_jso
                         "real_file_path": real_file_path,
                         "line_number": line_number,
                         "is_discriminator": is_discriminator,
-                        "previous_src_lines": previous_src_lines,
-                        "current_src_line": current_src_line,
-                        "next_src_lines": next_src_lines,
+                        "src_dict": current_src_code_dict,
                         "asm_lines": asm_lines,
                     })
             all_raw_train_data_items[function_name] = raw_train_data_items
@@ -198,7 +197,7 @@ def convert_raw_train_data_to_train_data(raw_train_data_json_dir,
     save_to_json_file([test_data_item.custom_serialize() for test_data_item in test_data], test_data_json_file)
 
 
-def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
+def _convert_to_train_data(raw_train_data, max_src_lines=7):
     # 合并 discriminator
     merge_discriminators(raw_train_data)
 
@@ -209,38 +208,53 @@ def _convert_to_train_data(raw_train_data, max_src_lines=5, max_asm_lines=50):
     # 遍历这些片段，构成训练数据
     item_id = 0
     for function_name, left_raw_data_items, current_raw_data_items, right_raw_data_items in train_data_items:
-
-        src_dict, min_line, max_line = process_src_codes(current_raw_data_items)
-        if not src_dict:
-            continue
         # 匹配的汇编代码
-        asm_codes = []
+        answer_asm_codes = []
+        min_line = None
+        max_line = None
         for current_raw_data_item in current_raw_data_items:
-            asm_codes.extend(current_raw_data_item["asm_lines"])
+            # 跳过不是当前函数的
+            if current_raw_data_item['sub_function_name'] != function_name:
+                continue
+            answer_asm_codes.extend(current_raw_data_item["asm_lines"])
+            line_number = current_raw_data_item["line_number"]
+            if not min_line or line_number < min_line:
+                min_line = line_number
+            if not max_line or line_number > max_line:
+                max_line = line_number
+        if not answer_asm_codes:
+            continue
 
-        # 补充答案上下文，计算答案位置
-        answer_start_index, answer_end_index, answer_length, asm_codes = cal_answer_position(asm_codes,
-                                                                                             left_raw_data_items,
-                                                                                             max_asm_lines,
-                                                                                             right_raw_data_items,
-                                                                                             src_dict,
-                                                                                             min_line,
-                                                                                             max_line)
-        # 重新构建源代码
+        # 全部的汇编代码
+        asm_codes = []
+        for raw_data_item in left_raw_data_items:
+            asm_codes.extend(raw_data_item["asm_lines"])
+        for raw_data_item in current_raw_data_items:
+            asm_codes.extend(raw_data_item["asm_lines"])
+        for raw_data_item in right_raw_data_items:
+            asm_codes.extend(raw_data_item["asm_lines"])
+
+        # 源代码
+        src_dict = current_raw_data_items[0]["src_dict"]
         src_codes = []
         for i in range(min_line, max_line + 1):
-            src_codes.append(src_dict.get(i, ""))
+            src_codes.append(src_dict.get(str(i), ""))
 
-        # 筛选数据
-        succeed = check_effective(src_codes, asm_codes)
-        if not succeed:
+        # 筛选数据: 至少3行有效源代码
+        count = count_function_effective_lines(src_codes)
+        if count < 5:
             continue
+        if len(asm_codes) > 50:
+            continue
+        # 汇编代码长度在源代码的2倍到10倍之间
+        if not (2 * count < len(answer_asm_codes) < 10 * count):
+            continue
+
         data_item = DataItemForCodeSnippetPositioningModel(
             function_name=function_name,
             src_codes=src_codes,
             asm_codes=asm_codes,
-            answer_start_index=answer_start_index,
-            answer_end_index=answer_end_index,
+            answer_asm_codes=answer_asm_codes,
         )
         data_item.id = item_id
         data_items.append(data_item)
@@ -286,7 +300,7 @@ def random_select_snippets(max_src_lines, raw_train_data, max_num=3):
     return train_data_items
 
 
-def process_src_codes(current_raw_data_items):
+def process_src_codes(function_name, current_raw_data_items):
     if not current_raw_data_items:
         return [], None, None
 
@@ -295,8 +309,11 @@ def process_src_codes(current_raw_data_items):
     min_line = None
     max_line = None
     for current_raw_data_item in current_raw_data_items:
-        src_code = current_raw_data_item["current_src_line"]
+        if current_raw_data_item['sub_function_name'] != function_name:
+            continue
+        src_dict = current_raw_data_item["src_dict"]
         src_line_num = current_raw_data_item["line_number"]
+        src_code = src_dict.get(src_line_num)
         if not min_line or src_line_num < min_line:
             min_line = src_line_num
         if not max_line or src_line_num > max_line:
@@ -309,7 +326,9 @@ def process_src_codes(current_raw_data_items):
             src_dict[i] = line
         for i, line in enumerate(next_src_lines, start=src_line_num + 1):
             src_dict[i] = line
-
+    for k, v in src_dict.items():
+        if v == src_dict.get(k - 1):
+            print(k, v)
     return src_dict, min_line, max_line
 
 
