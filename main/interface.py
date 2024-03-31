@@ -258,48 +258,29 @@ class DataItemForFunctionConfirmModel:
     def get_special_tokens(cls):
         return SpecialToken.get_all_special_tokens()
 
-    def get_train_text(self, separator):
+    def get_train_text(self, separator, src_code_diff=0):
         """
         生成text, 用于训练
         内容包括源代码、汇编代码、字符串、数字，以及特殊标记，主要用源码和汇编码的开头部分，以及字符串和数字
         :param separator:
         :return:
         """
-        # 源代码字符串
-        src_string_list = sorted(self.src_strings, key=lambda x: len(x), reverse=True)
-        src_string_list = [string.strip() for string in src_string_list if 4 < len(string.split()) < 20][:10]
-        src_strings = " ".join(src_string_list)
-        # final_text = f"{SpecialToken.SRC_STRING_SEPARATOR.value} {src_strings} {SpecialToken.SRC_CODE_SEPARATOR.value} "
-        src_strings = ""
-        final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} "
+        final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value}"
 
-
-        # 源代码, 不超过20行，60个单词，500个字符
-        src_code_word_num = len(src_strings.split())
-        src_codes = []
-        start_flag = False
-        for src_code in self.src_codes:
-            # if "{" in src_code:
-            #     start_flag = True
-            # if not start_flag:
-            #     continue
-            src_codes.append(src_code)
-            src_code_word_num += len(src_code.split())
-            if src_code_word_num > SRC_CODE_WORD_NUM_LIMIT or len(src_codes) >= SRC_CODE_NUM or len(" ".join(src_codes)) > 500:
+        # 源代码
+        count = 0
+        for i, src_code in enumerate(self.src_codes):
+            final_text += f" {src_code}"
+            if len(src_code) > 10:
+                count += 1
+            if count > SRC_CODE_NUM:
                 break
-        final_text += remove_comments(" ".join(src_codes))
-
-        # 汇编代码字符串
-        bin_string_list = sorted(self.bin_strings, key=lambda x: len(x), reverse=True)[:10]
-        bin_string_list = [string for string in bin_string_list if 4 < len(string.split()) < 20][:10]
-        bin_strings = " ".join(bin_string_list)
-        # final_text += f" {separator} {SpecialToken.BIN_STRING_SEPARATOR.value} {bin_strings} {SpecialToken.ASM_CODE_SEPARATOR.value}"
-        final_text += f" {separator} {SpecialToken.ASM_CODE_SEPARATOR.value}"
 
         # 汇编代码
+        final_text += f" {separator} {SpecialToken.ASM_CODE_SEPARATOR.value}"
         for asm_code in self.asm_codes:
             final_text += f" {asm_code}"
-            if len(final_text) > 1000:
+            if len(final_text) > 1100:
                 break
 
         return final_text
@@ -327,7 +308,7 @@ class DataItemForCodeSnippetPositioningModel:
     def __init__(self, function_name: str,
                  src_codes: List[str],
                  asm_codes: List[str],
-                 answer_asm_codes: List[str],):
+                 answer_asm_codes: List[str], ):
         self.id = 0
         self.function_name = function_name
         self.src_codes = src_codes
@@ -338,8 +319,6 @@ class DataItemForCodeSnippetPositioningModel:
         self.effective_src_length = count_function_effective_lines(self.src_codes)
         self.asm_length = len(self.asm_codes)
         self.answer_length = len(self.answer_asm_codes)
-
-
 
     def custom_serialize(self):
         return {
@@ -397,7 +376,6 @@ class DataItemForCodeSnippetPositioningModel:
         self.asm_codes = normalized_asm_lines(self.asm_codes)
 
         self.answer_asm_codes = normalized_asm_lines(self.answer_asm_codes)
-
 
 
 class DataItemForCodeSnippetConfirmModel:

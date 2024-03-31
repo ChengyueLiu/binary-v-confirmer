@@ -45,7 +45,7 @@ def init_train(train_data_json_file_path,
     model = torch.nn.DataParallel(model).to(device)
 
     # datasets
-    train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length)
+    train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length,is_train=True)
     val_dataset = create_dataset(val_data_json_file_path, tokenizer, token_max_length)
     test_dataset = create_dataset(test_data_json_file_path, tokenizer, token_max_length)
 

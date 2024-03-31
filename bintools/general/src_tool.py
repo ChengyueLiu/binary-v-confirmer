@@ -10,6 +10,6 @@ def count_function_effective_lines(lines):
             break
     count = 0
     for line in lines[start_index:]:
-        if len(line.split()) > 1:
+        if len(line.split()) > 1 or len(line.strip()) > 10:
             count += 1
     return count

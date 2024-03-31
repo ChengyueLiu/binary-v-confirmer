@@ -111,7 +111,7 @@ def train_model_1():
         val_data_save_path,
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
-        test_only=False,
+        test_only=True,
         epochs=30,
         batch_size=100,
     )
@@ -119,7 +119,8 @@ def train_model_1():
 
 if __name__ == '__main__':
     # Done
-    prepare_train_data_for_model_1()
-
-    # Done
-    # train_model_1()
+    # prepare_train_data_for_model_1()
+    train_model_1()
+    """
+    两个版本，1:20， 最终99.09%
+    """

@@ -8,6 +8,7 @@ from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
 from bintools.general.file_tool import load_from_json_file
+from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
 from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, PossibleBinFunction, \
     CauseFunction, SrcFunctionFeature
@@ -152,7 +153,7 @@ class FunctionFinder:
         max_ratio_threshold = 10
         for data_item in data_items:
             effective_asm_codes_num = len(data_item.asm_codes) - 1
-            effective_src_codes_num = len(data_item.src_codes) - 3
+            effective_src_codes_num = count_function_effective_lines(data_item.src_codes)
             if effective_src_codes_num <= 0:
                 effective_src_codes_num = 1
             ratio = round(effective_asm_codes_num / effective_src_codes_num, 2)

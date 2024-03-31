@@ -12,8 +12,8 @@ from main.models.code_snippet_confirm_model.model_application import SnippetConf
 from main.models.code_snippet_confirm_model_multi_choice.model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.function_confirm_model.model_application import FunctionFinder
-from setting.settings import CAUSE_FUNCTION_SIMILARITY_THRESHOLD, POSSIBLE_BIN_FUNCTION_TOP_N
-
+from setting.settings import CAUSE_FUNCTION_SIMILARITY_THRESHOLD, POSSIBLE_BIN_FUNCTION_TOP_N, \
+    MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM
 
 
 def generate_src_codes_text(src_codes: List[str]):
@@ -184,6 +184,8 @@ class VulConfirmTeam:
         # ---------- 以上是临时代码 ----------
 
         binary_analysis_info = BinaryAnalysisInfo(binary_path, len(bin_function_features))
+        # 筛选
+        bin_function_features = [bff for bff in bin_function_features if len(bff.asm_codes) > MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM]
         vul_analysis_info = VulAnalysisInfo(binary_analysis_info)
         for cause_function in vul.cause_functions:
             cause_function_analysis_info = CauseFunctionAnalysisInfo(cause_function.function_name)
@@ -193,6 +195,8 @@ class VulConfirmTeam:
             vul_src_function_feature: SrcFunctionFeature = extract_src_feature_for_specific_function(
                 cause_function.file_path,
                 cause_function.function_name)
+            if not vul_src_function_feature:
+                continue
 
             # 1. 找到漏洞函数(这里会过滤一些很短的或者很长的汇编函数)
             possible_vul_bin_functions = self.function_finder.find_bin_function(vul_src_function_feature,

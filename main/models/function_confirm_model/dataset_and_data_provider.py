@@ -8,8 +8,8 @@ from main.interface import DataItemForFunctionConfirmModel
 
 
 class FunctionConfirmDataset(Dataset):
-    def __init__(self, ids, texts, labels, tokenizer, max_len=512):
-        self.ids = ids # 用于记录原始数据的id, 方便调试
+    def __init__(self, item_ids, texts, labels, tokenizer, max_len=512):
+        self.item_ids = item_ids  # 用于记录原始数据的id, 方便调试
         self.texts = texts
         self.labels = labels
         self.tokenizer = tokenizer
@@ -19,6 +19,7 @@ class FunctionConfirmDataset(Dataset):
         return len(self.texts)
 
     def __getitem__(self, idx):
+        item_id = self.item_ids[idx]
         text = self.texts[idx]
         label = self.labels[idx]
 
@@ -33,7 +34,7 @@ class FunctionConfirmDataset(Dataset):
         )
 
         return {
-            'item_ids': self.ids[idx],
+            'item_ids': item_id,
             'input_ids': encoding['input_ids'].flatten(),
             'attention_mask': encoding['attention_mask'].flatten(),
             'labels': torch.tensor(label, dtype=torch.long)
@@ -53,7 +54,7 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
     return dataset
 
 
-def create_dataset(file_path, tokenizer, max_len=512):
+def create_dataset(file_path, tokenizer, max_len=512, is_train=False):
     train_data_json = load_from_json_file(file_path)
     data_items = []
     for item in train_data_json:
@@ -68,10 +69,15 @@ def create_dataset(file_path, tokenizer, max_len=512):
         item_ids.append(data_item.id)
         labels.append(data_item.label)
         texts.append(data_item.get_train_text(tokenizer.sep_token))
+        # if is_train and data_item.label == 1:
+        #     for i in [-2, -1, 1, 2]:
+        #         item_ids.append(data_item.id)
+        #         texts.append(data_item.get_train_text(tokenizer.sep_token, src_code_diff=i))
+        #         labels.append(data_item.label)
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
-    dataset = FunctionConfirmDataset(item_ids,texts, labels, tokenizer, max_len)
+    dataset = FunctionConfirmDataset(item_ids, texts, labels, tokenizer, max_len)
     return dataset
 
 
