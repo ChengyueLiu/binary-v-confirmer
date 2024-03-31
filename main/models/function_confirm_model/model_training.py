@@ -157,7 +157,7 @@ def run_train(train_data_json_file_path,
                 logger.info(f'No improvement in validation loss for {no_improvement_count} epochs.')
 
             # 如果连续5个epoch没有改进，提前停止训练
-            if no_improvement_count >= 5:
+            if no_improvement_count >= 3:
                 logger.info('Early stopping triggered. Training stopped.')
                 break
     logger.info('load model from model_weights.pth...')

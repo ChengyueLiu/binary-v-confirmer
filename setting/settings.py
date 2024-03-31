@@ -27,5 +27,7 @@ SRC_CODE_WORD_NUM_LIMIT = env.int("SRC_CODE_WORD_NUM_LIMIT", 60)
 
 # 汇编代码不超过35行
 SRC_CODE_NUM = env.int("SRC_CODE_NUM", 15)
+
+# 汇编代码不超过35行
 ASM_CODE_NUM = env.int("ASM_CODE_NUM", 35)
 

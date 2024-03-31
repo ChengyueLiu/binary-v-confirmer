@@ -268,12 +268,14 @@ class DataItemForFunctionConfirmModel:
         final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value}"
 
         # 源代码
-        count = 0
+        line_count = 0
+        word_count = 0
         for i, src_code in enumerate(self.src_codes):
             final_text += f" {src_code}"
             if len(src_code) > 10:
-                count += 1
-            if count > SRC_CODE_NUM:
+                line_count += 1
+            word_count += len(src_code.split())
+            if line_count > SRC_CODE_NUM or word_count > SRC_CODE_WORD_NUM_LIMIT:
                 break
 
         # 汇编代码
