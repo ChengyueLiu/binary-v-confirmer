@@ -41,7 +41,7 @@ def check_file_path(file_path, extension=None):
     return file_path
 
 
-def find_files_in_dir(dir_path: str, file_extension: str):
+def find_files_in_dir(dir_path: str, file_extension: str=None):
     """
     在目录中找出所有指定后缀的文件
     :param dir_path:
@@ -53,8 +53,11 @@ def find_files_in_dir(dir_path: str, file_extension: str):
     file_paths = []
     for root, dirs, files in os.walk(dir_path):
         for file in files:
-            if file.endswith(file_extension):
+            if not file_extension:
                 file_paths.append(os.path.join(root, file))
+            else:
+                if file.endswith(file_extension):
+                    file_paths.append(os.path.join(root, file))
 
     logger.info(f"Found {len(file_paths)} {file_extension} files")
     return file_paths
