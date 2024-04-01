@@ -14,6 +14,8 @@ CAUSE_FUNCTION_SIMILARITY_THRESHOLD = env.float("CAUSE_FUNCTION_SIMILARITY_THRES
 POSSIBLE_BIN_FUNCTION_TOP_N = env.int("POSSIBLE_BIN_FUNCTION_TOP_N", 1)
 
 # ------------ Model 1 ------------
+
+# TODO 重新整理这些参数
 # ----- 训练数据准备 -----
 # 训练数据源代码有效代码最小行数
 MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM = env.int("MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM", 5)

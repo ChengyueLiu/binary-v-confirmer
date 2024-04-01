@@ -9,10 +9,16 @@ from main.models.function_confirm_model.model_application import FunctionFinder
 
 # raw input
 # src
+# 3.2.1
 libcrypto_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\crypto"
 openssl_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\apps"
 libssl_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl\ssl"
 libpng_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\libpng"
+
+#1.1.1l
+libcrypto_1_1_1l_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl_1_1_1l\crypto"
+openssl_1_1_1l_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl_1_1_1l\apps"
+libssl_1_1_1l_src_dir = r"C:\Users\chengyue\Desktop\projects\github_projects\openssl_1_1_1l\ssl"
 
 # arch/：特定于架构的代码，如x86、ARM等。
 # kernel/：内核的核心功能，如进程管理和调度。
@@ -31,9 +37,15 @@ libpng_bin_path = r"TestCases/binaries/debian/libpng/libpng16.so.16.43.0"
 linux_kernel_path = "TestCases/binaries/linux_kernel_6.8.2/vmlinux"
 
 # self compiled bin
+# 3.2.1
 O0_libcrypto_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/libcrypto.so.3"
 O0_openssl_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/openssl"
 O0_libssl_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/libssl.so.3"
+
+# 1.1.1l
+O0_libcrypto_1_1_1l_bin_path = r"TestCases/binaries/self_compiled/openssl_1.1.1l/O0/libcrypto.so.1.1"
+O0_openssl_1_1_1l_bin_path = r"TestCases/binaries/self_compiled/openssl_1.1.1l/O0/openssl"
+O0_libssl_1_1_1l_bin_path = r"TestCases/binaries/self_compiled/openssl_1.1.1l/O0/libssl.so.1.1"
 
 # openssl matched_function_feature
 openssl_function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
@@ -68,6 +80,9 @@ def prepare_train_data_for_model_1():
         (libcrypto_src_dir, O0_libcrypto_bin_path),  # openssl O0 3.2.1
         (openssl_src_dir, O0_openssl_bin_path),  # openssl O0 3.2.1
         (libssl_src_dir, O0_libssl_bin_path),  # openssl O0 3.2.1
+        (libcrypto_1_1_1l_src_dir, O0_libcrypto_1_1_1l_bin_path),  # openssl O0 1.1.1l
+        (openssl_1_1_1l_src_dir, O0_openssl_1_1_1l_bin_path),  # openssl O0 1.1.1l
+        (libssl_1_1_1l_src_dir, O0_libssl_1_1_1l_bin_path),  # openssl O0 1.1.1l
     ]
 
     # 提取函数特征, 注意，这里有筛选，只提取长度在7-100之间的函数
@@ -87,14 +102,16 @@ def prepare_train_data_for_model_1():
     正负1:5   0.5的相似度阈值，
     正负1:10  0.2的相似度阈值，
     正负1:10  0.5的相似度阈值，97.8%
-    正负1:10  0.5的相似度阈值，（自己编译的O0级别），正在测试中
+    正负1:10  0.5的相似度阈值，（自己编译的O0级别），98.8
+    正负1:20  0.8的相似度阈值，（自己编译的O0级别），
+    
     """
     convert_function_feature_to_train_data(openssl_function_features_path,
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=10,
-                                           similarity_threshold=0.5)
+                                           negative_ratio=20,
+                                           similarity_threshold=0.8)
 
 
 def train_model_1():
@@ -111,7 +128,7 @@ def train_model_1():
         val_data_save_path,
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
-        test_only=True,
+        test_only=False,
         epochs=30,
         batch_size=100,
     )
@@ -119,8 +136,8 @@ def train_model_1():
 
 if __name__ == '__main__':
     # Done
-    # prepare_train_data_for_model_1()
-    train_model_1()
+    prepare_train_data_for_model_1()
+    # train_model_1()
     """
     两个版本，1:20， 最终99.09%
     """
