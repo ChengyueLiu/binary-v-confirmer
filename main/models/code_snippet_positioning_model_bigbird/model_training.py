@@ -35,7 +35,7 @@ def init_train(train_data_json_file_path,
     # tokenizer
     # tokenizer 和 model 需要根据 BigBird 进行修改
     config = AutoConfig.from_pretrained(model_name, attention_type="block_sparse", block_size=64, num_random_blocks=3)
-    tokenizer = AutoTokenizer.from_pretrained(model_name, config=config)
+    tokenizer = AutoTokenizer.from_pretrained(model_name, model_name, attention_type="block_sparse", block_size=64, num_random_blocks=3)
     for special_token in DataItemForCodeSnippetPositioningModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
