@@ -79,14 +79,14 @@ def prepare_train_data_for_model_1():
     """
     多进行几次实验，争取找到最好的训练样本比例和相似度阈值,以下实验结果，除特殊注明外，都是在debian二进制上实验的
     1:3     0.5     97
-    1:20    0.5     
     """
     convert_function_feature_to_train_data(openssl_function_features_path,
                                            train_data_save_path,
                                            val_data_save_path,
                                            test_data_save_path,
-                                           negative_ratio=10,
+                                           negative_ratio=5,
                                            similarity_threshold=0.5)
+
 
 
 def train_model_1():
@@ -111,8 +111,8 @@ def train_model_1():
 
 if __name__ == '__main__':
     # Done
-    # prepare_train_data_for_model_1()
-    train_model_1()
+    prepare_train_data_for_model_1()
+    # train_model_1()
     """
     两个版本，1:20， 最终99.09%
     """

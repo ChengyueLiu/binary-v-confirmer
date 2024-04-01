@@ -1,5 +1,6 @@
 import dataclasses
 import os
+import random
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
@@ -69,7 +70,7 @@ class SrcFunctionFeature:
         )
 
     @classmethod
-    def init_from_json_file(cls, file_path: str):
+    def batch_init_from_json_file(cls, file_path: str):
         """
         从json文件初始化SrcFunctionFeature对象
         :param file_path:
@@ -77,6 +78,16 @@ class SrcFunctionFeature:
         """
         data = load_from_json_file(file_path)
         return [cls.init_from_dict(item) for item in data]
+
+    @classmethod
+    def init_from_json_file(cls, file_path: str):
+        """
+        从json文件初始化SrcFunctionFeature对象
+        :param file_path:
+        :return:
+        """
+        data = load_from_json_file(file_path)
+        return cls.init_from_dict(data)
 
     def custom_serialize(self):
         return {
@@ -763,6 +774,41 @@ class VulAnalysisInfo:
 
 
 @dataclass
+class ASM_CODE_SNIPPET_MAPPING:
+    """
+    通过AUTO_COMPILE 生成的数据
+    {
+                "function_name": function_name,
+                "sub_function_name": sub_function_name,
+                "real_file_path": real_file_path,
+                "src_line_number": line_number,
+                "is_discriminator": is_discriminator,
+                "src_line": current_src_line,
+                "asm_lines": asm_lines,
+            }
+    """
+    function_name: str
+    sub_function_name: str
+    real_file_path: str
+    src_line_number: int
+    is_discriminator: bool
+    src_line: str
+    asm_lines: List[str]
+
+    @classmethod
+    def init_from_dict(cls, data: dict):
+        return cls(
+            function_name=data['function_name'],
+            sub_function_name=data['sub_function_name'],
+            real_file_path=data['real_file_path'],
+            src_line_number=data['src_line_number'],
+            is_discriminator=data['is_discriminator'],
+            src_line=data['src_line'],
+            asm_lines=data['asm_lines']
+        )
+
+
+@dataclass
 class TrainFunction:
     def __init__(self, src_file_path: str, binary_base_dir: str):
         self.function_save_path = src_file_path
@@ -811,3 +857,152 @@ class TrainFunction:
         obj.effective_src_line_num = data.get('effective_src_line_num', 0)
 
         return obj
+
+    def load_src_feature(self) -> SrcFunctionFeature | None:
+        path = self.get_src_feature_path()
+        if not os.path.exists(path):
+            return None
+
+        return SrcFunctionFeature.init_from_json_file(path)
+
+    def load_asm_code_snippet_mappings(self, compiler, opt) -> List[ASM_CODE_SNIPPET_MAPPING] | None:
+        """
+        通过AUTO_COMPILE 生成的数据
+        {
+                    "function_name": function_name,
+                    "sub_function_name": sub_function_name,
+                    "real_file_path": real_file_path,
+                    "src_line_number": line_number,
+                    "is_discriminator": is_discriminator,
+                    "src_line": current_src_line,
+                    "asm_lines": asm_lines,
+                }
+        """
+        path = self.get_asm_path(compiler, opt)
+        if not os.path.exists(path):
+            return None
+
+        asm_dict = load_from_json_file(path)
+        mappings = []
+        for mapping_dict in asm_dict["asm_code_snippet_mappings"]:
+            mappings.append(ASM_CODE_SNIPPET_MAPPING.init_from_dict(mapping_dict))
+        return mappings
+
+    def generate_model_1_train_data_item(self):
+        src_function_feature = self.load_src_feature()
+        if src_function_feature is None:
+            return None
+
+        asm_snippet_mappings = self.load_asm_code_snippet_mappings('gcc', 'O0')
+        if not asm_snippet_mappings:
+            return None
+
+        asm_codes = []
+        for asm_snippet_mapping in asm_snippet_mappings:
+            asm_codes.extend(asm_snippet_mapping.asm_lines)
+
+        positive_train_data_item = DataItemForFunctionConfirmModel(
+            function_name=self.function_name,
+            src_codes=src_function_feature.original_lines,
+            src_strings=src_function_feature.strings,
+            src_numbers=src_function_feature.numbers,
+            asm_codes=asm_codes,
+            bin_strings=[],
+            bin_numbers=[],
+            bin_function_name=self.function_name,
+            label=1
+        )
+
+        return positive_train_data_item
+
+    def generate_model_2_train_data_item(self):
+        """
+        最少10行源代码，才适合作为训练数据
+        """
+        # 必须要有源代码
+        src_function_feature = self.load_src_feature()
+        if src_function_feature is None:
+            return None
+
+        # 源代码至少10行
+        src_codes = src_function_feature.original_lines
+        if len(src_codes) < 10:
+            return None
+
+        # 必须要有汇编代码
+        asm_snippet_mappings = self.load_asm_code_snippet_mappings('gcc', 'O0')
+        if not asm_snippet_mappings:
+            return None
+
+        # 随机选择源代码片段
+        src_part_start_index = random.randint(3, len(src_codes) - 4)  # 不要前三行，因为可能是函数声明，不要最后三行(-4)，片段至少3行
+        src_part_end_index = src_part_start_index + random.randint(src_part_start_index, len(src_codes) - 1)
+        question_src_codes = src_codes[src_part_start_index:src_part_end_index + 1]
+        print(
+            f"src_codes length : {len(src_codes)}, start_line: {src_part_start_index}, end_line: {src_part_end_index}")
+
+        # 找到对应的汇编代码片段
+        asm_codes = []
+        answer_asm_codes = []
+        for asm_snippet_mapping in asm_snippet_mappings:
+            asm_codes.extend(asm_snippet_mapping.asm_lines)
+            if src_part_start_index <= asm_snippet_mapping.src_line_number <= src_part_end_index:
+                answer_asm_codes.extend(asm_snippet_mapping.asm_lines)
+
+        # 生成数据项
+        DataItemForCodeSnippetPositioningModel(
+            function_name=self.function_name,
+            src_codes=question_src_codes,
+            asm_codes=asm_codes,
+            answer_asm_codes=answer_asm_codes
+        )
+
+    def generate_model_3_train_data_item(self):
+        """
+        这里只生成了正确答案，还需要再生成错误答案
+            错误答案 1： 随机插入3行源代码
+            错误答案 2： 随机移除3行源代码
+            错误答案 3： 随机替换3行源代码
+        """
+        # 必须要有源代码
+        src_function_feature = self.load_src_feature()
+        if src_function_feature is None:
+            return None
+
+        # 源代码至少10行
+        src_codes = src_function_feature.original_lines
+        if len(src_codes) < 10:
+            return None
+
+        # 必须要有汇编代码
+        asm_snippet_mappings = self.load_asm_code_snippet_mappings('gcc', 'O0')
+        if not asm_snippet_mappings:
+            return None
+
+        # 随机选择源代码片段, 作为正确答案
+        src_part_start_index = random.randint(3, len(src_codes) - 4)  # 开始点在 [3, -3]
+        src_part_end_index = src_part_start_index + random.randint(src_part_start_index,
+                                                                   src_part_start_index + 15)  # 选取不超过15行的源代码
+        right_answer_src_codes = src_codes[src_part_start_index:src_part_end_index + 1]
+        print(
+            f"src_codes length : {len(src_codes)}, start_line: {src_part_start_index}, end_line: {src_part_end_index}")
+
+        # 找到对应的汇编代码片段，作为问题
+        asm_codes = []
+        question_asm_codes = []
+        for asm_snippet_mapping in asm_snippet_mappings:
+            asm_codes.extend(asm_snippet_mapping.asm_lines)
+            if src_part_start_index <= asm_snippet_mapping.src_line_number <= src_part_end_index:
+                question_asm_codes.extend(asm_snippet_mapping.asm_lines)
+
+        # 生成数据项
+        DataItemForCodeSnippetConfirmModelMC(
+            asm_codes=question_asm_codes,
+            right_src_codes=right_answer_src_codes,
+            wrong_src_codes=[]
+        )
+
+    @classmethod
+    def check_data_items(cls):
+        # 检查有多少个数据项
+        pass

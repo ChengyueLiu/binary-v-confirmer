@@ -94,7 +94,6 @@ def extract_asm(objdump_path, start_path, asm_path):
 
     final_result = {}
     for function in functions:
-        raw_train_data_items = []
         function_name = function["function_name"]
         sub_functions = function["sub_functions"]
         # 第一轮遍历，找到所有的源代码
