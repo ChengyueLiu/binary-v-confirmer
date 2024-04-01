@@ -151,7 +151,7 @@ def process_file(args):
         if (src_line_num := count_function_effective_lines(
                 src_function_feature.original_lines)) < MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM:
             return None
-        train_function.src_line_num = src_line_num
+        train_function.effective_src_line_num = src_line_num
 
         # save src feature
         save_to_json_file(src_function_feature.custom_serialize(), train_function.get_src_feature_path())
@@ -195,7 +195,7 @@ def main():
     # 多进程处理
     with Pool(processes=os.cpu_count()) as pool:
         args = [(c_file_path, root_source_dir, root_binary_dir, compiler_list, opt_list)
-                for c_file_path in file_paths[1000:2000]]
+                for c_file_path in file_paths]
 
         # 使用tqdm显示进度
         train_functions = []

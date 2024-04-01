@@ -781,7 +781,7 @@ class TrainFunction:
             raise Exception(err_msg)
 
         # 这个需要单独设置
-        self.src_line_num = 0
+        self.effective_src_line_num = 0
 
     def get_src_feature_path(self):
         return os.path.join(self.binary_base_dir, f"{self.file_name_without_ext}.src_feature.json")
@@ -799,7 +799,7 @@ class TrainFunction:
         return {
             "function_save_path": self.function_save_path,
             "binary_base_dir": self.binary_base_dir,
-            "src_line_num": self.src_line_num
+            "effective_src_line_num": self.effective_src_line_num
         }
 
     @classmethod
@@ -808,6 +808,6 @@ class TrainFunction:
             src_file_path=data['function_save_path'],
             binary_base_dir=data['binary_base_dir']
         )
-        obj.src_line_num = data.get('src_line_num', 0)
+        obj.effective_src_line_num = data.get('effective_src_line_num', 0)
 
         return obj
