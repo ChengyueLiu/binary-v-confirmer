@@ -636,7 +636,7 @@ class CauseFunction:
         self.vul_bin_function_names = [f.function_name for f in vul_bin_functions]
         self.vul_bin_function_num = len(vul_bin_functions)
 
-        repaired_bin_functions = [f for f in vul_bin_functions if f.is_repaired]
+        repaired_bin_functions = [f for f in self.possible_bin_functions if f.is_repaired]
         self.repaired_bin_function_names = [f.function_name for f in repaired_bin_functions]
         self.repaired_bin_function_num = len(repaired_bin_functions)
 
