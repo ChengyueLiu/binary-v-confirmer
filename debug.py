@@ -43,6 +43,8 @@
 #     src_length, src_words_num, src_token_length = get_token_length(src_code)
 #     asm_length, asm_words_num, asm_token_length = get_token_length(asm_code)
 #     print(f"{data_item.id}, src: {src_length}, {src_words_num}, {src_token_length}, {round(src_token_length/src_words_num)}, asm: {asm_length}, {asm_words_num}, {asm_token_length}, {round(asm_token_length/asm_words_num)}, total: {text_length}, {words_num}, {token_length}, {round(token_length/words_num)}")
+from rapidfuzz import process, fuzz
+
 from bintools.general.file_tool import load_from_json_file
 from main.interface import DataItemForCodeSnippetPositioningModel
 
@@ -55,8 +57,10 @@ test_item_dict = {item["id"]: item for item in test_items}
 label_0 = 0
 label_1 = 0
 failed_id_list = \
-    [0, 121, 161, 165, 472, 638, 759, 857, 978, 1115, 1155, 1157, 1309, 1354, 1358, 1573, 1693, 1936, 1957, 1974, 2035, 2068, 2134, 2239, 2244, 2253, 2462, 2463, 2695, 2728, 2915, 3102, 3236, 3283, 3388, 3545, 3795, 3817, 3825, 3831, 3902, 4163, 4201, 4327, 4374, 4399, 4518, 4595, 4615, 4619, 4653, 4663, 4730, 4735, 5005, 5028, 5029, 5154, 5266, 5357, 5495, 5500, 5587, 5594, 5598, 5631, 5784, 5785, 5786, 5811, 5981, 6041, 6092, 6258, 6501, 6721, 6842, 6861, 6863, 6870, 6877, 6952, 6962, 7073]
-
+    [6, 30, 32, 48, 58, 80, 86, 94, 108, 172, 178, 182, 201, 204, 270, 292, 326, 390, 408, 415, 418, 454, 468, 480, 505,
+     548, 576, 626, 642, 648, 715, 720, 726, 744, 816, 880, 898, 906, 922, 923, 944, 958, 979, 1038, 1070, 1100, 1110,
+     1136, 1146, 1164, 1193, 1200, 1206, 1216, 1270, 1288, 1306, 1346, 1360, 1420, 1434, 1454, 1492, 1514, 1558, 1574,
+     1575, 1599, 1600, 1622, 1632, 1634, 1650, 1664, 1688, 1702, 1718]
 
 for id in failed_id_list:
     demo = DataItemForFunctionConfirmModel.init_from_dict(test_item_dict[id])
@@ -78,3 +82,18 @@ print(len(failed_id_list), label_0, label_1)
 #     demo = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
 #     demo.normalize()
 #     print(demo.id, f"\n\tQ：{demo.get_question_text()}\n\tC:{demo.get_context_text()}\n\tA:{demo.get_answer_text()}")
+
+# def find_top_n_similar(target, strings, n=5):
+#     # 使用rapidfuzz的process.extract方法找到最相似的N个字符串
+#     top_n_similar = process.extract(target, strings, scorer=fuzz.ratio, limit=n)
+#     return top_n_similar
+#
+# # 示例字符串列表
+# strings = ["apple", "apples", "apricot", "banana", "cherry", "blueberry", "blackberry", "strawberry", "raspberry"]
+# # 目标字符串
+# target = "apple"
+#
+# # 找出最相似的5个字符串
+# top_similar = process.extract(target, strings, scorer=fuzz.ratio, limit=5)
+# for match in top_similar:
+#     print(match)
