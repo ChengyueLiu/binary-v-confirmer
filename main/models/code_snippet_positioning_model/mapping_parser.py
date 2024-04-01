@@ -1,5 +1,7 @@
 import re
 
+from loguru import logger
+
 
 class MappingParser:
     def __init__(self):
@@ -17,14 +19,16 @@ class MappingParser:
             self.raw_lines = [line.rstrip() for line in f.readlines()]
         for line in self.raw_lines:
             if line.strip():
-                file_path, _, _, self.file_type = line.split()
+                parts = line.split()
+                file_path = parts[0]
+                self.file_type = parts[-1]
                 self.file_path = file_path[:-1]
                 break
 
         # 拆分节
         self._split_sections()
         # 拆分函数
-        self._split_functions()
+        self._split_functions(mapping_file_path)
         # 解析函数
         self._parse_functions()
 
@@ -87,8 +91,18 @@ class MappingParser:
                     self._sections[current_section] = current_section_lines = []
                 current_section_lines.append(line)
 
-    def _split_functions(self):
-        text_section_lines = self._sections.get('.text')[1:]
+    def _split_functions(self,mapping_file_path):
+        text_section_lines = self._sections.get('.text')
+        if text_section_lines is None:
+            for section in self._sections:
+                if section.startswith('.text'):
+                    text_section_lines = self._sections[section]
+                    # logger.warning(f"use {section} as .text section.")
+                    break
+        if text_section_lines is None:
+            logger.warning(f"No .text section found in the mapping file: {mapping_file_path}")
+            return
+        text_section_lines = text_section_lines[1:]
         functions = []
         current_function_lines = []
         for line in text_section_lines[1:]:

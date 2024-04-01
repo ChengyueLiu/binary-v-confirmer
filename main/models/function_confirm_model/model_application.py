@@ -54,7 +54,7 @@ class FunctionFinder:
         # step 1 提取源代码特征
         # logger.info(f"Extracting feature for {src_file_path}")
         src_function_feature = extract_src_feature_for_specific_function(file_path=src_file_path,
-                                                                         vul_function_name=cause_function_name)
+                                                                         target_function_name=cause_function_name)
         if src_function_feature is None:
             logger.error(f"Can't find function {cause_function_name} in {src_file_path}")
             return None, None

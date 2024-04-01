@@ -1,4 +1,5 @@
 import dataclasses
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import List
@@ -759,3 +760,54 @@ class VulAnalysisInfo:
             "cause_function_analysis_infos": [cause_function_analysis_info.customer_serialize()
                                               for cause_function_analysis_info in self.cause_function_analysis_infos]
         }
+
+
+@dataclass
+class TrainFunction:
+    def __init__(self, src_file_path: str, binary_base_dir: str):
+        self.function_save_path = src_file_path
+        self.binary_base_dir = binary_base_dir
+
+        dir_path, file_name = os.path.split(src_file_path)
+        file_name_without_ext, ext = os.path.splitext(file_name)
+        self.file_name_without_ext = file_name_without_ext
+
+        if ".c_" in file_name_without_ext:
+            self.function_file_name, self.function_name = file_name_without_ext.split('.c_')
+        elif '.h_' in file_name_without_ext:
+            self.function_file_name, self.function_name = file_name_without_ext.split('.h_')
+        else:
+            err_msg = f"unexpected file name {file_name_without_ext}"
+            raise Exception(err_msg)
+
+        # 这个需要单独设置
+        self.src_line_num = 0
+
+    def get_src_feature_path(self):
+        return os.path.join(self.binary_base_dir, f"{self.file_name_without_ext}.src_feature.json")
+
+    def get_binary_path(self, compiler, opt):
+        return os.path.join(self.binary_base_dir, compiler, opt, f"{self.file_name_without_ext}.o")
+
+    def get_dump_path(self, compiler, opt):
+        return os.path.join(self.binary_base_dir, compiler, opt, f"{self.file_name_without_ext}.mapping")
+
+    def get_asm_path(self, compiler, opt):
+        return os.path.join(self.binary_base_dir, compiler, opt, f"{self.file_name_without_ext}.json")
+
+    def customer_serialize(self):
+        return {
+            "function_save_path": self.function_save_path,
+            "binary_base_dir": self.binary_base_dir,
+            "src_line_num": self.src_line_num
+        }
+
+    @classmethod
+    def init_from_dict(cls, data: dict):
+        obj = cls(
+            src_file_path=data['function_save_path'],
+            binary_base_dir=data['binary_base_dir']
+        )
+        obj.src_line_num = data.get('src_line_num', 0)
+
+        return obj

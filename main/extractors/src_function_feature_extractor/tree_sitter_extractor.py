@@ -182,10 +182,8 @@ class FileFeatureExtractor:
 
         while stack:
             current_node, level = stack.pop()
-
             # 起始行号（从1开始计数）
             node_line_number = current_node.start_point[0] + 1
-
             # 处理节点
             if current_node.type in {NodeType.preproc_include.value,
                                      NodeType.comment.value,
@@ -208,7 +206,7 @@ class FileFeatureExtractor:
                 continue
 
             # 2. 识别函数
-            elif current_node.type in {NodeType.function_definition.value}:
+            elif current_node.type in {NodeType.function_definition.value, NodeType.pointer_declarator.value}:
                 self.parse_function_definition_node(current_node)
                 continue
 

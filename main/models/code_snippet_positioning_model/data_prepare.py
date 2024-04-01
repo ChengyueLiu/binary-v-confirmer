@@ -74,7 +74,9 @@ def get_src_lines(sub_functions, start_path):
                 if i != 0:
                     for j, line in enumerate(src_lines[:-1], start=line_number - len(src_lines) + 1):
                         source_codes[j] = line
-
+        # 排序
+        source_codes = src_code_dict[sub_function_name]["src_codes"]
+        src_code_dict[sub_function_name]["src_codes"] = {line: source_codes[line] for line in sorted(source_codes.keys())}
     return src_code_dict
 
 

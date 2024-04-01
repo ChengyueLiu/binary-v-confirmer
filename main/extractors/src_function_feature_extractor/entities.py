@@ -28,7 +28,7 @@ class NodeFeature:
                  source_codes: List[str]):
         self.name = node_name
         self.type = node_type
-        self.start_line = start_line
+        self.start_line = start_line + 1 # 之前不知道哪儿错了，这里修正一下
         self.end_line = end_line
         self.numbers = numbers
         self.normalized_hash = normalized_hash

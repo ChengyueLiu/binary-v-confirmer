@@ -134,7 +134,7 @@ def extract_bin_feature(binary_file) -> List[BinFunctionFeature]:
     return bin_function_features
 
 
-def extract_src_feature_for_specific_function(file_path: str, vul_function_name: str) -> SrcFunctionFeature | None:
+def extract_src_feature_for_specific_function(file_path: str, target_function_name: str) -> SrcFunctionFeature | None:
     """
     提取源代码函数的特征, 并转换成FunctionFeature对象
 
@@ -144,11 +144,16 @@ def extract_src_feature_for_specific_function(file_path: str, vul_function_name:
     file_feature = extractor.result
     # 这个是提取器的结果，是原始的对象，需要转换成现在程序中的对象。
     for node_feature in file_feature.node_features:
-        if node_feature.name == vul_function_name and count_function_effective_lines(
-                node_feature.source_codes) > MODEL_1_TRAIN_DATA_SRC_CODE_MIN_NUM:
+
+        if node_feature.name in {target_function_name, f"*{target_function_name}", "*\n"}:
+            if node_feature.name == "*\n":
+                node_feature.name = f"*{target_function_name}"
             # 这个是转换成现在程序中的对象
             src_function_feature = SrcFunctionFeature.init_from_node_feature(file_path=file_feature.file_path,
                                                                              node_feature=node_feature)
             return src_function_feature
-    logger.warning(f"No matched function found in {file_path} with name {vul_function_name}")
+
+    function_names = [node_feature.name for node_feature in file_feature.node_features]
+    logger.warning(
+        f"No matched function found in {file_path} with name {target_function_name}, function names: {function_names}")
     return None

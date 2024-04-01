@@ -26,10 +26,10 @@ def prepare_data():
     test_data_json = "TestCases/model_train/model_2/final_train_data_items/test_data.json"
 
     # step 3: mapping ---> json
-    # convert_mapping_to_json(original_mapping_files, json_mapping_files)
+    convert_mapping_to_json(original_mapping_files, json_mapping_files)
 
     # step 4: json ---> raw train data：每一行源代码和汇编代码的对应关系
-    # convert_json_to_raw_train_data(json_mapping_files, all_raw_train_data_items_dir)
+    convert_json_to_raw_train_data(json_mapping_files, all_raw_train_data_items_dir)
 
     # step 5: raw train data ---> train data
     convert_raw_train_data_to_train_data(test_raw_train_data_items_dir,
