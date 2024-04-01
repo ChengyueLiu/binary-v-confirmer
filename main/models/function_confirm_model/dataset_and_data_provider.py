@@ -1,7 +1,9 @@
 from typing import List
 
 import torch
+from loguru import logger
 from torch.utils.data import Dataset, DataLoader
+from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file
 from main.interface import DataItemForFunctionConfirmModel
@@ -55,9 +57,11 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
 
 
 def create_dataset(file_path, tokenizer, max_len=512, is_train=False):
+    logger.info(f"加载数据集: {file_path}")
     train_data_json = load_from_json_file(file_path)
+    logger.info(f"加载完毕")
     data_items = []
-    for item in train_data_json:
+    for item in tqdm(train_data_json, desc="初始化训练对象"):
         data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
         data_item.normalize()
         data_items.append(data_item)
@@ -65,7 +69,7 @@ def create_dataset(file_path, tokenizer, max_len=512, is_train=False):
     texts = []
     labels = []
     item_ids = []
-    for data_item in data_items:
+    for data_item in tqdm(data_items, desc="构建Datasetc参数"):
         item_ids.append(data_item.id)
         labels.append(data_item.label)
         texts.append(data_item.get_train_text(tokenizer.sep_token))
@@ -78,6 +82,7 @@ def create_dataset(file_path, tokenizer, max_len=512, is_train=False):
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})
     dataset = FunctionConfirmDataset(item_ids, texts, labels, tokenizer, max_len)
+    logger.info(f"数据集构建完毕, 数据集大小: {len(dataset)}")
     return dataset
 
 

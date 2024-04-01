@@ -142,6 +142,8 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
 
     model_input = []
     for ff in function_features:
+        if ff.bin_function_feature.name =="png_do_read_interlace":
+             print("debug")
         data_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
         data_item.normalize()
         model_input.append(data_item)

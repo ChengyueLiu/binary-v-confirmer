@@ -60,15 +60,14 @@ def prepare_train_data_for_model_1():
         (openssl_src_dir, openssl_bin_path),  # openssl O2 3.2.1
         (libssl_src_dir, libssl_bin_path),  # openssl O2 3.2.1
         (libpng_src_dir, libpng_bin_path),  # libpng O2 16.43
-        # (linux_kernel_dir, linux_kernel_path),
     ]
 
     # self_compiled bin
-    src_bin_pairs = [
-        (libcrypto_src_dir, O0_libcrypto_bin_path),  # openssl O0 3.2.1
-        (openssl_src_dir, O0_openssl_bin_path),  # openssl O0 3.2.1
-        (libssl_src_dir, O0_libssl_bin_path),  # openssl O0 3.2.1
-    ]
+    # src_bin_pairs = [
+    #     (libcrypto_src_dir, O0_libcrypto_bin_path),  # openssl O0 3.2.1
+    #     (openssl_src_dir, O0_openssl_bin_path),  # openssl O0 3.2.1
+    #     (libssl_src_dir, O0_libssl_bin_path),  # openssl O0 3.2.1
+    # ]
 
     # 提取函数特征, 注意，这里有筛选，只提取长度在7-100之间的函数
     extract_matched_function_feature(
@@ -111,7 +110,7 @@ def train_model_1():
         val_data_save_path,
         test_data_json_file_path=test_data_save_path,
         model_save_path=model_save_path,
-        test_only=True,
+        test_only=False,
         epochs=30,
         batch_size=100,
     )
