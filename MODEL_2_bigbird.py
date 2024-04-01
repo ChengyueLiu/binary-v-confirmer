@@ -15,7 +15,7 @@ def train_model_2():
               model_save_path,
               test_only=False,
               epochs=3,
-              batch_size=16,
+              batch_size=8,
               token_max_length=2048)
 
 
