@@ -4,7 +4,7 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification, \
     RobertaConfig, BigBirdForSequenceClassification, BigBirdTokenizer
 
-from main.interface import DataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel, SpecialToken
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
 
 
@@ -38,6 +38,8 @@ def init_train(train_data_json_file_path,
     # tokenizer = BigBirdTokenizer.from_pretrained('google/bigbird-roberta-base')
     for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
+    for frequent_token in SpecialToken.get_asm_frequent_tokens():
+        tokenizer.add_tokens(frequent_token)
 
     # model
     # 不要用哪个config去初始化，会导致模型变差很多。
@@ -140,6 +142,7 @@ def run_train(train_data_json_file_path,
         logger.info(f'inited, start train, epochs: {epochs}, batch_size: {batch_size}...')
         # train scheduler
         best_valid_loss = float('inf')  # 初始化最佳验证损失
+        best_acc = 0
         no_improvement_count = 0  # 用于跟踪验证损失未改进的epoch数
         for epoch in range(epochs):
             logger.info(f'Epoch {epoch + 1}/{epochs}')

@@ -9,8 +9,6 @@ def normalize_asm_lines(lines):
                                                                                                         jump_token=SpecialToken.ASM_JUMP.value,
                                                                                                         loc_token=SpecialToken.ASM_LOC.value,
                                                                                                         mem_token=SpecialToken.ASM_MEM.value))]
-    if " ".join(normalized_asm_lines[:3]) == "endbr64 push rbp mov rbp,rsp":
-        normalized_asm_lines = normalized_asm_lines[3:]
     return normalized_asm_lines
 
 

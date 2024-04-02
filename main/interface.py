@@ -185,6 +185,8 @@ class SpecialToken(Enum):
     ASM_LOC = "<LOC>"
     ASM_MEM = "<MEM>"
 
+    # frequent asm tokens
+
     @classmethod
     def get_all_special_tokens(cls):
         return [token.value for token in cls]
@@ -193,6 +195,13 @@ class SpecialToken(Enum):
     def get_asm_special_tokens(cls):
         return [token.value for token in cls if token.name.startswith("ASM")]
 
+    @classmethod
+    def get_asm_frequent_tokens(cls):
+        frequent_tokens = ['mov', '<MEM>', 'rax', 'eax', '<JUMP>', '<LOC>', 'rdx', 'call', 'edx', 'rdi', '0x0',
+                               'cmp', 'lea', 'edi', 'add', 'esi', '', '[ASM_CODE]', 'test', 'rsi', 'ecx', 'rcx', '00',
+                               '0x1', 'and', 'shl', 'al', 'sub', 'movsxd', 'movzx', '0x2', 'or', 'rsp']
+
+        return frequent_tokens
 
 class DataItemForFunctionConfirmModel:
     """
@@ -279,14 +288,13 @@ class DataItemForFunctionConfirmModel:
         src_line_num = 1
         asm_line_num = 3
         text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
-        last = 3
+        ratio = round(len(self.asm_codes) / len(self.src_codes))
         while src_line_num <= len(self.src_codes) and asm_line_num <= len(self.asm_codes):
             src_line_num += 1
-            asm_line_num += last
-            if last == 3:
-                last = 4
-            else:
-                last = 3
+            current_src_line = self.src_codes[:src_line_num][-1]
+            if len(current_src_line) == 1 or current_src_line =='"STR"':
+                src_line_num +=1
+            asm_line_num += ratio
             text = f" {SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
             if len(text) > 1000:
                 break
@@ -899,13 +907,22 @@ class TrainFunction:
         if not asm_snippet_mappings:
             return None
 
+        all_asm_codes = []
         asm_codes = []
+        src_body_start_line = 0
+        start_flag = False
         for asm_snippet_mapping in asm_snippet_mappings:
+            all_asm_codes.extend(asm_snippet_mapping.asm_lines)
+            if not start_flag:
+                if "{" in asm_snippet_mapping.src_line:
+                    src_body_start_line = asm_snippet_mapping.src_line_number + 1
+                    start_flag = True
+                continue
             asm_codes.extend(asm_snippet_mapping.asm_lines)
-
+        skip_line_num = src_body_start_line - src_function_feature.line_start
         positive_train_data_item = DataItemForFunctionConfirmModel(
             function_name=self.function_name,
-            src_codes=src_function_feature.original_lines,
+            src_codes=src_function_feature.original_lines[skip_line_num:],
             src_strings=src_function_feature.strings,
             src_numbers=src_function_feature.numbers,
             asm_codes=asm_codes,
