@@ -34,7 +34,7 @@ def normalize_asm_code(asm_code: str,
         asm_code = asm_line_parts[-1]
 
     # 转换为小写，保持一致性
-    # asm_code = asm_code.lower()
+    asm_code = asm_code.lower()
 
     # 移除注释
     asm_code = re.sub(r";.*", "", asm_code).split("#")[0]
@@ -75,12 +75,17 @@ def normalize_src_lines(lines):
     """
     normalized_lines = []
     for line in lines:
+        # 跳过注释行和空行
         line = line.strip()
         if (line.startswith(("/*", "* ", "//"))  # 注释行开头
                 or line.endswith("*/")  # 注释行结尾
                 or line in ["", "*"]):  # 空行
             continue
-        normalized_lines.append(line)
+        # 移除字符串
+        normalized_line = re.sub(r'\".*?\"', '"STR"', line)
+        # 移除注释
+        normalized_line = remove_comments(normalized_line)
+        normalized_lines.append(normalized_line)
     return normalized_lines
 
 

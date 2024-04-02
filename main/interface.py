@@ -273,31 +273,25 @@ class DataItemForFunctionConfirmModel:
     def get_train_text(self, separator, src_code_diff=0):
         """
         生成text, 用于训练
-        内容包括源代码、汇编代码、字符串、数字，以及特殊标记，主要用源码和汇编码的开头部分，以及字符串和数字
+        源代码行数和汇编代码行数大概是 3.5
         :param separator:
         :return:
         """
-        final_text = f"{SpecialToken.SRC_CODE_SEPARATOR.value}"
-
-        # 源代码
-        line_count = 0
-        word_count = 0
-        for i, src_code in enumerate(self.src_codes):
-            final_text += f" {src_code}"
-            if len(src_code) > 10:
-                line_count += 1
-            word_count += len(src_code.split())
-            if line_count > SRC_CODE_NUM or word_count > SRC_CODE_WORD_NUM_LIMIT:
+        src_line_num = 1
+        asm_line_num = 3
+        text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
+        last = 3
+        while src_line_num <= len(self.src_codes) and asm_line_num <= len(self.asm_codes):
+            src_line_num += 1
+            asm_line_num += last
+            if last == 3:
+                last = 4
+            else:
+                last = 3
+            text = f" {SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
+            if len(text) > 1000:
                 break
-
-        # 汇编代码
-        final_text += f" {separator} {SpecialToken.ASM_CODE_SEPARATOR.value}"
-        for asm_code in self.asm_codes:
-            final_text += f" {asm_code}"
-            if len(final_text) > 1100:
-                break
-
-        return final_text
+        return text
 
     def normalize(self):
         # 正规化处理源代码
