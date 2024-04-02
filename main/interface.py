@@ -10,7 +10,6 @@ from bintools.general.normalize import normalize_asm_lines, normalize_asm_code, 
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
-from setting.settings import ASM_CODE_NUM, SRC_CODE_WORD_NUM_LIMIT, SRC_CODE_NUM
 
 
 @dataclass
