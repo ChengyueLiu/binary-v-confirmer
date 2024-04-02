@@ -48,9 +48,9 @@ O0_libssl_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/libssl.
 openssl_function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
 
 # train_data_items
-train_data_save_path = r"TestCases/model_train/model_1/train_data_50000/train_data.json"
-val_data_save_path = r"TestCases/model_train/model_1/train_data_50000/val_data.json"
-test_data_save_path = r"TestCases/model_train/model_1/train_data_50000/test_data.json"
+train_data_save_path = r"TestCases/model_train/model_1/train_data/train_data.json"
+val_data_save_path = r"TestCases/model_train/model_1/train_data/val_data.json"
+test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
 
 linux_kernel_train_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/train_data.json"
 linux_kernel_val_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/val_data.json"
@@ -149,13 +149,13 @@ def train_model_1():
         model_save_path=model_save_path,
         test_only=False,
         epochs=30,
-        batch_size=100,
+        batch_size=8,
     )
 
 
 if __name__ == '__main__':
     # prepare_train_data_for_model_1()
-    prepare_train_data_for_model_1_new()
+    # prepare_train_data_for_model_1_new()
     train_model_1()
 
     """

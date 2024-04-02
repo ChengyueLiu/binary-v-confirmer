@@ -34,15 +34,15 @@ def init_train(train_data_json_file_path,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # tokenizer
-    tokenizer = RobertaTokenizer.from_pretrained(model_name)
-    # tokenizer = BigBirdTokenizer.from_pretrained('google/bigbird-roberta-base')
+    # tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    tokenizer = BigBirdTokenizer.from_pretrained('google/bigbird-roberta-base')
     for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
     # model
     # 不要用哪个config去初始化，会导致模型变差很多。
-    model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
-    # model = BigBirdForSequenceClassification.from_pretrained('google/bigbird-roberta-base', num_labels=num_labels)
+    # model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+    model = BigBirdForSequenceClassification.from_pretrained('google/bigbird-roberta-base', num_labels=num_labels)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 

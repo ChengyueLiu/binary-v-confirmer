@@ -15,7 +15,7 @@ class FunctionConfirmDataset(Dataset):
         self.texts = texts
         self.labels = labels
         self.tokenizer = tokenizer
-        self.max_len = max_len
+        self.max_len = 2048
 
     def __len__(self):
         return len(self.texts)

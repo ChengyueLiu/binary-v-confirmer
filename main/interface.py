@@ -10,7 +10,6 @@ from bintools.general.normalize import normalize_asm_lines, normalize_asm_code, 
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
-from setting.settings import ASM_CODE_NUM, SRC_CODE_WORD_NUM_LIMIT, SRC_CODE_NUM
 
 
 @dataclass
@@ -280,16 +279,12 @@ class DataItemForFunctionConfirmModel:
         src_line_num = 1
         asm_line_num = 3
         text = f"{SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
-        last = 3
+        ratio = round(len(self.asm_codes) / len(self.src_codes))
         while src_line_num <= len(self.src_codes) and asm_line_num <= len(self.asm_codes):
             src_line_num += 1
-            asm_line_num += last
-            if last == 3:
-                last = 4
-            else:
-                last = 3
+            asm_line_num += ratio
             text = f" {SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
-            if len(text) > 1000:
+            if len(text) > 4000:
                 break
         return text
 
