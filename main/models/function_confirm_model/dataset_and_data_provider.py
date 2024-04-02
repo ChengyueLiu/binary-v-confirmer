@@ -73,11 +73,6 @@ def create_dataset(file_path, tokenizer, max_len=512, is_train=False):
         item_ids.append(data_item.id)
         labels.append(data_item.label)
         texts.append(data_item.get_train_text(tokenizer.sep_token))
-        # if is_train and data_item.label == 1:
-        #     for i in [-2, -1, 1, 2]:
-        #         item_ids.append(data_item.id)
-        #         texts.append(data_item.get_train_text(tokenizer.sep_token, src_code_diff=i))
-        #         labels.append(data_item.label)
 
     print("原始数据数量: ", len(texts))
     print("原始数据标签分布: ", {label: labels.count(label) for label in set(labels)})

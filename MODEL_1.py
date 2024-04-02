@@ -1,11 +1,20 @@
+import copy
 import os
+import random
+import traceback
+from random import shuffle
 
 from loguru import logger
+from tqdm import tqdm
 
-from bintools.general.file_tool import save_to_json_file
+from bintools.general.file_tool import save_to_json_file, load_from_json_file
+from bintools.general.normalize import normalize_asm_lines
 from main.extractors.function_feature_extractor import extract_matched_function_feature
-from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data
+from main.interface import TrainFunction
+from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data, \
+    levenshtein_distance, generate_data_items_from_train_functions, shuffle_and_split
 from main.models.function_confirm_model.model_application import FunctionFinder
+from setting.settings import ASM_CODE_NUM
 
 # raw input
 # src
@@ -88,6 +97,41 @@ def prepare_train_data_for_model_1():
                                            similarity_threshold=0.5)
 
 
+def prepare_train_data_for_model_1_new():
+    # 加载TrainFunction json数据
+    logger.info(f"loading train functions from json file...")
+    train_functions_json_items = load_from_json_file("test_results/compiled_paths.json")
+    shuffle(train_functions_json_items)
+
+    # 转换成TrainFunction对象
+    logger.info(f"converting json items to TrainFunction objects...")
+    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items[:15000]]
+
+    # 筛选数据
+    # shuffle and split
+    logger.info(f"shuffling and splitting...")
+    train_functions, valid_functions, test_functions = shuffle_and_split(train_functions)
+
+    # train data
+    logger.info(f"generating train data...")
+    all_data_items = generate_data_items_from_train_functions(train_functions)
+    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], train_data_save_path, output_log=True)
+    logger.info(f"done, data_items_num: {len(all_data_items)}")
+
+    # valid data
+    logger.info(f'generating valid data...')
+    all_data_items = generate_data_items_from_train_functions(valid_functions)
+    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], val_data_save_path, output_log=True)
+    logger.info(f"done, data_items_num: {len(all_data_items)}")
+
+    # test data
+    logger.info(f"generating test data...")
+    all_data_items = generate_data_items_from_train_functions(test_functions)
+    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], test_data_save_path, output_log=True)
+    logger.info(f"done, data_items_num: {len(all_data_items)}")
+
+    logger.info(f"all_done!")
+
 
 def train_model_1():
     """
@@ -110,9 +154,10 @@ def train_model_1():
 
 
 if __name__ == '__main__':
-    # Done
-    prepare_train_data_for_model_1()
-    # train_model_1()
+    # prepare_train_data_for_model_1()
+    prepare_train_data_for_model_1_new()
+    train_model_1()
+
     """
     两个版本，1:20， 最终99.09%
     """

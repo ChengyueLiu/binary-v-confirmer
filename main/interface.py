@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
-from bintools.general.normalize import normalized_asm_lines, normalize_asm_code, normalize_src_lines, remove_comments, \
+from bintools.general.normalize import normalize_asm_lines, normalize_asm_code, normalize_src_lines, remove_comments, \
     normalize_strings
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
@@ -301,7 +301,7 @@ class DataItemForFunctionConfirmModel:
         self.src_strings = normalize_strings(self.src_strings)
 
         # 正规化处理汇编代码
-        self.asm_codes = normalized_asm_lines(self.asm_codes)
+        self.asm_codes = normalize_asm_lines(self.asm_codes)
 
         # 正规化处理字符串
         self.bin_strings = normalize_strings(self.bin_strings)
@@ -381,9 +381,9 @@ class DataItemForCodeSnippetPositioningModel:
         self.src_codes = normalize_src_lines(lines)
 
         # 正规化处理汇编代码
-        self.asm_codes = normalized_asm_lines(self.asm_codes)
+        self.asm_codes = normalize_asm_lines(self.asm_codes)
 
-        self.answer_asm_codes = normalized_asm_lines(self.answer_asm_codes)
+        self.answer_asm_codes = normalize_asm_lines(self.answer_asm_codes)
 
 
 class DataItemForCodeSnippetConfirmModel:
@@ -873,12 +873,21 @@ class TrainFunction:
                 }
         """
         path = self.get_asm_path(compiler, opt)
+        # 文件不存在
         if not os.path.exists(path):
             return None
 
+        # 空文件
         asm_dict = load_from_json_file(path)
+        if not asm_dict:
+            return None
+
+        # 函数名搞错了
+        if self.function_name not in asm_dict:
+            return None
+
         mappings = []
-        for mapping_dict in asm_dict["asm_code_snippet_mappings"]:
+        for mapping_dict in asm_dict[self.function_name]["asm_code_snippet_mappings"]:
             mappings.append(ASM_CODE_SNIPPET_MAPPING.init_from_dict(mapping_dict))
         return mappings
 

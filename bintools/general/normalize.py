@@ -1,7 +1,7 @@
 import re
 
 
-def normalized_asm_lines(lines):
+def normalize_asm_lines(lines):
     from main.interface import SpecialToken
     normalized_asm_lines = [normalized_code for code in lines if (normalized_code := normalize_asm_code(code,
                                                                                                         reg_token=SpecialToken.ASM_REG.value,
