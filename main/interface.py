@@ -941,8 +941,8 @@ class TrainFunction:
         src_part_start_index = random.randint(3, len(src_codes) - 4)  # 不要前三行，因为可能是函数声明，不要最后三行(-4)，片段至少3行
         src_part_end_index = src_part_start_index + random.randint(src_part_start_index, len(src_codes) - 1)
         question_src_codes = src_codes[src_part_start_index:src_part_end_index + 1]
-        print(
-            f"src_codes length : {len(src_codes)}, start_line: {src_part_start_index}, end_line: {src_part_end_index}")
+        # print(
+        #     f"src_codes length : {len(src_codes)}, start_line: {src_part_start_index}, end_line: {src_part_end_index}")
 
         # 找到对应的汇编代码片段
         asm_codes = []
@@ -953,13 +953,14 @@ class TrainFunction:
                 answer_asm_codes.extend(asm_snippet_mapping.asm_lines)
 
         # 生成数据项
-        DataItemForCodeSnippetPositioningModel(
+        data_item = DataItemForCodeSnippetPositioningModel(
             function_name=self.function_name,
             src_codes=question_src_codes,
             asm_codes=asm_codes,
             answer_asm_codes=answer_asm_codes
         )
 
+        return data_item
     def generate_model_3_train_data_item(self):
         """
         这里只生成了正确答案，还需要再生成错误答案

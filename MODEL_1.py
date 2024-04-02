@@ -48,9 +48,9 @@ O0_libssl_bin_path = r"TestCases/binaries/self_compiled/openssl_3.2.1/O0/libssl.
 openssl_function_features_path = r"TestCases/feature_extraction/openssl_feature/function_features.json"
 
 # train_data_items
-train_data_save_path = r"TestCases/model_train/model_1/train_data/train_data.json"
-val_data_save_path = r"TestCases/model_train/model_1/train_data/val_data.json"
-test_data_save_path = r"TestCases/model_train/model_1/train_data/test_data.json"
+train_data_save_path = r"TestCases/model_train/model_1/train_data_50000/train_data.json"
+val_data_save_path = r"TestCases/model_train/model_1/train_data_50000/val_data.json"
+test_data_save_path = r"TestCases/model_train/model_1/train_data_50000/test_data.json"
 
 linux_kernel_train_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/train_data.json"
 linux_kernel_val_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/val_data.json"
@@ -105,7 +105,7 @@ def prepare_train_data_for_model_1_new():
 
     # 转换成TrainFunction对象
     logger.info(f"converting json items to TrainFunction objects...")
-    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items[:15000]]
+    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items[:1000]]
 
     # 筛选数据
     # shuffle and split

@@ -1,3 +1,4 @@
+from MODEL_1 import prepare_train_data_for_model_1_new, train_model_1
 from bintools.general.file_tool import save_to_json_file
 from main.VulConfirmTeam import VulConfirmTeam
 from main.interface import CauseFunction, Vulnerability, Patch
@@ -18,7 +19,10 @@ def train():
         logger.info("Start training model 3")
         # train_model_3()
         logger.info("Training finished")
+
+
 0
+
 
 def test_model():
     # patch
@@ -169,7 +173,6 @@ def test_model():
     # openssl 3.0.11
     libcrypto_3011 = "TestCases/binaries/debian/openssl_3.0.11/libcrypto.so.3"
 
-
     # openssl 3.2.0
     openssl_320 = "TestCases/binaries/debian/openssl_3.2.0/openssl"
     libcrypto_320 = "TestCases/binaries/debian/openssl_3.2.0/libcrypto.so.3"
@@ -209,5 +212,6 @@ def test_model():
 
 
 if __name__ == '__main__':
-    # train()
+    prepare_train_data_for_model_1_new()
+    train_model_1()
     test_model()

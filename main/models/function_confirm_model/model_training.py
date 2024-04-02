@@ -2,7 +2,7 @@ import torch
 from loguru import logger
 from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForSequenceClassification, \
-    RobertaConfig
+    RobertaConfig, BigBirdForSequenceClassification, BigBirdTokenizer
 
 from main.interface import DataItemForFunctionConfirmModel
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataloaders, create_dataset
@@ -35,12 +35,14 @@ def init_train(train_data_json_file_path,
 
     # tokenizer
     tokenizer = RobertaTokenizer.from_pretrained(model_name)
+    # tokenizer = BigBirdTokenizer.from_pretrained('google/bigbird-roberta-base')
     for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
         tokenizer.add_tokens(special_token)
 
     # model
     # 不要用哪个config去初始化，会导致模型变差很多。
     model = RobertaForSequenceClassification.from_pretrained(model_name, num_labels=num_labels)
+    # model = BigBirdForSequenceClassification.from_pretrained('google/bigbird-roberta-base', num_labels=num_labels)
     model.resize_token_embeddings(len(tokenizer))
     model = torch.nn.DataParallel(model).to(device)
 

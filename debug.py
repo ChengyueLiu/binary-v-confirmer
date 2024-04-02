@@ -52,7 +52,7 @@ from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
 from main.interface import DataItemForFunctionConfirmModel
 
-test_items = load_from_json_file("TestCases/model_train/model_1/train_data/val_data.json")
+test_items = load_from_json_file("TestCases/model_train/model_1/train_data_50000/val_data.json")
 test_item_dict = {item["id"]: item for item in test_items}
 label_0 = 0
 label_1 = 0
