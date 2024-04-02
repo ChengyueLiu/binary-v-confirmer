@@ -24,9 +24,6 @@ MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM = env.int("MODEL_1_TRAIN_DATA_ASM_CODE_MIN_N
 
 
 # ----- 特征生成 -----
-# 源代码token和单词量的比例一般不超过5，这里设置为60，token一般不超过250
-SRC_CODE_WORD_NUM_LIMIT = env.int("SRC_CODE_WORD_NUM_LIMIT", 60)
-
 # 汇编代码不超过35行
 SRC_CODE_NUM = env.int("SRC_CODE_NUM", 13)
 
