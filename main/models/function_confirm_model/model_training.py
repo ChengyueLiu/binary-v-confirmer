@@ -137,8 +137,8 @@ def run_train(train_data_json_file_path,
         test_data_json_file_path,
         batch_size=batch_size,
         epochs=epochs)
-    # model.load_state_dict(torch.load(model_save_path))
     if not test_only:
+        model.load_state_dict(torch.load(model_save_path))
         logger.info(f'inited, start train, epochs: {epochs}, batch_size: {batch_size}...')
         # train scheduler
         best_valid_loss = float('inf')  # 初始化最佳验证损失

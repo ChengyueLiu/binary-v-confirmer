@@ -218,7 +218,8 @@ class DataItemForFunctionConfirmModel:
                  bin_strings: List[str],
                  bin_numbers: List,
                  bin_function_name="",
-                 label=1):
+                 label=1,
+                 similarity=0):
         """
         从原始特征中初始化训练数据
         :param function_feature:
@@ -234,11 +235,14 @@ class DataItemForFunctionConfirmModel:
         self.label = label
         self.bin_function_name = bin_function_name
 
+        self.similarity = similarity
         self.is_normalized = False
 
     def custom_serialize(self):
         return {
             "id": self.id,
+            "label": self.label,
+            "similarity": self.similarity,
             "function_name": self.function_name,
             "src_codes": self.src_codes,
             "src_strings": self.src_strings,
@@ -246,7 +250,6 @@ class DataItemForFunctionConfirmModel:
             "asm_codes": self.asm_codes,
             "bin_strings": self.bin_strings,
             "bin_numbers": self.bin_numbers,
-            "label": self.label
         }
 
     @classmethod
@@ -259,7 +262,8 @@ class DataItemForFunctionConfirmModel:
             json_data_item['asm_codes'],
             json_data_item['bin_strings'],
             json_data_item['bin_numbers'],
-            label=json_data_item['label']
+            label=json_data_item['label'],
+            similarity=json_data_item.get('similarity', 0)
         )
         obj.id = json_data_item.get('id', 0)
         return obj
@@ -315,7 +319,6 @@ class DataItemForFunctionConfirmModel:
         self.src_strings = normalize_strings(self.src_strings)
 
         # 正规化处理汇编代码
-        # 这里处理是否合适？
         self.asm_codes = normalize_asm_lines(self.asm_codes)
 
         # 正规化处理字符串
@@ -763,11 +766,13 @@ class CauseFunctionAnalysisInfo:
 class BinaryAnalysisInfo:
     binary_path: str
     bin_function_num: int
+    filtered_bin_function_num: int
 
     def customer_serialize(self):
         return {
             "binary_path": self.binary_path,
-            "bin_function_num": self.bin_function_num
+            "bin_function_num": self.bin_function_num,
+            "filtered_bin_function_num": self.filtered_bin_function_num
         }
 
 

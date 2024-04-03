@@ -184,16 +184,18 @@ class VulConfirmTeam:
         # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
         # ---------- 以上是临时代码 ----------
 
-        binary_analysis_info = BinaryAnalysisInfo(binary_path, len(bin_function_features))  # 分析代码
         # 筛选
-        bin_function_features = [bff for bff in bin_function_features if
-                                 len(bff.asm_codes) > MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM]
+        filtered_bin_function_features = [bff for bff in bin_function_features if
+                                          len(bff.asm_codes) > MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM]
+        binary_analysis_info = BinaryAnalysisInfo(binary_path,
+                                                  len(bin_function_features),
+                                                  len(filtered_bin_function_features))  # 分析代码
         vul_analysis_info = VulAnalysisInfo(binary_analysis_info)  # 分析代码
         for cause_function in vul.cause_functions:
             cause_function_analysis_info = CauseFunctionAnalysisInfo(cause_function.function_name)  # 分析代码
             vul_analysis_info.cause_function_analysis_infos.append(cause_function_analysis_info)  # 分析代码
 
-            # 提取源代码特征
+            # 提取漏洞源代码特征
             vul_src_function_feature: SrcFunctionFeature = extract_src_feature_for_specific_function(
                 cause_function.file_path,
                 cause_function.function_name)
@@ -202,7 +204,7 @@ class VulConfirmTeam:
 
             # 1. 找到漏洞函数(这里会过滤一些很短的或者很长的汇编函数)
             possible_vul_bin_functions = self.function_finder.find_bin_function(vul_src_function_feature,
-                                                                                bin_function_features)
+                                                                                filtered_bin_function_features)
 
             cause_function_analysis_info.possible_bin_function_names = [  # 分析代码
                 f"{pvbf.function_name}({pvbf.match_possibility})"  # 分析代码

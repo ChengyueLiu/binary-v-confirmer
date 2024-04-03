@@ -8,9 +8,10 @@ import rapidfuzz.fuzz
 from loguru import logger
 from tqdm import tqdm
 
+from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.normalize import normalize_asm_code, normalize_src_lines, normalize_asm_lines
 from bintools.general.file_tool import save_to_json_file
-from bintools.general.src_tool import count_function_effective_lines
+from bintools.general.src_tool import count_function_effective_lines, analyze_src_codes
 from main.interface import FunctionFeature, DataItemForFunctionConfirmModel, SrcFunctionFeature, BinFunctionFeature, \
     SpecialToken, TrainFunction
 from setting.settings import ASM_CODE_NUM, SRC_CODE_NUM, MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM
@@ -145,8 +146,6 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
 
     model_input = []
     for ff in function_features:
-        if ff.bin_function_feature.name == "png_do_read_interlace":
-            print("debug")
         data_item = DataItemForFunctionConfirmModel.init_from_function_feature(ff, label=1)
         data_item.normalize()
         model_input.append(data_item)
@@ -159,6 +158,7 @@ def generate_data_items_from_train_functions(train_functions: List[TrainFunction
     DataItemForFunctionConfirmModel]:
     # 生成positive数据
     positive_data_items = []
+    positive_text_list = []
     for tf in tqdm(train_functions, desc="generating positive data items"):
         try:
             # 生成一个训练数据
@@ -172,27 +172,37 @@ def generate_data_items_from_train_functions(train_functions: List[TrainFunction
             if len(data_item.asm_codes) < 2 * tf.effective_src_line_num:
                 continue
             positive_data_items.append(data_item)
+            positive_text_list.append(" ".join(data_item.asm_codes[:40]))
         except Exception as e:
             logger.error(traceback.format_exc())
             logger.error(e)
 
     negative_data_items = []
-    for pdi in tqdm(positive_data_items, desc="generating negative data items"):
-        attempt_count = 0  # 添加尝试次数计数器
-        negative_count = 0
-        while attempt_count < 100:  # 限制最大尝试次数，避免无限循环
-            attempt_count += 1
-            another_pdi = positive_data_items[random.randint(0, len(positive_data_items) - 1)]
-            similarity = cal_similarity(pdi, another_pdi)
-            if similarity < similarity_threshold:
-                negative_data_item = copy.deepcopy(pdi)
+    for i, pdi in tqdm(enumerate(positive_data_items), desc="generating negative data items"):
+
+        # 随便选一个, 只要不是同一个，就可以作为负例
+        another_pdi = positive_data_items[random.randint(0, len(positive_data_items) - 1)]
+        if another_pdi != i:
+            negative_data_item = copy.deepcopy(pdi)
+            negative_data_item.bin_function_name = another_pdi.bin_function_name
+            negative_data_item.asm_codes = another_pdi.asm_codes
+            negative_data_item.label = 0
+            negative_data_items.append(negative_data_item)
+            negative_data_item.similarity = 0
+
+        # 再选一个比较相似的作为负例
+        text = " ".join(pdi.asm_codes[:40])
+        top_matches = process.extract(text, positive_text_list, limit=3)
+        for text, score, j in top_matches:
+            if j != i and score > 90:
+                negative_data_item = copy.deepcopy(positive_data_items[j])
                 negative_data_item.bin_function_name = another_pdi.bin_function_name
                 negative_data_item.asm_codes = another_pdi.asm_codes
                 negative_data_item.label = 0
+                negative_data_item.similarity = score
                 negative_data_items.append(negative_data_item)
-                negative_count += 1
-            if negative_count >= expected_negative_num:
-                break
+
+    print(len(positive_data_items), len(negative_data_items))
     all_data_items = positive_data_items + negative_data_items
     for i, item in enumerate(all_data_items):
         item.id = i
@@ -200,14 +210,12 @@ def generate_data_items_from_train_functions(train_functions: List[TrainFunction
 
 
 def cal_similarity(data_item_1, data_item_2):
-    data_item_1_copy = copy.deepcopy(data_item_1)
-    data_item_1_copy.normalize()
+    data_item_1_copy = generate_data_item_for_cal(data_item_1)
     t1 = data_item_1_copy.get_train_text("[SEP]").split("[SEP]")[1]
 
-    another_pdi_copy = copy.deepcopy(data_item_2)
-    another_pdi_copy.normalize()
-    another_pdi_copy.src_codes = data_item_1_copy.src_codes
-    t2 = another_pdi_copy.get_train_text("[SEP]").split("[SEP]")[1]
+    data_item_2_copy = generate_data_item_for_cal(data_item_2)
+    data_item_2_copy.src_codes = data_item_1_copy.src_codes
+    t2 = data_item_2_copy.get_train_text("[SEP]").split("[SEP]")[1]
 
     if len(t1) > len(t2):
         length = len(t2)
@@ -215,5 +223,15 @@ def cal_similarity(data_item_1, data_item_2):
         length = len(t1)
 
     similarity = difflib.SequenceMatcher(None, t1[:length], t2[:length]).ratio()
-
     return similarity
+
+
+def generate_data_item_for_cal(data_item):
+    data_item_copy = copy.deepcopy(data_item)
+    data_item_copy.normalize()
+    src_body_start_index, src_param_count = analyze_src_codes(data_item_copy.src_codes)
+    bin_body_start_index, bin_param_count = analyze_asm_codes(data_item_copy.asm_codes)
+    data_item_copy.src_codes = data_item_copy.src_codes[src_body_start_index:]
+    data_item_copy.asm_codes = data_item_copy.asm_codes[bin_body_start_index:]
+
+    return data_item_copy

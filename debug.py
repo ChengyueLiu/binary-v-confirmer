@@ -5,6 +5,7 @@ from random import shuffle
 
 from transformers import BigBirdTokenizer
 
+from bintools.general.normalize import normalize_src_lines
 from bintools.general.src_tool import count_function_effective_lines
 
 
@@ -133,8 +134,37 @@ def check_failed_items():
 
     print(len(test_items),len(failed_id_list), label_0, label_1)
 
+def check_normaliize():
+    src_codes = [
+            "  /* We have already examined parent j and we know parent i",
+            "   * and parent j are the same, so reuse the combined result",
+            "   * of parent j for parent i.",
+            "   */",
+            "  unsigned long lno, imask, jmask;",
+            "  imask = (1UL << i);",
+            "  jmask = (1UL << j);",
+            "",
+            "  for (lno = 0; lno <= cnt; lno++) {",
+            "    struct lline *ll = sline->lost;",
+            "    sline->p_lno[i] = sline->p_lno[j];",
+            "    while (ll) {",
+            "      if (ll->parent_map & jmask)",
+            "        ll->parent_map |= imask;",
+            "      ll = ll->next;",
+            "    }",
+            "    if (sline->flag & jmask)",
+            "      sline->flag |= imask;",
+            "    sline++;",
+            "  }",
+            "  /* the overall size of the file (sline[cnt]) */",
+            "  sline->p_lno[i] = sline->p_lno[j];",
+            "}"
+        ]
+    for line in normalize_src_lines(src_codes):
+        print(line)
 
 if __name__ == '__main__':
     # check_tokenizer()
 
-    check_failed_items()
+    # check_failed_items()
+    check_normaliize()

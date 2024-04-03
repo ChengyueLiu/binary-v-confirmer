@@ -105,7 +105,7 @@ def prepare_train_data_for_model_1_new():
 
     # 转换成TrainFunction对象
     logger.info(f"converting json items to TrainFunction objects...")
-    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items[:150000]]
+    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items[:200000]]
 
     # 筛选数据
     # shuffle and split
@@ -114,20 +114,23 @@ def prepare_train_data_for_model_1_new():
 
     # train data
     logger.info(f"generating train data...")
-    all_data_items = generate_data_items_from_train_functions(train_functions,expected_negative_num=1)
-    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], train_data_save_path, output_log=True)
+    all_data_items = generate_data_items_from_train_functions(train_functions, expected_negative_num=1)
+    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], train_data_save_path,
+                      output_log=True)
     logger.info(f"done, data_items_num: {len(all_data_items)}")
 
     # valid data
     logger.info(f'generating valid data...')
-    all_data_items = generate_data_items_from_train_functions(valid_functions,expected_negative_num=1)
-    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], val_data_save_path, output_log=True)
+    all_data_items = generate_data_items_from_train_functions(valid_functions, expected_negative_num=1)
+    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], val_data_save_path,
+                      output_log=True)
     logger.info(f"done, data_items_num: {len(all_data_items)}")
 
     # test data
     logger.info(f"generating test data...")
-    all_data_items = generate_data_items_from_train_functions(test_functions,expected_negative_num=1)
-    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], test_data_save_path, output_log=True)
+    all_data_items = generate_data_items_from_train_functions(test_functions, expected_negative_num=1)
+    save_to_json_file([data_item.custom_serialize() for data_item in all_data_items], test_data_save_path,
+                      output_log=True)
     logger.info(f"done, data_items_num: {len(all_data_items)}")
 
     logger.info(f"all_done!")
@@ -146,6 +149,7 @@ def train_model_1():
         train_data_save_path,
         val_data_save_path,
         test_data_json_file_path=test_data_save_path,
+        # test_data_json_file_path=train_data_save_path,
         model_save_path=model_save_path,
         test_only=False,
         epochs=30,

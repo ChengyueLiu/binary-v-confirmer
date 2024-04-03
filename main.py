@@ -203,12 +203,12 @@ def test_model():
     # 新的逻辑
     analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libpng16, vul=vulnerability)
     save_to_json_file(analysis_info.customer_serialize(), "test_results/libpng_16_result.json", output_log=True)
-    # analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_openssl_320, vul=vulnerability)
-    # save_to_json_file(analysis_info.customer_serialize(), "test_results/openssl_320_result.json", output_log=True)
-    # analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_320, vul=vulnerability)
-    # save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_320_result.json", output_log=True)
-    # analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_321, vul=vulnerability)
-    # save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_321_result.json", output_log=True)
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_openssl_320, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/openssl_320_result.json", output_log=True)
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_320, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_320_result.json", output_log=True)
+    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_321, vul=vulnerability)
+    save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_321_result.json", output_log=True)
 
 
 if __name__ == '__main__':
