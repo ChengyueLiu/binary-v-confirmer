@@ -1,11 +1,38 @@
-import idautils
 import ida_funcs
-import idc
 import ida_auto  # 导入ida_auto模块
 import json
-
+import idaapi
+import idautils
+import idc
 SAVE_PATH = r"C:\Users\chengyue\Desktop\projects\binary-v-confirmer\TestCases\feature_extraction\ida_pro_result.json"  # 请根据需要修改路径
 
+
+def get_first_block_asm(func_ea):
+    """
+    获取给定函数第一个基本块的汇编代码列表。
+    :param func_ea: 函数的起始地址。
+    :return: 包含第一个基本块汇编代码的列表。
+    """
+    first_block_asm = []
+
+    # 获取函数对象
+    func = idaapi.get_func(func_ea)
+    if not func:
+        return first_block_asm
+
+    # 获取函数的CFG
+    cfg = idaapi.FlowChart(func)
+
+    # 获取第一个基本块
+    first_block = next(iter(cfg), None)
+    if not first_block:
+        return first_block_asm
+
+    # 遍历第一个基本块中的所有指令
+    for ins_ea in idautils.Heads(first_block.start_ea, first_block.end_ea):
+        first_block_asm.append(idc.GetDisasm(ins_ea))
+
+    return first_block_asm
 
 def get_functions_info():
     functions_list = []
@@ -41,6 +68,7 @@ def get_functions_info():
         # 保存函数名、汇编代码、字符串和立即数到字典中
         func_info['name'] = func_name
         func_info['asm_codes'] = func_asm_codes
+        func_info['first_block_asm'] = get_first_block_asm(func_ea)
         func_info['strings'] = func_strings
         func_info['numbers'] = func_immediates
 

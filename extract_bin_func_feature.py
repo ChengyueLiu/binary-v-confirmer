@@ -20,7 +20,6 @@ def pre_extract_bin_func_features(bin_dir, root_save_dir):
             print(save_path)
             save_to_json_file([bff.custom_serialize() for bff in bin_function_features], save_path)
 
-
 if __name__ == '__main__':
     bin_dir = 'TestCases/binaries/self_compiled'
     save_dir = 'TestCases/binary_function_features/self_compiled'

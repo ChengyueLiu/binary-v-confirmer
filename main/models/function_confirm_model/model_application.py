@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaForSequenceClassification
 
+from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
@@ -159,7 +160,15 @@ class FunctionFinder:
             ratio = round(effective_asm_codes_num / effective_src_codes_num, 2)
             if ratio < min_ratio_threshold or ratio > max_ratio_threshold:
                 continue
+            # 检查参数数量，移除开头部分
+            # TODO 这里应该同时检查源代码的参数数量，如果不一致，直接过滤
+            if data_item.asm_codes[0] == "endbr64":
+                body_start_index, param_count = analyze_asm_codes(self.asm_codes)
+                data_item.asm_codes = data_item.asm_codes[body_start_index:]
             filtered_data_items.append(data_item)
+
+            # TODO 计算参数数量和mov数量是否一致，不一致，直接过滤。
+            # TODO 移除掉开头的汇编代码。
         # ------ 筛选结束 -------
 
         dataset = create_dataset_from_model_input(filtered_data_items, self.tokenizer, max_len=512)

@@ -1,5 +1,7 @@
 import re
 
+from bintools.general.bin_tool import analyze_asm_codes
+
 
 def normalize_asm_lines(lines):
     from main.interface import SpecialToken

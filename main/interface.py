@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List
 
+from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.normalize import normalize_asm_lines, normalize_asm_code, normalize_src_lines, remove_comments, \
     normalize_strings
 from bintools.general.file_tool import load_from_json_file
@@ -308,6 +309,7 @@ class DataItemForFunctionConfirmModel:
         self.src_strings = normalize_strings(self.src_strings)
 
         # 正规化处理汇编代码
+        # 这里处理是否合适？
         self.asm_codes = normalize_asm_lines(self.asm_codes)
 
         # 正规化处理字符串
