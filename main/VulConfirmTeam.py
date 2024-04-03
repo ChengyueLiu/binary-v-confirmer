@@ -7,7 +7,8 @@ from loguru import logger
 from bintools.general.file_tool import save_to_json_file, load_from_json_file
 from bintools.general.normalize import remove_comments
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
-from main.interface import Vulnerability, PossibleAsmSnippet, BinFunctionFeature, SrcFunctionFeature, VulAnalysisInfo, CauseFunctionAnalysisInfo, BinaryAnalysisInfo
+from main.interface import Vulnerability, PossibleAsmSnippet, BinFunctionFeature, SrcFunctionFeature, VulAnalysisInfo, \
+    CauseFunctionAnalysisInfo, BinaryAnalysisInfo
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
 from main.models.code_snippet_confirm_model_multi_choice.model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
@@ -183,13 +184,14 @@ class VulConfirmTeam:
         # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
         # ---------- 以上是临时代码 ----------
 
-        binary_analysis_info = BinaryAnalysisInfo(binary_path, len(bin_function_features))
+        binary_analysis_info = BinaryAnalysisInfo(binary_path, len(bin_function_features))  # 分析代码
         # 筛选
-        bin_function_features = [bff for bff in bin_function_features if len(bff.asm_codes) > MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM]
-        vul_analysis_info = VulAnalysisInfo(binary_analysis_info)
+        bin_function_features = [bff for bff in bin_function_features if
+                                 len(bff.asm_codes) > MODEL_1_TRAIN_DATA_ASM_CODE_MIN_NUM]
+        vul_analysis_info = VulAnalysisInfo(binary_analysis_info)  # 分析代码
         for cause_function in vul.cause_functions:
-            cause_function_analysis_info = CauseFunctionAnalysisInfo(cause_function.function_name)
-            vul_analysis_info.cause_function_analysis_infos.append(cause_function_analysis_info)
+            cause_function_analysis_info = CauseFunctionAnalysisInfo(cause_function.function_name)  # 分析代码
+            vul_analysis_info.cause_function_analysis_infos.append(cause_function_analysis_info)  # 分析代码
 
             # 提取源代码特征
             vul_src_function_feature: SrcFunctionFeature = extract_src_feature_for_specific_function(
@@ -202,14 +204,15 @@ class VulConfirmTeam:
             possible_vul_bin_functions = self.function_finder.find_bin_function(vul_src_function_feature,
                                                                                 bin_function_features)
 
-            cause_function_analysis_info.possible_bin_function_names = [
-                f"{pvbf.function_name}({pvbf.match_possibility})"
-                for pvbf in possible_vul_bin_functions]
+            cause_function_analysis_info.possible_bin_function_names = [  # 分析代码
+                f"{pvbf.function_name}({pvbf.match_possibility})"  # 分析代码
+                for pvbf in possible_vul_bin_functions]  # 分析代码
 
             if not possible_vul_bin_functions:
                 continue
+
             vul_bin_function = possible_vul_bin_functions[0]
-            cause_function_analysis_info.confirmed_bin_function_name = vul_bin_function.function_name
+            cause_function_analysis_info.confirmed_bin_function_name = vul_bin_function.function_name  # 分析代码
 
         #     # 2. 定位代码片段
         #     patch = cause_function.patches[0]
@@ -233,6 +236,7 @@ class VulConfirmTeam:
         #     print(f"\t  vul(choice_index,score,prob): {prediction[0]}, \t  vul src code: {snippet_codes_text_before_commit}")
         #     print(f"\tpatch(choice_index,score,prob): {prediction[1]}, \tpatch src code: {snippet_codes_text_after_commit}")
         return vul_analysis_info
+
 
 def confirm_vul(binary_path, vul: Vulnerability, analysis_file_save_path=None) -> bool:
     """
