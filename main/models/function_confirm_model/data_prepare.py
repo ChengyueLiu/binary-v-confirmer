@@ -155,7 +155,7 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
 
 def generate_data_items_from_train_functions(train_functions: List[TrainFunction],
                                              expected_negative_num=5,
-                                             similarity_threshold=0.8) -> List[
+                                             similarity_threshold=0.5) -> List[
     DataItemForFunctionConfirmModel]:
     # 生成positive数据
     positive_data_items = []

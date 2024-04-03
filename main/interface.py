@@ -199,10 +199,11 @@ class SpecialToken(Enum):
     @classmethod
     def get_asm_frequent_tokens(cls):
         frequent_tokens = ['mov', '<MEM>', 'rax', 'eax', '<JUMP>', '<LOC>', 'rdx', 'call', 'edx', 'rdi', '0x0',
-                               'cmp', 'lea', 'edi', 'add', 'esi', '', '[ASM_CODE]', 'test', 'rsi', 'ecx', 'rcx', '00',
-                               '0x1', 'and', 'shl', 'al', 'sub', 'movsxd', 'movzx', '0x2', 'or', 'rsp']
+                           'cmp', 'lea', 'edi', 'add', 'esi', '', '[ASM_CODE]', 'test', 'rsi', 'ecx', 'rcx', '00',
+                           '0x1', 'and', 'shl', 'al', 'sub', 'movsxd', 'movzx', '0x2', 'or', 'rsp']
 
         return frequent_tokens
+
 
 class DataItemForFunctionConfirmModel:
     """
@@ -232,6 +233,8 @@ class DataItemForFunctionConfirmModel:
         self.bin_numbers: List[str] = [str(num) for num in bin_numbers]
         self.label = label
         self.bin_function_name = bin_function_name
+
+        self.is_normalized = False
 
     def custom_serialize(self):
         return {
@@ -293,8 +296,8 @@ class DataItemForFunctionConfirmModel:
         while src_line_num <= len(self.src_codes) and asm_line_num <= len(self.asm_codes):
             src_line_num += 1
             current_src_line = self.src_codes[:src_line_num][-1]
-            if len(current_src_line) == 1 or current_src_line =='"STR"':
-                src_line_num +=1
+            if len(current_src_line) == 1 or current_src_line == '"STR"':
+                src_line_num += 1
             asm_line_num += ratio
             text = f" {SpecialToken.SRC_CODE_SEPARATOR.value} {' '.join(self.src_codes[:src_line_num])} {separator} {SpecialToken.ASM_CODE_SEPARATOR.value} {' '.join(self.asm_codes[:asm_line_num])}"
             if len(text) > 1000:
@@ -302,6 +305,9 @@ class DataItemForFunctionConfirmModel:
         return text
 
     def normalize(self):
+        if self.is_normalized:
+            return
+
         # 正规化处理源代码
         self.src_codes = normalize_src_lines(self.src_codes)
 
@@ -314,6 +320,8 @@ class DataItemForFunctionConfirmModel:
 
         # 正规化处理字符串
         self.bin_strings = normalize_strings(self.bin_strings)
+
+        self.is_normalized = True
 
 
 @dataclass
@@ -979,6 +987,7 @@ class TrainFunction:
         )
 
         return data_item
+
     def generate_model_3_train_data_item(self):
         """
         这里只生成了正确答案，还需要再生成错误答案

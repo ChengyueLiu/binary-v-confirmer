@@ -12,7 +12,7 @@ from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
 from main.interface import DataItemForFunctionConfirmModel, BinFunctionFeature, PossibleBinFunction, \
-    CauseFunction, SrcFunctionFeature
+    CauseFunction, SrcFunctionFeature, SpecialToken
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_model_input
 from main.models.function_confirm_model.dataset_and_data_provider import create_dataset_from_model_input
 import torch.nn.functional as F
@@ -38,7 +38,8 @@ class FunctionFinder:
         tokenizer = RobertaTokenizer.from_pretrained(self.model_name)
         for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
             tokenizer.add_tokens(special_token)
-
+        for frequent_token in SpecialToken.get_asm_frequent_tokens():
+            tokenizer.add_tokens(frequent_token)
         # model
         model = RobertaForSequenceClassification.from_pretrained(self.model_name, num_labels=self.num_labels)
         model.resize_token_embeddings(len(tokenizer))
@@ -155,7 +156,7 @@ class FunctionFinder:
         for data_item in data_items:
             # TODO 这里应该同时检查源代码的参数数量，如果不一致，直接过滤
             if data_item.asm_codes[0] == "endbr64":
-                body_start_index, param_count = analyze_asm_codes(self.asm_codes)
+                body_start_index, param_count = analyze_asm_codes(data_item.asm_codes)
                 data_item.asm_codes = data_item.asm_codes[body_start_index:]
 
             effective_asm_codes_num = len(data_item.asm_codes)
