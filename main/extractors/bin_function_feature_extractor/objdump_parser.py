@@ -6,8 +6,9 @@ from loguru import logger
 from main.interface import AsmFunction, CodeMapping
 
 
-def parse_objdump_file(dump_file_path):
-    logger.warning(f"THIS FUNCTION WILL FILTER ASM FUNCTIONS which has less than 10 lines of code.")
+def parse_objdump_file(dump_file_path, ignore_warnings=False):
+    if not ignore_warnings:
+        logger.warning(f"THIS FUNCTION WILL FILTER ASM FUNCTIONS which has less than 10 lines of code.")
     try:
         with open(dump_file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
