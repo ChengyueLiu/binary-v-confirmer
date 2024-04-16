@@ -24,10 +24,13 @@ def load_test_cases(tc_save_path) -> List[VulConfirmTC]:
     return test_cases
 
 
-def confirm_functions(vul_functions: List[VulFunction], test_bin: TestBin):
+def confirm_functions(model, tc: VulConfirmTC):
     """
     函数确认
     """
+    vul_functions: List[VulFunction] = tc.vul_functions
+    test_bin: TestBin = tc.test_bin
+
     # 生成数据
     data_items = []
     print(f"extracting asm function from {test_bin.binary_path}")
@@ -64,30 +67,33 @@ def confirm_functions(vul_functions: List[VulFunction], test_bin: TestBin):
     print(f"generated {len(data_items)} data items")
 
     # 调用模型
-    print(f"init model...")
-    confirmer = FunctionConfirmer(model_save_path=r"Resources/model_weights/model_1_weights.pth",
-                                  batch_size=128)
     print(f"predicting...")
-    predictions = confirmer.confirm(data_items)
+    predictions = model.confirm(data_items)
     print(f"predict Done!")
 
     for data_item, (pred, prob) in zip(data_items, predictions):
         if (pred == 1 and prob > 0.95) or data_item.function_name == data_item.bin_function_name:
-            print(data_item.function_name, data_item.bin_function_name, pred, prob)
+            prob = round(prob, 4)
+            print('\t', data_item.function_name, data_item.bin_function_name, prob)
 
 
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
+    model_save_path = r"Resources/model_weights/model_1_weights.pth"
+
+    print(f"init model...")
+    model = FunctionConfirmer(model_save_path=model_save_path,
+                              batch_size=128)
+
     print(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
-    for i, tc in enumerate(test_cases, 1):
+    for i, tc in enumerate(test_cases[:10], 1):
         print(f"run test case: {i}\n"
               f"\tvul: {tc.public_id}\n"
               f"\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
               f"\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
               f"\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}\n")
-        confirm_functions(tc.vul_functions, tc.test_bin)
-        break
+        confirm_functions(model, tc)
 
 
 if __name__ == '__main__':
