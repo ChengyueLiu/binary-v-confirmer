@@ -6,7 +6,8 @@ from loguru import logger
 
 from bintools.general.file_tool import save_to_json_file, load_from_json_file
 from bintools.general.normalize import remove_comments
-from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function
+from main.extractors.function_feature_extractor import extract_src_feature_for_specific_function, extract_bin_feature, \
+    extract_bin_feature_by_objdump
 from main.interface import Vulnerability, PossibleAsmSnippet, BinFunctionFeature, SrcFunctionFeature, VulAnalysisInfo, \
     CauseFunctionAnalysisInfo, BinaryAnalysisInfo
 from main.models.code_snippet_confirm_model.model_application import SnippetConfirmer
@@ -172,15 +173,16 @@ class VulConfirmTeam:
             3. 判断是否已经被修复
         """
         # 提取二进制特征
-        # bin_function_features = extract_bin_feature(binary_file_abs_path)
+        # bin_function_features = extract_bin_feature(binary_path)
+        bin_function_features = extract_bin_feature_by_objdump(binary_path)
         # ---------- 临时使用已经提取好的特征，以下是临时代码 ----------
-        if "TestCases/binaries" in binary_path:
-            IDA_PRO_OUTPUT_PATH = binary_path.replace("TestCases/binaries/",
-                                                      "TestCases/binary_function_features/") + ".json"
-        results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
-        # 转换成外部的数据结构
-        bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
-                                                           for json_item in results]
+        # if "TestCases/binaries" in binary_path:
+        #     IDA_PRO_OUTPUT_PATH = binary_path.replace("TestCases/binaries/",
+        #                                               "TestCases/binary_function_features/") + ".json"
+        # results = load_from_json_file(IDA_PRO_OUTPUT_PATH)
+        # # 转换成外部的数据结构
+        # bin_function_features: List[BinFunctionFeature] = [BinFunctionFeature.init_from_dict(data=json_item)
+        #                                                    for json_item in results]
         # logger.info(f"{len(bin_function_features)} features extracted for {binary_file_abs_path}")
         # ---------- 以上是临时代码 ----------
 
@@ -212,7 +214,8 @@ class VulConfirmTeam:
 
             if not possible_vul_bin_functions:
                 continue
-
+            for vul_bin_function in possible_vul_bin_functions:
+                print(vul_bin_function.asm_codes)
             vul_bin_function = possible_vul_bin_functions[0]
             cause_function_analysis_info.confirmed_bin_function_name = vul_bin_function.function_name  # 分析代码
 

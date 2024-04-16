@@ -201,10 +201,10 @@ def test_model():
     self_compiled_libpng16 = "TestCases/binaries/self_compiled/libpng_master/libpng16.so.16.44.0"
 
     # 新的逻辑
-    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libpng16, vul=vulnerability)
-    save_to_json_file(analysis_info.customer_serialize(), "test_results/libpng_16_result.json", output_log=True)
-    analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_openssl_320, vul=vulnerability)
-    save_to_json_file(analysis_info.customer_serialize(), "test_results/openssl_320_result.json", output_log=True)
+    # analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libpng16, vul=vulnerability)
+    # save_to_json_file(analysis_info.customer_serialize(), "test_results/libpng_16_result.json", output_log=True)
+    # analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_openssl_320, vul=vulnerability)
+    # save_to_json_file(analysis_info.customer_serialize(), "test_results/openssl_320_result.json", output_log=True)
     analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_320, vul=vulnerability)
     save_to_json_file(analysis_info.customer_serialize(), "test_results/libcrypto_320_result.json", output_log=True)
     analysis_info = vul_confirm_team.new_confirm(binary_path=self_compiled_libcrypto_321, vul=vulnerability)

@@ -3,10 +3,12 @@ import copy
 from collections import Counter
 from random import shuffle
 
+from rapidfuzz import process
 from transformers import BigBirdTokenizer
 
 from bintools.general.normalize import normalize_src_lines
 from bintools.general.src_tool import count_function_effective_lines
+from main.extractors.bin_function_feature_extractor.asm_extractor import objdump, parse_asm_codes
 
 
 def check_tokenizer():
@@ -167,4 +169,10 @@ if __name__ == '__main__':
     # check_tokenizer()
 
     # check_failed_items()
-    check_normaliize()
+    # check_normaliize()
+    binary_path='TestCases/binaries/self_compiled/libpng_master/libpng16.so.16.44.0'
+    result = parse_asm_codes(binary_path)
+    for function_name,asm_codes in result.items():
+        print(function_name)
+        for asm_code in asm_codes:
+            print('\t', asm_code)

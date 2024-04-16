@@ -153,20 +153,25 @@ class FunctionFinder:
             bin_function_features)
         src_body_start_index, src_param_count = analyze_src_codes(data_items[0].src_codes)
 
+        function_name_for_check = src_function_feature.name
+        if function_name_for_check.startswith('*'):
+            function_name_for_check = function_name_for_check[1:]
         # ------ 筛选 -------
         filtered_data_items = []
         min_ratio_threshold = 2
         max_ratio_threshold = 10
         for data_item in data_items:
+            if data_item.bin_function_name == function_name_for_check:
+                print()
             # 非标准开头，跳过
             if data_item.asm_codes[0] == "endbr64":
                 bin_body_start_index, bin_param_count = analyze_asm_codes(data_item.asm_codes)
                 # 参数不一致，跳过
                 if src_param_count != bin_param_count:
-                    print("skip: ", data_item.function_name,
-                          src_param_count,
-                          bin_param_count,
-                          data_item.bin_function_name)
+                    # print("skip: ", data_item.function_name,
+                    #       src_param_count,
+                    #       bin_param_count,
+                    #       data_item.bin_function_name)
                     continue
                 data_item.src_codes = data_item.src_codes[src_body_start_index:]
                 data_item.asm_codes = data_item.asm_codes[bin_body_start_index:]
@@ -189,6 +194,8 @@ class FunctionFinder:
 
         possible_bin_functions: List[PossibleBinFunction] = []
         for data_item, (pred, prob) in zip(filtered_data_items, predictions):
+            if data_item.bin_function_name == function_name_for_check:
+                print(data_item.bin_function_name, pred,prob)
             if pred.item() == 1:
                 possible_bin_function = PossibleBinFunction(
                     function_name=data_item.bin_function_name,

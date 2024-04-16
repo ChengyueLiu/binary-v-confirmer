@@ -1,3 +1,4 @@
+from random import shuffle
 from typing import List
 
 import torch
@@ -49,6 +50,7 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
     item_ids = []
     for data_item in data_items:
         item_ids.append(data_item.id)
+        data_item.normalize()
         texts.append(data_item.get_train_text(tokenizer.sep_token))
         labels.append(data_item.label)
 

@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file, check_file_path, save_to_json_file
 from bintools.general.src_tool import count_function_effective_lines
+from main.extractors.bin_function_feature_extractor.asm_extractor import parse_asm_codes
 from main.extractors.src_function_feature_extractor.entities import ProjectFeature, NodeType
 from main.extractors.src_function_feature_extractor.tree_sitter_extractor import ProjectFeatureExtractor, \
     FileFeatureExtractor
@@ -92,6 +93,17 @@ def extract_src_feature_for_project(project_path) -> List[SrcFunctionFeature]:
 
     return src_function_features
 
+
+def extract_bin_feature_by_objdump(binary_file) -> List[BinFunctionFeature]:
+    """
+    使用objdump提取项目的特征，转换成外部的数据结构
+    :return:
+    """
+    asm_code_dict = parse_asm_codes(binary_file)
+    bin_func_features = [BinFunctionFeature(name=function_name, asm_codes=asm_codes, strings=[],numbers=[])
+                         for function_name,asm_codes in asm_code_dict.items()]
+
+    return bin_func_features
 
 def extract_bin_feature(binary_file) -> List[BinFunctionFeature]:
     """

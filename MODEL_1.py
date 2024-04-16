@@ -13,8 +13,6 @@ from main.extractors.function_feature_extractor import extract_matched_function_
 from main.interface import TrainFunction
 from main.models.function_confirm_model.data_prepare import convert_function_feature_to_train_data, \
     levenshtein_distance, generate_data_items_from_train_functions, shuffle_and_split
-from main.models.function_confirm_model.model_application import FunctionFinder
-from setting.settings import ASM_CODE_NUM
 
 # raw input
 # src
@@ -105,7 +103,7 @@ def prepare_train_data_for_model_1_new():
 
     # 转换成TrainFunction对象
     logger.info(f"converting json items to TrainFunction objects...")
-    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items[:200000]]
+    train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items]
 
     # 筛选数据
     # shuffle and split
@@ -143,23 +141,29 @@ def train_model_1():
 
     :return:
     """
+    # train_data_items
+    train_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/train_data_items_for_model_1.json"
+    val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_1.json"
+    test_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/test_data_items_for_model_1.json"
+
     from main.models.function_confirm_model.model_training import run_train
+    back_model_save_path = r"Resources/model_weights/model_1_weights_back.pth"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
     run_train(
-        train_data_save_path,
-        val_data_save_path,
+        train_data_json_file_path=train_data_save_path,
+        val_data_json_file_path=val_data_save_path,
         test_data_json_file_path=test_data_save_path,
-        # test_data_json_file_path=train_data_save_path,
+        back_model_save_path=back_model_save_path,
         model_save_path=model_save_path,
         test_only=False,
-        epochs=30,
+        epochs=100,
         batch_size=100,
     )
 
 
 if __name__ == '__main__':
     # prepare_train_data_for_model_1()
-    prepare_train_data_for_model_1_new()
+    # prepare_train_data_for_model_1_new()
     train_model_1()
 
     """

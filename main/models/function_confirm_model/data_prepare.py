@@ -1,8 +1,9 @@
 import copy
 import difflib
+import multiprocessing
 import random
 import traceback
-from typing import List
+from typing import List, Tuple
 
 import rapidfuzz.fuzz
 from loguru import logger
@@ -151,63 +152,120 @@ def convert_function_feature_to_model_input(src_function_feature: SrcFunctionFea
         model_input.append(data_item)
     return model_input
 
+def generate_positive_data_item(tf: TrainFunction) -> Tuple[DataItemForFunctionConfirmModel, str]:
+    try:
+        data_item = tf.generate_model_1_train_data_item()
+        if data_item is None or tf.effective_src_line_num < 10 or len(data_item.asm_codes) < 2 * tf.effective_src_line_num:
+            return None
+        data_item_copy = generate_data_item_for_cal(data_item)
+        return (data_item, " ".join(data_item_copy.asm_codes[:30]))
+    except Exception as e:
+        return None
 
+def generate_negative_data_items(pdi, another_pdi):
+    # pdi, another_pdi = args
+    pdi_copy = generate_data_item_for_cal(pdi)
+    text = " ".join(pdi_copy.asm_codes[:30])
+    negative_data_items = []
+
+    # 使用随机选择的另一个pdi，作为负例
+    negative_data_item = copy.deepcopy(pdi)
+    negative_data_item.bin_function_name = another_pdi.bin_function_name
+    negative_data_item.asm_codes = another_pdi.asm_codes
+    negative_data_item.label = 0
+    negative_data_item_copy = generate_data_item_for_cal(negative_data_item)
+    negative_data_item.similarity = fuzz.ratio(text, " ".join(negative_data_item_copy.asm_codes[:30]))
+    negative_data_items.append(negative_data_item)
+
+    # 修改当前正例的汇编代码，形成负例
+    modified_pdi = copy.deepcopy(pdi)
+    # 随机位置的汇编码复制一份
+    modified_pdi.asm_codes = modify_asm_codes(pdi.asm_codes)
+    modified_pdi.label = 0
+    negative_data_item_copy = generate_data_item_for_cal(modified_pdi)
+    modified_pdi.similarity = fuzz.ratio(text, " ".join(negative_data_item_copy.asm_codes[:30]))
+    if 80 < modified_pdi.similarity < 98:
+        negative_data_items.append(modified_pdi)
+
+    return negative_data_items
 def generate_data_items_from_train_functions(train_functions: List[TrainFunction],
                                              expected_negative_num=5,
                                              similarity_threshold=0.5) -> List[
     DataItemForFunctionConfirmModel]:
-    # 生成positive数据
     positive_data_items = []
     positive_text_list = []
-    for tf in tqdm(train_functions, desc="generating positive data items"):
-        try:
-            # 生成一个训练数据
-            data_item = tf.generate_model_1_train_data_item()
-            if data_item is None:
-                continue
-            # 至少10行有效源代码
-            if tf.effective_src_line_num < 10:
-                continue
-            # 汇编代码数量至少是有效源代码数量的两倍
-            if len(data_item.asm_codes) < 2 * tf.effective_src_line_num:
-                continue
-            positive_data_items.append(data_item)
-            positive_text_list.append(" ".join(data_item.asm_codes[:40]))
-        except Exception as e:
-            logger.error(traceback.format_exc())
-            logger.error(e)
 
-    negative_data_items = []
-    for i, pdi in tqdm(enumerate(positive_data_items), desc="generating negative data items"):
+    # 使用多进程生成正例数据
+    with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+        # 使用imap代替map，以tqdm直接封装结果，显示进度条
+        results = pool.imap_unordered(generate_positive_data_item, train_functions)
+        for result in tqdm(results, total=len(train_functions), desc="Generating positive data items"):
+            if result:
+                data_item, text = result
+                positive_data_items.append(data_item)
+                positive_text_list.append(text)
 
-        # 随便选一个, 只要不是同一个，就可以作为负例
-        another_pdi = positive_data_items[random.randint(0, len(positive_data_items) - 1)]
-        if another_pdi != i:
-            negative_data_item = copy.deepcopy(pdi)
-            negative_data_item.bin_function_name = another_pdi.bin_function_name
-            negative_data_item.asm_codes = another_pdi.asm_codes
-            negative_data_item.label = 0
-            negative_data_items.append(negative_data_item)
-            negative_data_item.similarity = 0
+    # Define the number of processes
+    num_processes = multiprocessing.cpu_count()
 
-        # 再选一个比较相似的作为负例
-        text = " ".join(pdi.asm_codes[:40])
-        top_matches = process.extract(text, positive_text_list, limit=3)
-        for text, score, j in top_matches:
-            if j != i and score > 90:
-                negative_data_item = copy.deepcopy(positive_data_items[j])
-                negative_data_item.bin_function_name = another_pdi.bin_function_name
-                negative_data_item.asm_codes = another_pdi.asm_codes
-                negative_data_item.label = 0
-                negative_data_item.similarity = score
-                negative_data_items.append(negative_data_item)
+    # Initialize a multiprocessing pool
+    pool = multiprocessing.Pool(processes=num_processes)
 
-    print(len(positive_data_items), len(negative_data_items))
-    all_data_items = positive_data_items + negative_data_items
+    # Use tqdm for progress bar
+    with tqdm(total=len(positive_data_items), desc="Generating negative data items") as pbar:
+        results = []
+        for pdi in positive_data_items:
+            # 随机选择另一个pdi
+            another_pdi = positive_data_items[random.randint(0, len(positive_data_items) - 1)]
+            # 异步调用，传递pdi和另一个随机选择的pdi给处理函数
+            arg = (pdi, another_pdi)
+            result = pool.apply_async(generate_negative_data_items, args=arg)
+            results.append(result)
+
+        all_negative_data_items = []
+        for result in results:
+            negative_data_items = result.get()
+            all_negative_data_items.extend(negative_data_items)
+            pbar.update(1)
+
+    pool.close()
+    pool.join()
+
+    print(len(positive_data_items), len(all_negative_data_items))
+    all_data_items = positive_data_items + all_negative_data_items
     for i, item in enumerate(all_data_items):
         item.id = i
     return all_data_items
 
+
+def modify_asm_codes(original_asm_codes):
+
+    asm_codes = copy.deepcopy(original_asm_codes[:30])
+    # 确保输入列表的长度足够进行操作
+    if len(asm_codes) < 3:
+        raise ValueError("The input list must contain at least 3 elements.")
+
+    # 随机选择三个位置复制并插入到位置后面
+    for _ in range(3):
+        index = random.randint(0, len(asm_codes) - 1)
+        asm_codes.insert(index + 1, asm_codes[index])
+
+    # 由于列表长度已改变，确保删除操作的索引不会越界
+    if len(asm_codes) < 6:
+        raise ValueError("After insertions, the list is too short for deletions.")
+
+    # 随机选择三个位置删除
+    for _ in range(3):
+        # 每次删除后列表长度减一，故随机范围也相应减小
+        index = random.randint(0, len(asm_codes) - 1)
+        del asm_codes[index]
+
+    # 随机选择两个位置互换
+    index1, index2 = random.sample(range(len(asm_codes)), 2)
+    asm_codes[index1], asm_codes[index2] = asm_codes[index2], asm_codes[index1]
+
+    original_asm_codes[:30] = asm_codes
+    return original_asm_codes
 
 def cal_similarity(data_item_1, data_item_2):
     data_item_1_copy = generate_data_item_for_cal(data_item_1)
