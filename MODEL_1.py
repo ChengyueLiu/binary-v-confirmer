@@ -55,7 +55,7 @@ linux_kernel_val_data_save_path = r"TestCases/model_train/model_1/linux_kernel_t
 linux_kernel_test_data_save_path = r"TestCases/model_train/model_1/linux_kernel_train_data/test_data.json"
 
 
-def prepare_train_data_for_model_1():
+def prepare_train_data_for_model_1_from_openssl():
     """
     1. 从源代码和二进制文件中提取函数特征: 需要准备源代码和对应的二进制文件，需要保持版本一致。
     2. 把函数特征转换成训练数据
@@ -95,7 +95,10 @@ def prepare_train_data_for_model_1():
                                            similarity_threshold=0.5)
 
 
-def prepare_train_data_for_model_1_new():
+def prepare_train_data_for_model_1_from_million_funcs():
+    """
+    从100万个函数中生成训练数据
+    """
     # 加载TrainFunction json数据
     logger.info(f"loading train functions from json file...")
     train_functions_json_items = load_from_json_file("test_results/compiled_paths.json")
@@ -159,6 +162,10 @@ def train_model_1():
         epochs=100,
         batch_size=100,
     )
+
+
+def test_model_1():
+    pass
 
 
 if __name__ == '__main__':

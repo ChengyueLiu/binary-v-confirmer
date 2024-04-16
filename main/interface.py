@@ -1,16 +1,46 @@
 import dataclasses
 import os
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, asdict
 from enum import Enum
-from typing import List
+from typing import List, Type, Dict, Any
 
-from bintools.general.bin_tool import analyze_asm_codes
+from bintools.general.file_tool import load_from_json_file
 from bintools.general.normalize import normalize_asm_lines, normalize_asm_code, normalize_src_lines, remove_comments, \
     normalize_strings
-from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import count_function_effective_lines
 from main.extractors.src_function_feature_extractor.entities import NodeFeature
+
+
+@dataclass
+class Serializable:
+    def customer_serialize(self) -> Dict[str, Any]:
+        # 使用 asdict 来序列化所有实例属性，包括那些带默认值的
+        serialized_data = asdict(self)
+        # 额外处理复杂类型，例如含有 customer_serialize 方法的属性
+        for field in fields(self):
+            value = getattr(self, field.name)
+            if hasattr(value, 'customer_serialize'):
+                serialized_data[field.name] = value.customer_serialize()
+            elif isinstance(value, list) and value and hasattr(value[0], 'customer_serialize'):
+                serialized_data[field.name] = [item.customer_serialize() for item in value]
+        return serialized_data
+
+    @classmethod
+    def init_from_dict(cls: Type['Serializable'], data: Dict[str, Any]) -> 'Serializable':
+        init_args = {}
+        for field in fields(cls):
+            field_value = data.get(field.name)
+            if hasattr(field.type, 'init_from_dict') and isinstance(field_value, dict):
+                init_args[field.name] = field.type.init_from_dict(field_value)
+            elif (isinstance(field_value, list) and
+                  field.type.__args__ and
+                  hasattr(field.type.__args__[0], 'init_from_dict') and
+                  all(isinstance(i, dict) for i in field_value)):
+                init_args[field.name] = [field.type.__args__[0].init_from_dict(item) for item in field_value]
+            else:
+                init_args[field.name] = field_value
+        return cls(**init_args)
 
 
 @dataclass
@@ -1042,3 +1072,63 @@ class TrainFunction:
     def check_data_items(cls):
         # 检查有多少个数据项
         pass
+
+
+@dataclass
+class CodeMapping(Serializable):
+    src_function_name: str = None
+    src_function_path: str = None
+    src_code_line_num: int = None
+
+    is_discriminator: bool = False
+    asm_codes: List[str] = dataclasses.field(default_factory=list)
+    src_codes: List[str] = dataclasses.field(default_factory=list)
+
+
+@dataclass
+class AsmFunction(Serializable):
+    function_name: str
+    code_mappings: List[CodeMapping]
+
+    def get_key(self):
+        asm_function_path = self.code_mappings[0].src_function_path
+        asm_function_path = asm_function_path.split("__tmp/")[-1]
+        if asm_function_path.startswith("./"):
+            asm_function_path = asm_function_path[2:]
+
+        return f"{asm_function_path}__{self.function_name}"
+    def get_param_num(self):
+        for code_mapping in self.code_mappings:
+            for line in code_mapping.src_codes:
+                if "(" in line:
+                    return line.count(",") + 1
+        return 0
+    def get_asm_codes(self, skip_function_def=False):
+        if skip_function_def:
+            start_flag = False
+            start_index = 0
+            for i, code_mapping in enumerate(self.code_mappings):
+                for line in code_mapping.src_codes:
+                    if "{" in line:
+                        start_flag = True
+                if start_flag:
+                    start_index = i + 1
+                    if start_index >= len(self.code_mappings):
+                        start_index = len(self.code_mappings) - 1
+                    break
+
+            asm_codes = [asm_code
+                         for code_mapping in self.code_mappings[start_index:]
+                         for asm_code in code_mapping.asm_codes]
+            src_code_start_line = self.code_mappings[start_index].src_code_line_num
+        else:
+            asm_codes = [asm_code
+                         for code_mapping in self.code_mappings
+                         for asm_code in code_mapping.asm_codes]
+            src_code_start_line = self.code_mappings[0].src_code_line_num
+        return asm_codes, src_code_start_line
+
+    def count_asm_codes(self):
+        asm_codes, src_code_start_line = self.get_asm_codes()
+        return len(asm_codes)
+

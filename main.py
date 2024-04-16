@@ -1,4 +1,4 @@
-from MODEL_1 import prepare_train_data_for_model_1_new, train_model_1
+from MODEL_1 import prepare_train_data_for_model_1_from_million_funcs, train_model_1
 from bintools.general.file_tool import save_to_json_file
 from main.VulConfirmTeam import VulConfirmTeam
 from main.interface import CauseFunction, Vulnerability, Patch
