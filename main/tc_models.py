@@ -68,11 +68,20 @@ class VulConfirmTC(Serializable):
     ground_truth: GroundTruth = None
 
     def is_effective(self):
+        """
+        检查是否有效的测试用例，且移除无效的漏洞函数
+        """
         if not self.test_bin.binary_name:
             return False
 
+        # filter functions
+        filtered_vul_functions = []
         for function in self.vul_functions:
             if function.vul_source_codes:
-                return True
+                filtered_vul_functions.append(function)
 
-        return False
+        if not filtered_vul_functions:
+            return False
+        else:
+            self.vul_functions = filtered_vul_functions
+            return True

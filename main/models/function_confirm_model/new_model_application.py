@@ -65,7 +65,7 @@ class FunctionConfirmer():
         """
         # predict
         predictions = []
-        for batch in tqdm(dataloader, desc=f"confirming functions(batch_size: {self.batch_size}):"):
+        for batch in tqdm(dataloader, desc=f"\tconfirming functions(batch_size: {self.batch_size}):"):
             input_ids = batch['input_ids'].to(self.device)
             attention_mask = batch['attention_mask'].to(self.device)
             with torch.no_grad():
