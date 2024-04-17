@@ -1,178 +1,48 @@
-# # tokenizer
-import copy
-from collections import Counter
-from random import shuffle
+import json
 
-from rapidfuzz import process
-from transformers import BigBirdTokenizer
-
-from bintools.general.normalize import normalize_src_lines
-from bintools.general.src_tool import count_function_effective_lines
-from main.extractors.bin_function_feature_extractor.asm_extractor import objdump, parse_asm_codes
+from bintools.general.file_tool import load_from_json_file
+from main.interface import DataItemForFunctionConfirmModel
 
 
-def check_tokenizer():
-    from tqdm import tqdm
-    from transformers import RobertaTokenizer
+def check_failed_item():
+    failed_ids = [413, 749, 843, 854, 870, 1211, 1444, 1620, 1694, 2002, 2021, 2024, 2477, 2625, 2681, 3363, 3415, 3469, 3712, 3879, 3919, 4188, 4639, 4643, 4808, 4887, 5018, 5030, 5127, 5155, 5194, 5261, 5711, 5741, 5971, 6206, 6309, 6387, 6403, 6633, 6841, 7107, 7112, 7235, 7315, 7647, 7726, 7741, 7762, 8008, 8267, 8316, 8364, 8688, 8728, 8761, 9034, 9290, 9527, 9691, 10043, 10098, 10114, 10292, 10385, 10504, 10609, 11248, 11420, 11616, 11622, 11685, 11731, 11884, 12125, 12497, 12501, 12525, 12939, 13039, 13063, 13272, 13347, 13380, 13402, 13747, 13757, 13886, 14060, 14128, 14275, 14538, 14608, 14614, 14634, 14715, 15241, 15386, 15456, 15631, 15812, 15824, 16029, 16255, 16332, 16952, 17912, 17968, 17988, 18221, 18336, 18495, 18597, 18663, 18772, 18822, 19255, 19271, 19306, 19466, 19681, 19724, 20085, 20118, 20333, 20376, 20693, 20702, 20988, 21037, 21114, 21491, 21557, 21865, 22403, 22586, 23204, 23418, 23727, 23858, 23909, 23961, 24078, 24225, 24568, 24586, 24716, 24824, 24867, 24876, 24947, 25056, 25204, 25284, 25338, 25797, 26285, 26508, 26776, 26869, 27497, 27757, 28098, 28282, 28290, 28330, 28347, 28399, 28647, 28708, 28798, 28825, 29209, 29474, 29597, 29664, 29689, 29724, 29993, 30027, 30108, 30329, 30357, 30423, 30847, 30990, 31128, 31140, 31153, 31163, 31259, 31677, 31746, 31760, 31977, 32108, 32362, 32457, 32557, 32633, 32862, 32955, 33087, 33204, 33219, 33253, 33257, 33337, 33367, 33786, 33984, 34059, 34121, 34160, 34241, 34276, 34381, 34580, 34658, 34931, 34933, 35022, 35064, 35109, 35112, 35271, 35520, 35700, 36361, 36421, 36429, 36505, 37192, 37207, 37378, 37756, 38240, 38430, 38565, 38745, 38904, 38971, 39034, 39946, 40030, 40179, 40330, 40886, 40947, 41127, 41177, 41474, 42218, 42472, 42546, 42715, 42724, 42860, 43036, 43473, 43562, 43688, 43769, 43790, 43933, 44009, 44262, 44275, 44299, 44440, 44584, 44668, 44690, 45097, 45172, 45198, 45231, 45273, 45313, 45331, 45604, 45648, 46583, 46914, 46980, 46998, 47126, 47173, 47373, 47849, 47857, 47858, 47968, 48111, 48489, 48568, 48838, 49099, 49174, 49223, 49280, 49513, 49524, 49588, 49980, 50128, 50396, 50432, 50653, 50855, 51023, 51306, 51328, 51420, 51431, 51669, 51845, 51858, 51880, 52053, 52392, 52722, 52976, 53145, 53326, 53335, 53400, 53547, 53683, 53985, 54019, 54325, 54432, 54437, 54444, 54484, 54700, 54829, 54904, 55017, 55032, 55061, 55135, 55386, 55783, 56083, 56084, 56182, 56194, 56503, 56511, 56722, 56999, 57208, 57423, 57650, 57718, 57861, 58015, 58134, 58313, 58399, 58443, 58612, 58853, 58954, 59061, 59239, 59388, 59438, 59679, 60191, 60210, 60389, 60420, 60508, 60541, 60545, 60765, 60811, 61031, 61180, 61201, 61496, 61793, 61850, 61880, 62227, 62270, 62352, 62361, 62433, 62899, 63317, 63394, 63659, 63719, 63789, 63904, 64411, 64686, 64815, 64959, 65106, 65334, 65400, 65883, 66526, 66562, 66610, 66752, 66856, 66876, 67234, 67290, 67582, 67789, 68007, 68100, 68336, 68555, 68653, 68716, 68719, 68820, 68960, 69381, 69453, 69477, 69511, 69845, 70010, 70103, 70450, 70759, 70864, 71190, 71453, 71477, 71752, 71953, 72077, 72188, 72249, 72601, 72614, 72641, 72770, 72975, 73192, 73213, 73219, 73563, 74554, 74618, 74866, 74921, 74984, 75041, 75428, 75593, 75607, 75726, 75844, 75868, 75937, 75967, 76186, 76217, 76236, 76893, 77018, 77059, 77597, 77628, 78030, 78130, 78213, 78357, 80293, 80306, 80426, 80519, 80610, 80689, 80893, 80977, 81145, 81215, 81469, 81727, 81762, 81955, 82047, 82094, 82274, 82640, 82679, 82807, 82847, 82961, 83176, 83212, 83561, 83624, 83751, 83822, 83855, 83875, 84284, 84426, 84796, 84802, 84838, 84934, 84941, 85352, 85453, 85806, 86341, 86350, 86504, 87038, 87246, 87436, 87483, 87545, 87811, 88031, 88144, 88358, 88486, 89110, 90213, 90412, 90468, 91048, 92255, 94166, 94679, 94917, 95613, 95692, 96152, 97637, 97845, 98072, 99561, 99675, 99969, 100167, 100273, 100370, 100420, 101068, 101077, 101089, 101133, 101417, 101630, 101735, 102171, 102630, 102634, 102768, 102862, 102968, 103003, 103259, 104137, 104565, 105089, 105124, 105303, 105916, 106132, 106163, 106762, 107519, 107625, 107649, 107953, 108149, 108191, 108325, 108329, 108592, 108905, 110153, 110341, 110534, 110831, 110895, 110909, 111021, 111278, 111516, 111617, 111641, 111695, 112201, 112428, 113059, 113188, 113435, 113450, 113776, 113988, 114173, 114481, 114894, 115058, 115392, 115414, 115620, 115824, 116058, 116217, 116565, 116733, 116748, 117000, 117082, 117923, 117977, 118483, 119635, 119937, 120840, 121809, 122072, 122153, 122194, 122621, 123560, 123913, 124819, 125008, 125301, 125317, 125524, 126246, 126258, 126423, 126604, 126630, 126915, 126923, 128880, 128890, 129462, 129885, 130305, 130348, 130997, 131216, 131437, 132400, 132561, 133040, 133532, 133757, 133763, 134008, 134397, 135018, 135318, 136569, 136712, 137152, 138487, 139239, 139777, 139981, 141122, 141244, 141752, 142099, 143086, 143913, 143918, 144047, 144348, 144879, 144990, 145450, 145613, 145840, 146097, 147130, 147740, 148079, 148373, 148672, 149824, 150807, 150921, 152558, 153620, 153668, 154390, 155168, 156169, 156376, 156443, 156534, 156570, 156916, 156956, 157902, 157956, 158097, 158176, 158606, 159101, 159392, 159735, 159763, 160486, 161519, 161563, 161686, 161762, 161806, 162979, 163153, 163177, 163236, 163788, 163955, 164517, 165053, 165151, 165395, 165413, 166739, 166976, 167538, 167706, 167714, 167731, 168134, 168388, 168394, 168469, 168797, 168861, 169147, 169437, 169553, 170001, 170835, 171057, 171170, 172385, 172484, 173192, 173494, 173702, 174595, 174815, 175071, 175378, 175802, 176749, 177317, 177361]
 
-    from bintools.general.file_tool import load_from_json_file
-    from main.interface import DataItemForFunctionConfirmModel
+    val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_1.json"
+    with open(val_data_save_path, 'r') as f:
+        val_data = json.load(f)
+    val_data_dict = {item['id']: item for item in val_data}
 
-    tokenizer = BigBirdTokenizer.from_pretrained('google/bigbird-roberta-base')
-    for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
-        tokenizer.add_tokens(special_token)
-    for special_token in DataItemForFunctionConfirmModel.get_special_tokens():
-        tokenizer.add_tokens(special_token)
+    for failed_id in failed_ids[1:]:
+        item = val_data_dict[failed_id]
+        print(item['id'], item['function_name'])
+        print(f"src_codes: ")
+        for scr_code in item['src_codes']:
+            print(scr_code)
+        print('asm_codes: ')
+        for asm_code in item['asm_codes']:
+            print(asm_code)
+        item = DataItemForFunctionConfirmModel.init_from_dict(item)
+        item.normalize()
+        print(item.get_train_text("[SEP]"))
+        break
 
-    def get_token_length(text):
-        encoding = tokenizer.encode_plus(
-            text,
-            add_special_tokens=True,
-            # max_length=512,
-            # padding='max_length',
-            # truncation=True,
-            return_attention_mask=True,
-            return_tensors='pt',
-        )
-        # 输出token长度
-        token_length = len(encoding['input_ids'][0])
-        text_length = len(text)
-        words_num = len(text.split())
-        return text_length, words_num, token_length
 
-    # 加载数据
-    train_data_json = load_from_json_file("TestCases/model_train/model_1/train_data/train_data.json")
-    shuffle(train_data_json)
+def check_param_num():
+    data_items_path = r"C:\Users\chengyue\Desktop\test_data_items_for_model_1.json"
+    print('load')
+    data_items = load_from_json_file(data_items_path)
 
-    # 生成训练数据对象
-    data_items = []
-    for item in tqdm(train_data_json[:1000]):
-        data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
+    print('obj')
+    data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in data_items]
+
+    for data_item in data_items:
+        if data_item.label !=1:
+            continue
         data_item.normalize()
-        data_items.append(data_item)
-
-    # 检查
-    min_ratio = float("inf")
-    max_ratio = 0
-    ratios = []
-    count = 0
-    for data_item in tqdm(data_items):
+        print(data_item.get_train_text("[SEP]"))
+        break
 
 
-
-        text = data_item.get_train_text(tokenizer.sep_token)
-        src_code, asm_code = text.split(tokenizer.sep_token)
-        text_length, words_num, token_length = get_token_length(text)
-        src_length, src_words_num, src_token_length = get_token_length(src_code)
-        asm_length, asm_words_num, asm_token_length = get_token_length(asm_code)
-
-        if token_length > 512:
-            count += 1
-            print(f"function_name： {data_item.function_name} ")
-            print(f"\t{text}")
-            print(f"\ttext： \t{text_length} \t{words_num} \t{token_length}")
-            print(f"\tsrc： \t\t{src_length} \t{src_words_num} \t{src_token_length}")
-            print(f"\tasm： \t\t{asm_length} \t{asm_words_num} \t{asm_token_length}")
-
-        src_line_num = count_function_effective_lines(data_item.src_codes)
-        asm_line_num = len(data_item.asm_codes)
-        ratio = round(len(text) / token_length, 1)
-
-        if ratio < min_ratio:
-            min_ratio = ratio
-        if ratio > max_ratio:
-            max_ratio = ratio
-        ratios.append(ratio)
-    print(f"count: {count}")
-    avg_ratio = round(sum(ratios) / len(ratios), 1)
-    print(f"min_ratio: {min_ratio}, max_ratio: {max_ratio}, avg_ratio: {avg_ratio}")
-    # 打印ratio 数量分布情况
-    counter = Counter(ratios)
-    print(counter.most_common(10))
-
-def check_failed_items():
-    from bintools.general.file_tool import load_from_json_file
-    from bintools.general.src_tool import count_function_effective_lines
-    from main.interface import DataItemForFunctionConfirmModel
-
-    test_items = load_from_json_file("TestCases/model_train/model_1/train_data/val_data.json")
-    test_item_dict = {item["id"]: item for item in test_items}
-    label_0 = 0
-    label_1 = 0
-    failed_id_list = \
-        [97, 268, 300, 388, 429, 519, 616, 742, 793, 818, 859, 1044, 1052, 1063, 1099, 1190, 1243, 1272, 1278, 1280,
-         1556, 1697, 1747, 1812, 1867, 2044, 2310, 2526, 2527, 2561, 2730, 2768, 2820, 2866, 2897, 3202, 3260, 3529,
-         3605, 3607, 3616, 3728, 3809, 4020, 4319, 4359, 4705, 4721, 4775, 4835, 4870, 4872, 4907, 5100, 5101, 5227,
-         5228, 5235, 5260, 5516, 5535, 5590, 5601, 5617, 5645, 5816, 5883, 6030, 6088, 6105, 6364, 6405, 6444, 6459,
-         6477, 6479, 6557, 6632, 6673, 6689, 6817, 6988, 7075, 7173, 7220, 7284, 7323, 7361, 7417, 7430, 7523, 7652,
-         7709, 7784, 7894, 8100, 8164, 8220, 8321, 8418, 8648, 9043, 9070, 9163, 9177, 9308, 9894, 9981, 10209, 10220,
-         10233, 10319, 10387, 10559, 10587, 10594, 10625, 10685, 10744, 10958, 11038, 11128, 11164, 11205, 11259, 11290,
-         11291, 11303, 11450, 11565, 11800, 11970, 12018, 12078, 12136, 12193, 12213, 12427, 12434, 12585, 12678, 12743,
-         12776, 12800, 12928, 12971, 13030, 13095, 13175, 13257, 13275, 13359, 13393, 13455, 13467, 13614, 13625, 13802,
-         13805, 13908, 13921, 14065, 14176, 14370, 14511, 14564, 14571, 14610, 14703, 14730, 14742, 14756, 14900, 14949,
-         14959, 14999, 15034, 15161, 15287, 15419, 15488, 15502, 15515, 15540, 15548, 15587, 15698, 15718, 15787, 15812,
-         16065, 16311, 16427, 16478, 16482, 16552, 16573, 16805, 16829, 16836, 17126, 17195, 17242, 17285, 17330, 17372,
-         17448, 17467, 17548, 17586, 17645, 17741, 17944, 17994, 18056, 18077, 18239, 18263, 18407, 18516]
-
-    for id in failed_id_list:
-        demo = DataItemForFunctionConfirmModel.init_from_dict(test_item_dict[id])
-        effective_line_num = count_function_effective_lines(demo.src_codes)
-        src_codes = copy.copy(demo.src_codes)
-        asm_codes = copy.copy(demo.asm_codes)
-        demo.normalize()
-        text = demo.get_train_text("<s>")
-        src_text, asm_text = text.split("<s>")
-        print(demo.get_train_text("<s>"))
-        print(id, demo.label,demo.function_name,
-              f"\n\t{src_text}"
-              f"\n\t{src_codes}"
-              f"\n\t{asm_text}"
-              f"\n\t{asm_codes}")
-        if demo.label == 0:
-            label_0 += 1
-        else:
-            label_1 += 1
-        # print(asm_strings)
-
-    print(len(test_items),len(failed_id_list), label_0, label_1)
-
-def check_normaliize():
-    src_codes = [
-            "  /* We have already examined parent j and we know parent i",
-            "   * and parent j are the same, so reuse the combined result",
-            "   * of parent j for parent i.",
-            "   */",
-            "  unsigned long lno, imask, jmask;",
-            "  imask = (1UL << i);",
-            "  jmask = (1UL << j);",
-            "",
-            "  for (lno = 0; lno <= cnt; lno++) {",
-            "    struct lline *ll = sline->lost;",
-            "    sline->p_lno[i] = sline->p_lno[j];",
-            "    while (ll) {",
-            "      if (ll->parent_map & jmask)",
-            "        ll->parent_map |= imask;",
-            "      ll = ll->next;",
-            "    }",
-            "    if (sline->flag & jmask)",
-            "      sline->flag |= imask;",
-            "    sline++;",
-            "  }",
-            "  /* the overall size of the file (sline[cnt]) */",
-            "  sline->p_lno[i] = sline->p_lno[j];",
-            "}"
-        ]
-    for line in normalize_src_lines(src_codes):
-        print(line)
 
 if __name__ == '__main__':
-    # check_tokenizer()
-
-    # check_failed_items()
-    # check_normaliize()
-    binary_path='TestCases/binaries/self_compiled/libpng_master/libpng16.so.16.44.0'
-    result = parse_asm_codes(binary_path)
-    for function_name,asm_codes in result.items():
-        print(function_name)
-        for asm_code in asm_codes:
-            print('\t', asm_code)
+    check_failed_item()

@@ -66,3 +66,13 @@ class VulConfirmTC(Serializable):
     test_bin: TestBin = None
 
     ground_truth: GroundTruth = None
+
+    def is_effective(self):
+        if not self.test_bin.binary_name:
+            return False
+
+        for function in self.vul_functions:
+            if function.vul_source_codes:
+                return True
+
+        return False

@@ -74,25 +74,25 @@ def confirm_functions(model, tc: VulConfirmTC):
             data_items.append(data_item)
     print(f"\tgenerated {len(data_items)} data items")
 
-    # 调用模型
-    predictions = model.confirm(data_items)
-
-    print(f"confirm result: \n"
-          f"\tvul: {tc.public_id}\n"
-          f"\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
-          f"\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
-          f"\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}\n")
-    print(f"\tconfirmed functions:")
-    for data_item, (pred, prob) in zip(data_items, predictions):
-        prob = round(prob, 4)
-        if pred == 1 and prob > 0.95:
-            function_name = data_item.function_name
-            if function_name.startswith("*"):
-                function_name = function_name[1:]
-            if function_name == data_item.bin_function_name:
-                print(f"\t***** {function_name} {data_item.bin_function_name} {prob} *****")
-            else:
-                print('\t\t', data_item.function_name, data_item.bin_function_name, prob)
+    # # 调用模型
+    # predictions = model.confirm(data_items)
+    #
+    # print(f"confirm result: \n"
+    #       f"\tvul: {tc.public_id}\n"
+    #       f"\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
+    #       f"\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
+    #       f"\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}\n")
+    # print(f"\tconfirmed functions:")
+    # for data_item, (pred, prob) in zip(data_items, predictions):
+    #     prob = round(prob, 4)
+    #     if pred == 1 and prob > 0.95:
+    #         function_name = data_item.function_name
+    #         if function_name.startswith("*"):
+    #             function_name = function_name[1:]
+    #         if function_name == data_item.bin_function_name:
+    #             print(f"\t***** {function_name} {data_item.bin_function_name} {prob} *****")
+    #         else:
+    #             print('\t\t', data_item.function_name, data_item.bin_function_name, prob)
 
 
 def run_experiment():
@@ -100,14 +100,15 @@ def run_experiment():
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
 
     print(f"init model...")
-    model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
-
+    # model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
+    model = None
     print(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
 
     for i, tc in enumerate(test_cases[:10], 1):
-        if tc.public_id != "CVE-2012-2776":
+        if not tc.is_effective():
             continue
+        print(tc.public_id)
         confirm_functions(model, tc)
 
 

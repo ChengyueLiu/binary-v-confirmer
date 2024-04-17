@@ -8,9 +8,19 @@ def analyze_src_codes(normalized_src_codes):
             start_index = i
             break
 
-    function_def_line = " ".join(normalized_src_codes[:start_index])
     body_start_index = start_index + 1
-    param_count = function_def_line.count(",") + 1
+    function_def_line = " ".join(normalized_src_codes[:body_start_index])
+
+    param_part = function_def_line.rsplit("(", 1)[-1].split(")", 1)[0]
+
+    if param_part == "void" or param_part == "":
+        param_count = 0
+    elif param_part.endswith("..."):
+        param_count = 6
+    else:
+        param_count = param_part.count(",") + 1
+    if param_count >= 6:
+        param_count = 6
     return body_start_index, param_count
 
 
