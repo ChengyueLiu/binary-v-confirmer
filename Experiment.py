@@ -44,10 +44,6 @@ def generate_model_input(asm_function, vul_function):
     data_item.asm_codes = data_item.asm_codes[asm_body_start_index:]
     data_item.src_codes = data_item.src_codes[src_body_start_index:]
 
-    # 过滤条件 2: 长度
-    # if not (2 * len(data_item.src_codes) < len(data_item.asm_codes) < 5 * len(data_item.src_codes)):
-    #     return None
-
     return data_item
 
 
@@ -95,14 +91,14 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     predictions = model.confirm(data_items)
 
     # 4. 预览和分析结果
-    confirmed_function_name = None
-    confirmed_prob = 0
     print(f"\n\tground truth: \n"
           f"\t\tvul: {tc.public_id}\n"
           f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
           f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
           f"\t\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}")
     print(f"\n\tconfirm result:")
+    confirmed_function_name = None
+    confirmed_prob = 0
     asm_codes_list = []
     for data_item, (pred, prob) in zip(data_items, predictions):
         prob = round(prob, 4)
@@ -140,6 +136,17 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     return confirmed_function_name, confirmed_prob
 
 
+def analyze_result(tp, fp, fn):
+    precision = tp / (tp + fp) if tp + fp > 0 else 0
+    recall = tp / (tp + fn) if tp + fn > 0 else 0
+    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
+    print(f"test result:")
+    print(f"\ttp: {tp} fp: {fp} fn: {fn}")
+    print(f"\tprecision: {precision}")
+    print(f"\trecall: {recall}")
+    print(f"\tf1: {f1}")
+
+
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
@@ -156,15 +163,20 @@ def run_experiment():
     asm_functions_cache = {}
     tp = 0
     fp = 0
+    fn = 0
     for i, tc in enumerate(test_cases[:10], 1):
         print(f"confirm: {i} {tc.public_id}")
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
-        if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
-            tp += 1
+        if confirmed_function_name is None:
+            fn += 1
         else:
-            fp += 1
-
-    print(f"tp: {tp} fp: {fp} acc: {tp / (tp + fp) if tp + fp > 0 else 0}")
+            if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
+                tp += 1
+            else:
+                fp += 1
+    print(f"test result:")
+    print(f"\ttc num: {len(test_cases)}")
+    analyze_result(tp, fp, fn)
 
 
 if __name__ == '__main__':

@@ -1,3 +1,4 @@
+import multiprocessing
 from random import shuffle
 from typing import List
 
@@ -58,20 +59,28 @@ def create_dataset_from_model_input(data_items: List[DataItemForFunctionConfirmM
     return dataset
 
 
+def init_data_item_obj_from_dict(item):
+    data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
+    data_item.normalize()
+    return data_item
+
+
 def create_dataset(file_path, tokenizer, max_len=512, is_train=False):
     logger.info(f"加载数据集: {file_path}")
     train_data_json = load_from_json_file(file_path)
     logger.info(f"加载完毕")
-    data_items = []
-    for item in tqdm(train_data_json, desc="初始化训练对象"):
-        data_item = DataItemForFunctionConfirmModel.init_from_dict(item)
-        data_item.normalize()
-        data_items.append(data_item)
+
+    pool = multiprocessing.Pool(multiprocessing.cpu_count() - 4)
+    data_items = list(
+        tqdm(pool.imap_unordered(init_data_item_obj_from_dict, train_data_json), total=len(train_data_json),
+             desc="多进程初始化训练对象"))
+    pool.close()
+    pool.join()
 
     texts = []
     labels = []
     item_ids = []
-    for data_item in tqdm(data_items, desc="构建Datasetc参数"):
+    for data_item in tqdm(data_items, desc="构建Dataset参数"):
         item_ids.append(data_item.id)
         labels.append(data_item.label)
         texts.append(data_item.get_train_text(tokenizer.sep_token))
