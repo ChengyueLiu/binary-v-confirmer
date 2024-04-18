@@ -220,7 +220,7 @@ def run_experiment():
     tp = 0
     fp = 0
     fn = 0
-    for i, tc in enumerate(test_cases[:10], 1):
+    for i, tc in enumerate(test_cases[:100], 1):
         logger.info(f"confirm: {i} {tc.public_id}")
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
         tp_change, fp_change, fn_change = check_result(tc, confirmed_function_name)
