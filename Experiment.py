@@ -143,11 +143,40 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
             if src_function_name == data_item.bin_function_name:
                 logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
                 asm_codes_list.append(data_item.asm_codes[:40])
-    logger.info(f"\tasm codes:")
+    logger.info(f"\tconfirmed asm codes:")
     for asm_codes in asm_codes_list:
         logger.info(f"\t\t{asm_codes}")
 
     return confirmed_function_name, confirmed_prob
+
+
+def check_result(tc, confirmed_function_name):
+    ground_truth = tc.ground_truth
+    tp, fp, fn = 0, 0, 0
+    # 如果ground truth中包含漏洞函数名
+    if ground_truth.contained_vul_function_names:
+        if confirmed_function_name is None:
+            fn += 1
+            logger.info(f"\t\tcheck result: FN")
+        else:
+            # 这里有时候会检测到名称相同但是路径不同的函数，所以这里不用ground_truth, 直接比较函数名
+            vul_function_names = [func.get_function_name() for func in tc.vul_functions]
+            if confirmed_function_name in vul_function_names:
+                tp += 1
+                logger.info(f"\t\tcheck result: TP")
+            else:
+                fp += 1
+                logger.info(f"\t\tcheck result: FP")
+    # 如果ground truth中不包含漏洞函数名
+    else:
+        if confirmed_function_name is None:
+            tp += 1
+            logger.info(f"\t\tcheck result: TP")
+        else:
+            fp += 1
+            logger.info(f"\t\tcheck result: FP")
+    logger.info("\n")
+    return tp, fp, fn
 
 
 def analyze_result(tp, fp, fn):
@@ -159,32 +188,6 @@ def analyze_result(tp, fp, fn):
     logger.info(f"\tprecision: {precision}")
     logger.info(f"\trecall: {recall}")
     logger.info(f"\tf1: {f1}")
-
-
-def check_result(ground_truth, confirmed_function_name):
-    tp, fp, fn = 0, 0, 0
-    # 如果ground truth中包含漏洞函数名
-    if ground_truth.contained_vul_function_names:
-        if confirmed_function_name is None:
-            fn += 1
-            logger.info(f"check result: FN")
-        else:
-            if confirmed_function_name in ground_truth.contained_vul_function_names:
-                tp += 1
-                logger.info(f"check result: TP")
-            else:
-                fp += 1
-                logger.info(f"check result: FP")
-    # 如果ground truth中不包含漏洞函数名
-    else:
-        if confirmed_function_name is None:
-            tp += 1
-            logger.info(f"check result: TP")
-        else:
-            fp += 1
-            logger.info(f"check result: FP")
-    logger.info("\n")
-    return tp, fp, fn
 
 
 def run_experiment():
@@ -220,7 +223,10 @@ def run_experiment():
         logger.info(f"confirm: {i} {tc.public_id}")
         ground_truth = tc.ground_truth
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
-        tp, fp, fn = check_result(ground_truth, confirmed_function_name)
+        tp_change, fp_change, fn_change = check_result(tc, confirmed_function_name)
+        tp += tp_change
+        fp += fp_change
+        fn += fn_change
 
     logger.info(f"test result:")
     logger.info(f"\ttc num: {len(test_cases)}")
