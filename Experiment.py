@@ -1,6 +1,9 @@
 import difflib
+from datetime import datetime
 from multiprocessing import Pool
 from typing import List
+
+from loguru import logger
 
 from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.file_tool import load_from_json_file
@@ -9,6 +12,12 @@ from main.extractors.bin_function_feature_extractor.objdump_parser import parse_
 from main.interface import DataItemForFunctionConfirmModel
 from main.models.function_confirm_model.new_model_application import FunctionConfirmer
 from main.tc_models import VulConfirmTC, VulFunction, TestBin
+
+# 获取当前时间并格式化为字符串，例如 '20230418_101530'
+start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+# 添加日志处理器，文件名包含脚本开始时间
+logger.add(f"logs/experiment_{start_time}.log", level="INFO")
 
 
 def load_test_cases(tc_save_path) -> List[VulConfirmTC]:
@@ -68,16 +77,16 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     test_bin: TestBin = tc.test_bin
 
     # 1. 提取汇编函数
-    print(f"\textracting asm functions from {test_bin.binary_path}")
+    logger.info(f"\textracting asm functions from {test_bin.binary_path}")
     if test_bin.binary_path not in asm_functions_cache:
         asm_function_dict = parse_objdump_file(test_bin.binary_path, ignore_warnings=True)
         asm_functions_cache[test_bin.binary_path] = asm_function_dict
     else:
         asm_function_dict = asm_functions_cache[test_bin.binary_path]
-    print(f"\textracted {len(asm_function_dict)} asm functions")
+    logger.info(f"\textracted {len(asm_function_dict)} asm functions")
 
     # 2. 过滤asm函数并生成模型输入数据
-    print(f"\tfilter asm functions and generating model input data...")
+    logger.info(f"\tfilter asm functions and generating model input data...")
     found_functions = []
     data_items = []
     tasks = [(asm_function, vul_function)
@@ -91,20 +100,20 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
             data_items.append(data_item)
             if data_item.function_name.strip("*") == data_item.bin_function_name:
                 found_functions.append(data_item.bin_function_name)
-    print(f"\tgenerated {len(data_items)} data items")
-    print(f"\tvul functions: {[vf.function_name for vf in vul_functions]}")
-    print(f"\tvul functions in data items: {found_functions}")
+    logger.info(f"\tgenerated {len(data_items)} data items")
+    logger.info(f"\tvul functions: {[vf.function_name for vf in vul_functions]}")
+    logger.info(f"\tvul functions in data items: {found_functions}")
 
     # 3. 调用模型
     predictions = model.confirm(data_items)
 
     # 4. 预览和分析结果
-    print(f"\n\tground truth: \n"
-          f"\t\tvul: {tc.public_id}\n"
-          f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
-          f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
-          f"\t\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}")
-    print(f"\n\tconfirm result:")
+    logger.info(f"\n\tground truth: \n"
+                f"\t\tvul: {tc.public_id}\n"
+                f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
+                f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
+                f"\t\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}")
+    logger.info(f"\n\tconfirm result:")
     confirmed_function_name = None
     confirmed_prob = 0
     asm_codes_list = []
@@ -120,28 +129,28 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
             if src_function_name.startswith("*"):
                 src_function_name = src_function_name[1:]
             if src_function_name == data_item.bin_function_name:
-                print(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
+                logger.info(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
             else:
-                print('\t\t', data_item.function_name, data_item.bin_function_name, prob)
-            asm_codes_list.append(data_item.asm_codes)
+                logger.info(f'\t\t {data_item.function_name} {data_item.bin_function_name} {prob}')
+            asm_codes_list.append(data_item.asm_codes[:40])
         else:
             src_function_name = data_item.function_name
             if src_function_name.startswith("*"):
                 src_function_name = src_function_name[1:]
             if src_function_name == data_item.bin_function_name:
-                print(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
-                asm_codes_list.append(data_item.asm_codes)
-    print(f"\n\tasm_codes:")
-    # for asm_codes in asm_codes_list:
-    #     print(f"\t\t{asm_codes}")
+                logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
+                asm_codes_list.append(data_item.asm_codes[:40])
+    logger.info(f"\tasm_codes:")
+    for asm_codes in asm_codes_list:
+        logger.info(f"\t\t{asm_codes}")
     if confirmed_function_name:
         if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
-            print(f"\n\tConclusion: TP {confirmed_function_name} {confirmed_prob}")
+            logger.info(f"\tConclusion: TP {confirmed_function_name} {confirmed_prob}")
         else:
-            print(f"\n\tConclusion: FP {confirmed_function_name} {confirmed_prob} ")
+            logger.info(f"\tConclusion: FP {confirmed_function_name} {confirmed_prob}")
     else:
-        print(f"\n\tConclusion: FN")
-    print('\n')
+        logger.info(f"\tConclusion: FN")
+    logger.info('\n')
 
     return confirmed_function_name, confirmed_prob
 
@@ -150,26 +159,47 @@ def analyze_result(tp, fp, fn):
     precision = tp / (tp + fp) if tp + fp > 0 else 0
     recall = tp / (tp + fn) if tp + fn > 0 else 0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-    print(f"test result:")
-    print(f"\ttp: {tp} fp: {fp} fn: {fn}")
-    print(f"\tprecision: {precision}")
-    print(f"\trecall: {recall}")
-    print(f"\tf1: {f1}")
+    logger.info(f"test result:")
+    logger.info(f"\ttp: {tp} fp: {fp} fn: {fn}")
+    logger.info(f"\tprecision: {precision}")
+    logger.info(f"\trecall: {recall}")
+    logger.info(f"\tf1: {f1}")
+
+
+def check_result(ground_truth, confirmed_function_name):
+    tp, fp, fn = 0, 0, 0
+    # 如果ground truth中包含漏洞函数名
+    if ground_truth.contained_vul_function_names:
+        if confirmed_function_name is None:
+            fn += 1
+        else:
+            if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
+                tp += 1
+            else:
+                fp += 1
+    # 如果ground truth中不包含漏洞函数名
+    else:
+        if confirmed_function_name is None:
+            tp += 1
+        else:
+            fp += 1
+
+    return tp, fp, fn
 
 
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
 
-    print(f"init model...")
+    logger.info(f"init model...")
     model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
 
-    print(f"load test cases from {tc_save_path}")
+    logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
-    print(f"loaded {len(test_cases)} test cases")
+    logger.info(f"loaded {len(test_cases)} test cases")
     test_cases = [tc for tc in test_cases if tc.is_effective()]
-    print(f"include {len(test_cases)} effective test cases")
-    
+    logger.info(f"include {len(test_cases)} effective test cases")
+
     # 分开测试的话，筛选一下
     # # 不包含漏洞的测试用例
     # test_cases = [tc for tc in test_cases
@@ -186,18 +216,14 @@ def run_experiment():
     tp = 0
     fp = 0
     fn = 0
-    for i, tc in enumerate(test_cases, 1):
-        print(f"confirm: {i} {tc.public_id}")
+    for i, tc in enumerate(test_cases[390:400], 1):
+        logger.info(f"confirm: {i} {tc.public_id}")
+        ground_truth = tc.ground_truth
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
-        if confirmed_function_name is None:
-            fn += 1
-        else:
-            if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
-                tp += 1
-            else:
-                fp += 1
-    print(f"test result:")
-    print(f"\ttc num: {len(test_cases)}")
+        tp, fp, fn = check_result(ground_truth, confirmed_function_name)
+
+    logger.info(f"test result:")
+    logger.info(f"\ttc num: {len(test_cases)}")
     analyze_result(tp, fp, fn)
 
 
