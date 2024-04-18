@@ -1,3 +1,4 @@
+import difflib
 from multiprocessing import Pool
 from typing import List
 
@@ -50,6 +51,13 @@ def generate_model_input(asm_function, vul_function):
 def generate_model_input_wrapper(args):
     asm_function, vul_function = args
     return generate_model_input(asm_function, vul_function)
+
+
+def cal_similarity(asm_codes_1, asm_codes_2):
+    s1 = " ".join(asm_codes_1[:40])
+    s2 = " ".join(asm_codes_2[:40])
+    similarity = difflib.SequenceMatcher(None, s1, s2).quick_ratio()
+    return similarity
 
 
 def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
@@ -114,7 +122,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
             if src_function_name == data_item.bin_function_name:
                 print(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
             else:
-                print('\t\t', data_item.function_name, data_item.bin_function_name, prob, )
+                print('\t\t', data_item.function_name, data_item.bin_function_name, prob)
             asm_codes_list.append(data_item.asm_codes)
         else:
             src_function_name = data_item.function_name
@@ -124,13 +132,15 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
                 print(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
                 asm_codes_list.append(data_item.asm_codes)
     print(f"\n\tasm_codes:")
-    for asm_codes in asm_codes_list:
-        print(f"\t\t{asm_codes}")
-
-    if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
-        print(f"\n\tConclusion: TP {confirmed_function_name} {confirmed_prob}")
+    # for asm_codes in asm_codes_list:
+    #     print(f"\t\t{asm_codes}")
+    if confirmed_function_name:
+        if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
+            print(f"\n\tConclusion: TP {confirmed_function_name} {confirmed_prob}")
+        else:
+            print(f"\n\tConclusion: FP {confirmed_function_name} {confirmed_prob} ")
     else:
-        print(f"\n\tConclusion: FP {confirmed_function_name} {confirmed_prob} ")
+        print(f"\n\tConclusion: FN")
     print('\n')
 
     return confirmed_function_name, confirmed_prob
@@ -159,12 +169,24 @@ def run_experiment():
     print(f"loaded {len(test_cases)} test cases")
     test_cases = [tc for tc in test_cases if tc.is_effective()]
     print(f"include {len(test_cases)} effective test cases")
+    
+    # 分开测试的话，筛选一下
+    # # 不包含漏洞的测试用例
+    # test_cases = [tc for tc in test_cases
+    #               if not tc.ground_truth.contained_vul_function_names]
+    # # 包含，且没修复
+    # test_case = [tc for tc in test_cases
+    #              if tc.ground_truth.contained_vul_function_names and not tc.ground_truth.is_fixed]
+    #
+    # # 包含，且已修复
+    # test_case = [tc for tc in test_cases
+    #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
 
     asm_functions_cache = {}
     tp = 0
     fp = 0
     fn = 0
-    for i, tc in enumerate(test_cases[:10], 1):
+    for i, tc in enumerate(test_cases, 1):
         print(f"confirm: {i} {tc.public_id}")
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
         if confirmed_function_name is None:
