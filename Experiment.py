@@ -146,7 +146,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     logger.info(f"\tconfirmed asm codes:")
     for asm_codes in asm_codes_list:
         logger.info(f"\t\t{asm_codes}")
-
+    logger.info(f"\tconfirm result: {confirmed_function_name} {confirmed_prob}")
     return confirmed_function_name, confirmed_prob
 
 
@@ -166,7 +166,8 @@ def check_result(tc, confirmed_function_name):
                 logger.info(f"\t\tcheck result: TP")
             else:
                 fp += 1
-                logger.info(f"\t\tcheck result: FP")
+                fn += 1
+                logger.info(f"\t\tcheck result: FP, FN")
     # 如果ground truth中不包含漏洞函数名
     else:
         if confirmed_function_name is None:
@@ -219,9 +220,8 @@ def run_experiment():
     tp = 0
     fp = 0
     fn = 0
-    for i, tc in enumerate(test_cases[390:400], 1):
+    for i, tc in enumerate(test_cases[:10], 1):
         logger.info(f"confirm: {i} {tc.public_id}")
-        ground_truth = tc.ground_truth
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
         tp_change, fp_change, fn_change = check_result(tc, confirmed_function_name)
         tp += tp_change
