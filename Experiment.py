@@ -83,10 +83,10 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
         asm_functions_cache[test_bin.binary_path] = asm_function_dict
     else:
         asm_function_dict = asm_functions_cache[test_bin.binary_path]
-    logger.info(f"\textracted {len(asm_function_dict)} asm functions")
+    logger.info(f"\t\textracted {len(asm_function_dict)} asm functions")
 
     # 2. 过滤asm函数并生成模型输入数据
-    logger.info(f"\tfilter asm functions and generating model input data...")
+    logger.info(f"\t\tfilter asm functions and generating model input data...")
     found_functions = []
     data_items = []
     tasks = [(asm_function, vul_function)
@@ -100,20 +100,23 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
             data_items.append(data_item)
             if data_item.function_name.strip("*") == data_item.bin_function_name:
                 found_functions.append(data_item.bin_function_name)
-    logger.info(f"\tgenerated {len(data_items)} data items")
-    logger.info(f"\tvul functions: {[vf.function_name for vf in vul_functions]}")
-    logger.info(f"\tvul functions in data items: {found_functions}")
+    logger.info(f"\t\tgenerated {len(data_items)} data items")
+    logger.info(f"\t\tvul functions: {[vf.function_name for vf in vul_functions]}")
+    logger.info(f"\t\tvul functions in data items: {found_functions}")
 
     # 3. 调用模型
     predictions = model.confirm(data_items)
 
-    # 4. 预览和分析结果
-    logger.info(f"\n\tground truth: \n"
-                f"\t\tvul: {tc.public_id}\n"
-                f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}\n"
-                f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}\n"
-                f"\t\tground truth: {tc.ground_truth.is_fixed} {tc.ground_truth.contained_vul_function_names}")
-    logger.info(f"\n\tconfirm result:")
+    # 4. 预览ground truth
+    logger.info(f"\tground truth: ")
+    logger.info(f"\t\tvul: {tc.public_id}")
+    logger.info(f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}")
+    logger.info(f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}")
+    logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
+    logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
+
+    # 5. 确认结果
+    logger.info(f"\tconfirmed functions:")
     confirmed_function_name = None
     confirmed_prob = 0
     asm_codes_list = []
@@ -124,7 +127,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
                 confirmed_function_name = data_item.bin_function_name
                 confirmed_prob = prob
 
-            # 打印分析
+            # 预览结果
             src_function_name = data_item.function_name
             if src_function_name.startswith("*"):
                 src_function_name = src_function_name[1:]
@@ -140,17 +143,9 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
             if src_function_name == data_item.bin_function_name:
                 logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
                 asm_codes_list.append(data_item.asm_codes[:40])
-    logger.info(f"\tasm_codes:")
+    logger.info(f"\tasm codes:")
     for asm_codes in asm_codes_list:
         logger.info(f"\t\t{asm_codes}")
-    if confirmed_function_name:
-        if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
-            logger.info(f"\tConclusion: TP {confirmed_function_name} {confirmed_prob}")
-        else:
-            logger.info(f"\tConclusion: FP {confirmed_function_name} {confirmed_prob}")
-    else:
-        logger.info(f"\tConclusion: FN")
-    logger.info('\n')
 
     return confirmed_function_name, confirmed_prob
 
@@ -172,18 +167,23 @@ def check_result(ground_truth, confirmed_function_name):
     if ground_truth.contained_vul_function_names:
         if confirmed_function_name is None:
             fn += 1
+            logger.info(f"check result: FN")
         else:
-            if confirmed_function_name in tc.ground_truth.contained_vul_function_names:
+            if confirmed_function_name in ground_truth.contained_vul_function_names:
                 tp += 1
+                logger.info(f"check result: TP")
             else:
                 fp += 1
+                logger.info(f"check result: FP")
     # 如果ground truth中不包含漏洞函数名
     else:
         if confirmed_function_name is None:
             tp += 1
+            logger.info(f"check result: TP")
         else:
             fp += 1
-
+            logger.info(f"check result: FP")
+    logger.info("\n")
     return tp, fp, fn
 
 
