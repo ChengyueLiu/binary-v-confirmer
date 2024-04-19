@@ -1,4 +1,6 @@
 import difflib
+from collections import namedtuple
+from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
 from typing import List
@@ -150,45 +152,57 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     return confirmed_function_name, confirmed_prob
 
 
-def check_result(tc, confirmed_function_name):
+def check_result(tc, confirmed_function_name, analysis):
     ground_truth = tc.ground_truth
-    tp, fp, fn = 0, 0, 0
-    # 如果ground truth中包含漏洞函数名
+    # 如果ground truth中有漏洞
     if ground_truth.contained_vul_function_names:
+        # 没有确认到漏洞，FN
         if confirmed_function_name is None:
-            fn += 1
+            analysis.fn += 1
             logger.info(f"\t\tcheck result: FN")
         else:
-            # 这里有时候会检测到名称相同但是路径不同的函数，所以这里不用ground_truth, 直接比较函数名
             vul_function_names = [func.get_function_name() for func in tc.vul_functions]
+            # 确认到正确漏洞函数，TP
             if confirmed_function_name in vul_function_names:
-                tp += 1
+                analysis.tp += 1
                 logger.info(f"\t\tcheck result: TP")
+            # 确认到错误漏洞函数，FP, FN
             else:
-                fp += 1
-                fn += 1
+                analysis.fp += 1
+                analysis.fn += 1
                 logger.info(f"\t\tcheck result: FP, FN")
     # 如果ground truth中不包含漏洞函数名
     else:
+        # 没有确认到漏洞，TN
         if confirmed_function_name is None:
-            tp += 1
+            analysis.tn += 1
             logger.info(f"\t\tcheck result: TP")
+        # 确认到漏洞，FP
         else:
-            fp += 1
+            analysis.fp += 1
             logger.info(f"\t\tcheck result: FP")
     logger.info("\n")
-    return tp, fp, fn
 
 
-def analyze_result(tp, fp, fn):
-    precision = tp / (tp + fp) if tp + fp > 0 else 0
-    recall = tp / (tp + fn) if tp + fn > 0 else 0
-    f1 = 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-    logger.info(f"test result:")
-    logger.info(f"\ttp: {tp} fp: {fp} fn: {fn}")
-    logger.info(f"\tprecision: {precision}")
-    logger.info(f"\trecall: {recall}")
-    logger.info(f"\tf1: {f1}")
+@dataclass
+class Analysis:
+    tp: int = 0
+    fp: int = 0
+    tn: int = 0
+    fn: int = 0
+
+    @property
+    def precision(self):
+        return self.tp / (self.tp + self.fp) if self.tp + self.fp > 0 else 0
+
+    @property
+    def recall(self):
+        return self.tp / (self.tp + self.fn) if self.tp + self.fn > 0 else 0
+
+    @property
+    def f1(self):
+        return 2 * self.precision * self.recall / (
+                self.precision + self.recall) if self.precision + self.recall > 0 else 0
 
 
 def run_experiment():
@@ -217,21 +231,25 @@ def run_experiment():
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
 
     asm_functions_cache = {}
-    tp = 0
-    fp = 0
-    fn = 0
+    analysis = Analysis()
     for i, tc in enumerate(test_cases[:100], 1):
         logger.info(f"confirm: {i} {tc.public_id}")
         confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
-        tp_change, fp_change, fn_change = check_result(tc, confirmed_function_name)
-        tp += tp_change
-        fp += fp_change
-        fn += fn_change
+        check_result(tc, confirmed_function_name, analysis)
 
     logger.info(f"test result:")
     logger.info(f"\ttc num: {len(test_cases)}")
-    analyze_result(tp, fp, fn)
+    logger.info(f"test result:")
+    logger.info(f"\ttp: {analysis.tp} fp: {analysis.fp} tn: {analysis.tn} fn: {analysis.fn}")
+    logger.info(f"\tprecision: {analysis.precision}")
+    logger.info(f"\trecall: {analysis.recall}")
+    logger.info(f"\tf1: {analysis.f1}")
 
 
 if __name__ == '__main__':
+    """
+    Model 1: 定位漏洞函数
+        首先看判断结构是否正确，有判断有，无判断无
+        判断有的情况下，计算 准确率，召回率，F1
+    """
     run_experiment()
