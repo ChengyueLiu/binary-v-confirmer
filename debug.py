@@ -1,48 +1,100 @@
-import json
+from tqdm import tqdm
+from transformers import AutoTokenizer
 
 from bintools.general.file_tool import load_from_json_file
-from main.interface import DataItemForFunctionConfirmModel
+from bintools.general.normalize import normalize_src_lines, normalize_asm_lines
+from main.interface import DataItemForCodeSnippetPositioningModel, AsmFunction
+
+model_name = 'microsoft/graphcodebert-base'
 
 
-def check_failed_item():
-    failed_ids = [413, 749, 843, 854, 870, 1211, 1444, 1620, 1694, 2002, 2021, 2024, 2477, 2625, 2681, 3363, 3415, 3469, 3712, 3879, 3919, 4188, 4639, 4643, 4808, 4887, 5018, 5030, 5127, 5155, 5194, 5261, 5711, 5741, 5971, 6206, 6309, 6387, 6403, 6633, 6841, 7107, 7112, 7235, 7315, 7647, 7726, 7741, 7762, 8008, 8267, 8316, 8364, 8688, 8728, 8761, 9034, 9290, 9527, 9691, 10043, 10098, 10114, 10292, 10385, 10504, 10609, 11248, 11420, 11616, 11622, 11685, 11731, 11884, 12125, 12497, 12501, 12525, 12939, 13039, 13063, 13272, 13347, 13380, 13402, 13747, 13757, 13886, 14060, 14128, 14275, 14538, 14608, 14614, 14634, 14715, 15241, 15386, 15456, 15631, 15812, 15824, 16029, 16255, 16332, 16952, 17912, 17968, 17988, 18221, 18336, 18495, 18597, 18663, 18772, 18822, 19255, 19271, 19306, 19466, 19681, 19724, 20085, 20118, 20333, 20376, 20693, 20702, 20988, 21037, 21114, 21491, 21557, 21865, 22403, 22586, 23204, 23418, 23727, 23858, 23909, 23961, 24078, 24225, 24568, 24586, 24716, 24824, 24867, 24876, 24947, 25056, 25204, 25284, 25338, 25797, 26285, 26508, 26776, 26869, 27497, 27757, 28098, 28282, 28290, 28330, 28347, 28399, 28647, 28708, 28798, 28825, 29209, 29474, 29597, 29664, 29689, 29724, 29993, 30027, 30108, 30329, 30357, 30423, 30847, 30990, 31128, 31140, 31153, 31163, 31259, 31677, 31746, 31760, 31977, 32108, 32362, 32457, 32557, 32633, 32862, 32955, 33087, 33204, 33219, 33253, 33257, 33337, 33367, 33786, 33984, 34059, 34121, 34160, 34241, 34276, 34381, 34580, 34658, 34931, 34933, 35022, 35064, 35109, 35112, 35271, 35520, 35700, 36361, 36421, 36429, 36505, 37192, 37207, 37378, 37756, 38240, 38430, 38565, 38745, 38904, 38971, 39034, 39946, 40030, 40179, 40330, 40886, 40947, 41127, 41177, 41474, 42218, 42472, 42546, 42715, 42724, 42860, 43036, 43473, 43562, 43688, 43769, 43790, 43933, 44009, 44262, 44275, 44299, 44440, 44584, 44668, 44690, 45097, 45172, 45198, 45231, 45273, 45313, 45331, 45604, 45648, 46583, 46914, 46980, 46998, 47126, 47173, 47373, 47849, 47857, 47858, 47968, 48111, 48489, 48568, 48838, 49099, 49174, 49223, 49280, 49513, 49524, 49588, 49980, 50128, 50396, 50432, 50653, 50855, 51023, 51306, 51328, 51420, 51431, 51669, 51845, 51858, 51880, 52053, 52392, 52722, 52976, 53145, 53326, 53335, 53400, 53547, 53683, 53985, 54019, 54325, 54432, 54437, 54444, 54484, 54700, 54829, 54904, 55017, 55032, 55061, 55135, 55386, 55783, 56083, 56084, 56182, 56194, 56503, 56511, 56722, 56999, 57208, 57423, 57650, 57718, 57861, 58015, 58134, 58313, 58399, 58443, 58612, 58853, 58954, 59061, 59239, 59388, 59438, 59679, 60191, 60210, 60389, 60420, 60508, 60541, 60545, 60765, 60811, 61031, 61180, 61201, 61496, 61793, 61850, 61880, 62227, 62270, 62352, 62361, 62433, 62899, 63317, 63394, 63659, 63719, 63789, 63904, 64411, 64686, 64815, 64959, 65106, 65334, 65400, 65883, 66526, 66562, 66610, 66752, 66856, 66876, 67234, 67290, 67582, 67789, 68007, 68100, 68336, 68555, 68653, 68716, 68719, 68820, 68960, 69381, 69453, 69477, 69511, 69845, 70010, 70103, 70450, 70759, 70864, 71190, 71453, 71477, 71752, 71953, 72077, 72188, 72249, 72601, 72614, 72641, 72770, 72975, 73192, 73213, 73219, 73563, 74554, 74618, 74866, 74921, 74984, 75041, 75428, 75593, 75607, 75726, 75844, 75868, 75937, 75967, 76186, 76217, 76236, 76893, 77018, 77059, 77597, 77628, 78030, 78130, 78213, 78357, 80293, 80306, 80426, 80519, 80610, 80689, 80893, 80977, 81145, 81215, 81469, 81727, 81762, 81955, 82047, 82094, 82274, 82640, 82679, 82807, 82847, 82961, 83176, 83212, 83561, 83624, 83751, 83822, 83855, 83875, 84284, 84426, 84796, 84802, 84838, 84934, 84941, 85352, 85453, 85806, 86341, 86350, 86504, 87038, 87246, 87436, 87483, 87545, 87811, 88031, 88144, 88358, 88486, 89110, 90213, 90412, 90468, 91048, 92255, 94166, 94679, 94917, 95613, 95692, 96152, 97637, 97845, 98072, 99561, 99675, 99969, 100167, 100273, 100370, 100420, 101068, 101077, 101089, 101133, 101417, 101630, 101735, 102171, 102630, 102634, 102768, 102862, 102968, 103003, 103259, 104137, 104565, 105089, 105124, 105303, 105916, 106132, 106163, 106762, 107519, 107625, 107649, 107953, 108149, 108191, 108325, 108329, 108592, 108905, 110153, 110341, 110534, 110831, 110895, 110909, 111021, 111278, 111516, 111617, 111641, 111695, 112201, 112428, 113059, 113188, 113435, 113450, 113776, 113988, 114173, 114481, 114894, 115058, 115392, 115414, 115620, 115824, 116058, 116217, 116565, 116733, 116748, 117000, 117082, 117923, 117977, 118483, 119635, 119937, 120840, 121809, 122072, 122153, 122194, 122621, 123560, 123913, 124819, 125008, 125301, 125317, 125524, 126246, 126258, 126423, 126604, 126630, 126915, 126923, 128880, 128890, 129462, 129885, 130305, 130348, 130997, 131216, 131437, 132400, 132561, 133040, 133532, 133757, 133763, 134008, 134397, 135018, 135318, 136569, 136712, 137152, 138487, 139239, 139777, 139981, 141122, 141244, 141752, 142099, 143086, 143913, 143918, 144047, 144348, 144879, 144990, 145450, 145613, 145840, 146097, 147130, 147740, 148079, 148373, 148672, 149824, 150807, 150921, 152558, 153620, 153668, 154390, 155168, 156169, 156376, 156443, 156534, 156570, 156916, 156956, 157902, 157956, 158097, 158176, 158606, 159101, 159392, 159735, 159763, 160486, 161519, 161563, 161686, 161762, 161806, 162979, 163153, 163177, 163236, 163788, 163955, 164517, 165053, 165151, 165395, 165413, 166739, 166976, 167538, 167706, 167714, 167731, 168134, 168388, 168394, 168469, 168797, 168861, 169147, 169437, 169553, 170001, 170835, 171057, 171170, 172385, 172484, 173192, 173494, 173702, 174595, 174815, 175071, 175378, 175802, 176749, 177317, 177361]
-
-    val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_1.json"
-    with open(val_data_save_path, 'r') as f:
-        val_data = json.load(f)
-    val_data_dict = {item['id']: item for item in val_data}
-
-    for failed_id in failed_ids[1:]:
-        item = val_data_dict[failed_id]
-        print(item['id'], item['function_name'])
-        print(f"src_codes: ")
-        for scr_code in item['src_codes']:
-            print(scr_code)
-        print('asm_codes: ')
-        for asm_code in item['asm_codes']:
-            print(asm_code)
-        item = DataItemForFunctionConfirmModel.init_from_dict(item)
-        item.normalize()
-        print(item.get_train_text("[SEP]"))
-        break
+def init_tokenizer():
+    tokenizer = AutoTokenizer.from_pretrained(model_name, use_fast=True)
+    for special_token in DataItemForCodeSnippetPositioningModel.get_special_tokens():
+        tokenizer.add_tokens(special_token)
+    return tokenizer
 
 
-def check_param_num():
-    data_items_path = r"C:\Users\chengyue\Desktop\test_data_items_for_model_1.json"
-    print('load')
-    data_items = load_from_json_file(data_items_path)
+def cal_token_length(question: str, context: str, tokenizer):
+    encoding = tokenizer.encode_plus(
+        question,
+        context,
+        add_special_tokens=True,
+        # max_length=512,
+        # padding='max_length',
+        # truncation=True,
+        return_attention_mask=True,
+        return_offsets_mapping=True,  # 需要offsets来计算答案位置
+        return_tensors='pt',
+    )
+    token_length = len(encoding['input_ids'][0])
+    return token_length
 
-    print('obj')
-    data_items = [DataItemForFunctionConfirmModel.init_from_dict(item) for item in data_items]
 
-    for data_item in data_items:
-        if data_item.label !=1:
-            continue
-        data_item.normalize()
-        print(data_item.get_train_text("[SEP]"))
-        break
+def _load_asm_function_dict_from_file(asm_functions_save_path):
+    asm_function_items_dict = load_from_json_file(asm_functions_save_path)
+    asm_function_dict = {}
+    for library, library_asm_function_items_dict in tqdm(asm_function_items_dict.items(), desc='init asm functions'):
+        if library not in asm_function_dict:
+            asm_function_dict[library] = {}
+        for tag, asm_function_item_list in library_asm_function_items_dict.items():
+            if tag not in asm_function_dict[library]:
+                asm_function_dict[library][tag] = []
+            for asm_function_item in asm_function_item_list:
+                asm_function = AsmFunction.init_from_dict(asm_function_item)
+                asm_function_dict[library][tag].append(asm_function)
+    return asm_function_dict
+
+
 
 
 
 if __name__ == '__main__':
-    check_failed_item()
+    asm_codes = ['mov rax,<MEM>', 'mov rax,<MEM>', 'mov <MEM>,rax', 'cmp <MEM>,0x0', '<JUMP> <LOC>', 'mov eax,<MEM>',
+                 'cdqe', 'lea rdx,<MEM>', 'mov rax,<MEM>', 'add rax,rdx', 'mov eax,<MEM>', 'cmp <MEM>,eax',
+                 '<JUMP> <LOC>', 'mov rax,<MEM>', 'mov rax,<MEM>', 'mov rax,<MEM>', 'mov <MEM>,rax', 'mov rax,<MEM>',
+                 'mov rax,<MEM>', 'mov eax,<MEM>', 'and eax,0x10000', 'test eax,eax', '<JUMP> <LOC>', 'mov rax,<MEM>',
+                 'mov rax,<MEM>', 'mov rsi,<MEM>', 'mov ecx,<MEM>', 'mov edx,<MEM>', 'mov r9,rsi', 'mov r8d,ecx',
+                 'mov ecx,edx', 'lea rdx,<MEM>', 'mov esi,0x30', 'mov rdi,rax', 'mov eax,0x0', 'call <av_log>',
+                 'mov rax,<MEM>', 'add rax,0xd0', 'mov rdi,rax', 'call <pthread_mutex_lock@plt>', 'mov rax,<MEM>',
+                 'mov rax,<MEM>', 'mov <MEM>,rax', 'cmp <MEM>,0x0', '<JUMP> <LOC>', 'mov eax,<MEM>',
+                 'cdqe', 'lea rdx,<MEM>', 'mov rax,<MEM>', 'add rax,rdx', 'mov eax,<MEM>', 'cmp <MEM>,eax',
+                 '<JUMP> <LOC>', 'mov rax,<MEM>', 'mov rax,<MEM>', 'mov rax,<MEM>', 'mov <MEM>,rax', 'mov rax,<MEM>',
+                 'mov rax,<MEM>', 'mov eax,<MEM>', 'and eax,0x10000', 'test eax,eax', '<JUMP> <LOC>', 'mov rax,<MEM>',
+                 'mov rax,<MEM>', 'mov rsi,<MEM>', 'mov ecx,<MEM>', 'mov edx,<MEM>', 'mov r9,rsi', 'mov r8d,ecx']
+    question = ""
+    context = " ".join(asm_codes)
+    tokenizer = init_tokenizer()
+
+    asm_function_dict = _load_asm_function_dict_from_file(
+        '/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/asm_functions_tmp.json')
+    length_list = []
+    for library, library_asm_function_dict in asm_function_dict.items():
+        for tag, asm_function_list in library_asm_function_dict.items():
+            for asm_function in asm_function_list:
+                all_asm_codes, src_code_start_line = asm_function.get_asm_codes(skip_function_def=True)
+                all_asm_codes = all_asm_codes[:70]
+                context = " ".join(normalize_asm_lines(all_asm_codes))
+                for i in range(len(asm_function.code_mappings) - 2):
+                    src_codes = []
+                    asm_codes = []
+                    code_mappings = asm_function.code_mappings[i:i + 3]
+                    for code_mapping in code_mappings:
+                        if not code_mapping.asm_codes or not code_mapping.src_codes:
+                            continue
+                        src_codes.append(code_mapping.src_codes[-1])
+                        asm_codes.extend(code_mapping.asm_codes)
+                    question = " ".join(normalize_src_lines(src_codes))
+
+                    token_length = cal_token_length(question, context, tokenizer)
+                    length_list.append(token_length)
+
+                    print(len(src_codes))
+                    print(len(asm_codes))
+                    print(len(all_asm_codes))
+                    print(token_length)
+                    print()
+
+    print(max(length_list))
+    print(min(length_list))
+    print(sum(length_list) / len(length_list))

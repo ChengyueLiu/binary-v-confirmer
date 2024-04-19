@@ -1,16 +1,12 @@
 from random import shuffle
 
 from loguru import logger
-from tqdm import tqdm
 
-from bintools.general.file_tool import save_to_json_file, load_from_json_file
-from bintools.general.normalize import normalize_asm_code
+from bintools.general.file_tool import load_from_json_file
 from main.interface import TrainFunction
 from main.models.code_snippet_positioning_model.data_prepare import convert_mapping_to_json, \
     convert_json_to_raw_train_data, convert_raw_train_data_to_train_data
-from main.models.code_snippet_positioning_model.model_application import SnippetPositioner
 from main.models.code_snippet_positioning_model.model_training import run_train
-from main.models.function_confirm_model.data_prepare import shuffle_and_split
 
 
 def prepare_data():
@@ -46,20 +42,6 @@ def prepare_data():
                                          test_data_json)
 
 
-def train_model_2():
-    train_data_save_path = "TestCases/model_train/model_2/final_train_data_items/train_data.json"
-    val_data_save_path = "TestCases/model_train/model_2/final_train_data_items/valid_data.json"
-    test_data_save_path = "TestCases/model_train/model_2/final_train_data_items/test_data.json"
-    model_save_path = r"Resources/model_weights/model_2_weights_GCB.pth"
-    run_train(train_data_save_path,
-              val_data_save_path,
-              test_data_save_path,
-              model_save_path,
-              test_only=False,
-              epochs=3,
-              batch_size=100)
-
-
 def prepare_train_data_for_model_2_new():
     train_data_save_path = "TestCases/model_train/model_2/final_train_data_items/train_data.json"
     val_data_save_path = "TestCases/model_train/model_2/final_train_data_items/valid_data.json"
@@ -75,7 +57,7 @@ def prepare_train_data_for_model_2_new():
     train_functions = [TrainFunction.init_from_dict(item) for item in train_functions_json_items]
     for tf in train_functions:
         if "openssl" in tf.function_save_path:
-            print(tf.function_save_path,tf.function_name)
+            print(tf.function_save_path, tf.function_name)
     # # 筛选数据
     # # shuffle and split
     # logger.info(f"shuffling and splitting...")
@@ -109,6 +91,25 @@ def prepare_train_data_for_model_2_new():
     # save_to_json_file(test_data_items, test_data_save_path)
 
 
+def train_model_2():
+    # train_data_items
+    train_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/train_data_items_for_model_2.json"
+    val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_2.json"
+    test_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/test_data_items_for_model_2.json"
+
+    back_model_save_path = r"Resources/model_weights/model_2_weights_back.pth"
+    model_save_path = r"Resources/model_weights/model_2_weights.pth"
+    run_train(train_data_save_path,
+              val_data_save_path,
+              test_data_save_path,
+              back_model_save_path=back_model_save_path,
+              model_save_path=model_save_path,
+              test_only=False,
+              epochs=30,
+              batch_size=80)
+
+
 if __name__ == '__main__':
     # prepare_data()
-    prepare_train_data_for_model_2_new()
+    # prepare_train_data_for_model_2_new()
+    train_model_2()

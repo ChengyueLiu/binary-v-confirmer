@@ -238,7 +238,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[:100]
+    # test_cases = test_cases[:100]
     asm_functions_cache = {}
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):

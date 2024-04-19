@@ -137,6 +137,7 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 def run_train(train_data_json_file_path,
               val_data_json_file_path,
               test_data_json_file_path,
+              back_model_save_path="model_weights_back.pth",
               model_save_path="model_weights.pth",
               test_only=False,
               **kwargs):
@@ -151,12 +152,14 @@ def run_train(train_data_json_file_path,
         **kwargs)  # 确保其他参数也能被传递
     logger.info('Initialized, start training, epochs: {}, batch_size: {}...'.format(epochs, batch_size))
     if not test_only:
+        model.load_state_dict(torch.load(back_model_save_path))
         # 训练和验证
         for epoch in range(epochs):
             logger.info(f'Epoch {epoch + 1}/{epochs}')
             train_loss, train_precision, train_recall, train_f1 = train_or_evaluate(model, train_loader, optimizer,
                                                                                     scheduler, device, is_train=True)
-            valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer, scheduler,
+            valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer,
+                                                                                    scheduler,
                                                                                     device, is_train=False)
             print(
                 f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')

@@ -1,5 +1,6 @@
 from loguru import logger
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file
 from main.interface import DataItemForCodeSnippetPositioningModel
@@ -96,8 +97,10 @@ class CodeSnippetPositioningDataset(Dataset):
             answer_tokens_end_index = self.max_len - 1
 
         if answer_tokens_end_index < answer_tokens_start_index:
-            logger.warning(f"answer_start_index: {self.answer_start_indexes[idx]}, answer_end_index: {self.answer_end_indexes[idx]}")
-            logger.warning(f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index}")
+            logger.warning(
+                f"answer_start_index: {self.answer_start_indexes[idx]}, answer_end_index: {self.answer_end_indexes[idx]}")
+            logger.warning(
+                f"answer_tokens_end_index < answer_tokens_start_index: {answer_tokens_end_index} < {answer_tokens_start_index}")
         answer_tokens_start_index_tensor = torch.tensor([answer_tokens_start_index])
         answer_tokens_end_index_tensor = torch.tensor([answer_tokens_end_index])
 
@@ -112,7 +115,7 @@ class CodeSnippetPositioningDataset(Dataset):
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
     data_items = []
-    for item in train_data_json:
+    for item in tqdm(train_data_json, desc="init data items"):
         data_item = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
         data_item.normalize()
         data_items.append(data_item)
