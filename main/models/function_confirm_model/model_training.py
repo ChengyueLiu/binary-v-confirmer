@@ -155,7 +155,6 @@ def run_train(train_data_json_file_path,
         logger.info(f'inited, start train, epochs: {epochs}, batch_size: {batch_size}...')
         # train scheduler
         best_valid_loss = float('inf')  # 初始化最佳验证损失
-        best_acc = 0
         no_improvement_count = 0  # 用于跟踪验证损失未改进的epoch数
         for epoch in range(epochs):
             logger.info(f'Epoch {epoch + 1}/{epochs}')

@@ -153,6 +153,8 @@ def run_train(train_data_json_file_path,
     logger.info('Initialized, start training, epochs: {}, batch_size: {}...'.format(epochs, batch_size))
     if not test_only:
         model.load_state_dict(torch.load(back_model_save_path))
+        best_valid_loss = float('inf')  # 初始化最佳验证损失
+        no_improvement_count = 0  # 用于跟踪验证损失未改进的epoch数
         # 训练和验证
         for epoch in range(epochs):
             logger.info(f'Epoch {epoch + 1}/{epochs}')
@@ -165,9 +167,21 @@ def run_train(train_data_json_file_path,
                 f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
             print(
                 f'\t Val. Loss: {valid_loss:.3f} |  Val Precision: {valid_precision:.2f} | Val Recall: {valid_recall:.2f} | Val F1: {valid_f1:.2f}')
+            # 如果当前验证损失更低，保存模型
+            if valid_loss < best_valid_loss:
+                best_valid_loss = valid_loss
+                no_improvement_count = 0  # 重置计数器
+                logger.info('Validation loss improved, saving model...')
+                torch.save(model.state_dict(), model_save_path)
+                logger.info('Model saved.')
+            else:
+                no_improvement_count += 1
+                logger.info(f'No improvement in validation loss for {no_improvement_count} epochs.')
 
-        logger.info('Training complete, saving model...')
-        torch.save(model.state_dict(), model_save_path)
+            # 如果连续5个epoch没有改进，提前停止训练
+            if no_improvement_count >= 3:
+                logger.info('Early stopping triggered. Training stopped.')
+                break
 
     # 测试
     logger.info('Model saved, starting test, loading model from {}...'.format(model_save_path))
