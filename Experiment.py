@@ -1,7 +1,6 @@
 import difflib
 import multiprocessing
 import re
-from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
@@ -106,7 +105,7 @@ def cal_similarity(asm_codes_1, asm_codes_2):
     return similarity
 
 
-def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
+def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_threshold=0.99):
     """
     函数确认
     """
@@ -142,7 +141,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     confirmed_prob = 0
     asm_codes_list = []
     for data_item, (pred, prob) in zip(data_items, predictions):
-        if pred == 1 and prob > 0.99:
+        if pred == 1 and prob > prob_threshold:
             if prob > confirmed_prob:
                 confirmed_function_name = data_item.bin_function_name
                 confirmed_prob = prob
