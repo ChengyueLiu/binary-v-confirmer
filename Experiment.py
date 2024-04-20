@@ -142,8 +142,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict):
     confirmed_prob = 0
     asm_codes_list = []
     for data_item, (pred, prob) in zip(data_items, predictions):
-        prob = round(prob, 4)
-        if pred == 1 and prob > 0.95:
+        if pred == 1 and prob > 0.99:
             if prob > confirmed_prob:
                 confirmed_function_name = data_item.bin_function_name
                 confirmed_prob = prob
