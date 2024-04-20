@@ -1,4 +1,6 @@
 import difflib
+import multiprocessing
+import re
 from collections import namedtuple
 from dataclasses import dataclass
 from datetime import datetime
@@ -6,6 +8,7 @@ from multiprocessing import Pool
 from typing import List
 
 from loguru import logger
+from tqdm import tqdm
 
 from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.file_tool import load_from_json_file
@@ -30,7 +33,40 @@ def load_test_cases(tc_save_path) -> List[VulConfirmTC]:
     test_cases = [VulConfirmTC.init_from_dict(tc) for tc in test_cases]
     return test_cases
 
+
+def is_reserved_function_name(function_name):
+    """
+    Check if a function name is reserved in C/C++.
+
+    Args:
+    function_name (str): The name of the function to check.
+
+    Returns:
+    bool: True if the function name is reserved, False otherwise.
+    """
+    # Regex to match reserved function names:
+    # 1. Names that begin with an underscore followed by an uppercase letter (e.g., _A, _Z).
+    # 2. Names that begin with two underscores.
+    # 3. Names that contain two consecutive underscores anywhere.
+    reserved_patterns = [
+        r'^_[A-Z]',  # Starts with _ followed by an uppercase letter
+        r'^__',  # Starts with two underscores
+        r'.*__.*'  # Contains two consecutive underscores
+    ]
+
+    # Check each pattern against the function name
+    for pattern in reserved_patterns:
+        if re.match(pattern, function_name):
+            return True
+
+    return False
+
+
 def generate_model_input(asm_function, vul_function):
+    # 过滤条件 1：保留函数名
+    if is_reserved_function_name(asm_function.function_name):
+        return None
+
     # 构成模型输入
     asm_codes, _ = asm_function.get_asm_codes()
     data_item = DataItemForFunctionConfirmModel(function_name=vul_function.function_name,
@@ -45,7 +81,7 @@ def generate_model_input(asm_function, vul_function):
     # 正规化处理
     data_item.normalize()
 
-    # 过滤条件 1：参数数量检验
+    # 过滤条件 2：参数数量检验
     asm_body_start_index, asm_param_count = analyze_asm_codes(data_item.asm_codes)
     src_body_start_index, src_param_count = analyze_src_codes(data_item.src_codes)
     if asm_param_count != src_param_count:
@@ -185,7 +221,7 @@ def check_result(tc, confirmed_function_name, analysis):
         # 没有确认到漏洞，TN
         if confirmed_function_name is None:
             analysis.tn += 1
-            logger.info(f"\t\tcheck result: TP")
+            logger.info(f"\t\tcheck result: TN")
         # 确认到漏洞，FP
         else:
             analysis.fp += 1
@@ -214,6 +250,29 @@ class Analysis:
                 self.precision + self.recall) if self.precision + self.recall > 0 else 0
 
 
+def parse_objdump_file_wrapper(file_path):
+    asm_function_dict = parse_objdump_file(file_path, ignore_warnings=True)
+    return file_path, asm_function_dict
+
+
+def generate_asm_function_cache(tcs):
+    path_set = set()
+    for tc in tcs:
+        path_set.add(tc.test_bin.binary_path)
+
+    paths = list(path_set)
+
+    cache_dict = {}
+    with Pool(multiprocessing.cpu_count() - 6) as pool:
+        results = list(tqdm(pool.imap_unordered(parse_objdump_file_wrapper, paths), total=len(paths),
+                            desc="generate_asm_function_cache"))
+
+    for path, asm_function_dict in results:
+        cache_dict[path] = asm_function_dict
+
+    return cache_dict
+
+
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
@@ -238,8 +297,10 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    # test_cases = test_cases[:100]
-    asm_functions_cache = {}
+    test_cases = [tc for tc in test_cases if tc.public_id == "CVE-2024-0727"]
+    print(f"Experiment tc num: {len(test_cases)}")
+
+    asm_functions_cache = generate_asm_function_cache(test_cases)
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):
         logger.info(f"confirm: {i} {tc.public_id}")
@@ -258,7 +319,20 @@ def run_experiment():
 if __name__ == '__main__':
     """
     Model 1: 定位漏洞函数
-        首先看判断结构是否正确，有判断有，无判断无
-        判断有的情况下，计算 准确率，召回率，F1
+        当前准确率：
+        tc num: 1082
+        test result:
+            tp: 410 fp: 302 tn: 43 fn: 596
+            precision: 0.5758426966292135
+            recall: 0.40755467196819084
+            f1: 0.47729918509895225
+        
+        存在的问题：
+            1. 参数过滤，有时候会把正确的也过滤掉
+            2. 很多函数的输出结果都相同，且概率都是0.9981，这个问题要分析一下。
+            3. 测试用例总数量好像不太对，检查一下。
+            4. recall一定要上去。分析一下不再top1的时候，总体的recall是多少。
+        
+        
     """
     run_experiment()

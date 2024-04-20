@@ -316,7 +316,7 @@ class DataItemForFunctionConfirmModel:
     def get_special_tokens(cls):
         return SpecialToken.get_all_special_tokens()
 
-    def get_train_text(self, separator, src_code_diff=0):
+    def get_train_text(self, separator):
         """
         生成text, 用于训练
         源代码行数和汇编代码行数大概是 3.5

@@ -137,6 +137,10 @@ def prepare_train_data_for_model_1_from_million_funcs():
     logger.info(f"all_done!")
 
 
+def test_model_1():
+    pass
+
+
 def train_model_1():
     """
     训练模型
@@ -152,7 +156,6 @@ def train_model_1():
     from main.models.function_confirm_model.model_training import run_train
     """
     model_1_weights：正负1:3，漏洞函数10倍，负例相似度限制在0.4-0.9之间，源代码行数提升到了7行。250万。目的是提高对相似函数的识别能力。
-
     model_1_weights_back_3: 正负1:3，漏洞函数10倍，200万组件训练的结果
     model_1_weights_back_2: 正负1:1,140万个组件函数训练出来的结果
     model_1_weights_back: 使用75万个独立的函数训练的结果
@@ -169,10 +172,6 @@ def train_model_1():
         epochs=100,
         batch_size=100,
     )
-
-
-def test_model_1():
-    pass
 
 
 if __name__ == '__main__':
