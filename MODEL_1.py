@@ -155,12 +155,13 @@ def train_model_1():
 
     from main.models.function_confirm_model.model_training import run_train
     """
-    model_1_weights：正负1:3，漏洞函数10倍，负例相似度限制在0.4-0.9之间，源代码行数提升到了7行。250万。目的是提高对相似函数的识别能力。
+    model_1_weights: 4种负例，300万训练样本
+    model_1_weights_back_4：正负1:3，漏洞函数10倍，负例相似度限制在0.4-0.9之间，源代码行数提升到了7行。250万。目的是提高对相似函数的识别能力。
     model_1_weights_back_3: 正负1:3，漏洞函数10倍，200万组件训练的结果
     model_1_weights_back_2: 正负1:1,140万个组件函数训练出来的结果
     model_1_weights_back: 使用75万个独立的函数训练的结果
     """
-    back_model_save_path = r"Resources/model_weights/model_1_weights_back_3.pth"
+    back_model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
     run_train(
         train_data_json_file_path=train_data_save_path,
@@ -179,7 +180,3 @@ if __name__ == '__main__':
     # prepare_train_data_for_model_1_new()
     train_model_1()
 
-    """
-    5万训练样本，1:1， 最终99.09%
-    140万训练样本，1:1，
-    """

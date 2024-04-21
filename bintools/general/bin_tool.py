@@ -21,11 +21,11 @@ def analyze_asm_codes(normalized_asm_codes):
         #         'movsd <MEM>,xmm0',
         #         'movss <MEM>,xmm0'
         # ):
-        if asm_code.split(',')[0] in (
+        if asm_code.split(',')[0] in [
             'mov <MEM>',
             'movsd <MEM>',
             'movss <MEM>',
-        ):
+        ] and asm_code not in {'mov <MEM>,0x0'}:
             param_count += 1
             body_start_index = i + 1
             start_flag = True
