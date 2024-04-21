@@ -61,7 +61,7 @@ def is_reserved_function_name(function_name):
     return False
 
 
-def generate_model_input(asm_function, vul_function:VulFunction):
+def generate_model_input(asm_function, vul_function: VulFunction):
     # 过滤条件 1：保留函数名
     if is_reserved_function_name(asm_function.function_name):
         return None
@@ -80,7 +80,11 @@ def generate_model_input(asm_function, vul_function:VulFunction):
     # 正规化处理
     data_item.normalize()
 
-    # 过滤条件 2：参数数量检验
+    # 过滤条件 2：汇编代码长度检验
+    if not 1 < len(data_item.asm_codes) / len(data_item.src_codes):
+        return None
+
+    # 过滤条件 3：参数数量检验
     asm_body_start_index, asm_param_count = analyze_asm_codes(data_item.asm_codes)
     src_body_start_index, src_param_count = analyze_src_codes(data_item.src_codes)
 
@@ -108,70 +112,6 @@ def cal_similarity(asm_codes_1, asm_codes_2):
     s2 = " ".join(asm_codes_2[:40])
     similarity = difflib.SequenceMatcher(None, s1, s2).quick_ratio()
     return similarity
-
-
-def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_threshold=0.99):
-    """
-    函数确认
-    """
-    vul_functions: List[VulFunction] = tc.vul_functions
-    test_bin: TestBin = tc.test_bin
-
-    # 1. 提取汇编函数
-    logger.info(f"\textracting asm functions from {test_bin.binary_path}")
-    asm_function_dict = extract_asm_functions(asm_functions_cache, test_bin)
-    logger.info(f"\t\textracted {len(asm_function_dict)} asm functions")
-
-    # 2. 过滤asm函数并生成模型输入数据
-    logger.info(f"\t\tfilter asm functions and generating model input data...")
-    data_items, found_functions = filter_and_generate_data_items(asm_function_dict, vul_functions)
-    logger.info(f"\t\tgenerated {len(data_items)} data items")
-    logger.info(f"\t\tvul functions: {[vf.function_name for vf in vul_functions]}")
-    logger.info(f"\t\tvul functions in data items: {found_functions}")
-    # if tc.ground_truth.contained_vul_function_names and not found_functions:
-    #     logger.info(f"\t\tvul functions not found in data items")
-    # return None,None
-    # 3. 调用模型
-    predictions = model.confirm(data_items)
-
-    # 4. 预览ground truth
-    logger.info(f"\tground truth: ")
-    logger.info(f"\t\tvul: {tc.public_id}")
-    logger.info(f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}")
-    logger.info(f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}")
-    logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
-    logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
-
-    # 5. 确认结果
-    logger.info(f"\tconfirmed functions:")
-    confirmed_function_name = None
-    confirmed_prob = 0
-    asm_codes_list = []
-    for data_item, (pred, prob) in zip(data_items, predictions):
-        src_function_name = data_item.function_name
-        if src_function_name.startswith("*"):
-            src_function_name = src_function_name[1:]
-
-        if pred == 1 and prob > prob_threshold:
-            if prob > confirmed_prob:
-                confirmed_function_name = data_item.bin_function_name
-                confirmed_prob = prob
-
-            # 预览结果
-            if src_function_name == data_item.bin_function_name:
-                logger.info(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
-            else:
-                logger.info(f'\t\t {data_item.function_name} {data_item.bin_function_name} {prob}')
-            asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes[:40]}")
-        else:
-            if src_function_name == data_item.bin_function_name:
-                logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
-                asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes[:40]}")
-    logger.info(f"\tconfirmed asm codes:")
-    for asm_codes in asm_codes_list:
-        logger.info(f"\t\t{asm_codes}")
-    logger.info(f"\tconfirm result: {confirmed_function_name} {confirmed_prob}")
-    return confirmed_function_name, confirmed_prob
 
 
 def filter_and_generate_data_items(asm_function_dict, vul_functions: List[VulFunction]):
@@ -274,6 +214,71 @@ def generate_asm_function_cache(tcs):
         cache_dict[path] = asm_function_dict
 
     return cache_dict
+
+
+def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_threshold=0.99):
+    """
+    函数确认
+    """
+    vul_functions: List[VulFunction] = tc.vul_functions
+    test_bin: TestBin = tc.test_bin
+
+    # 1. 提取汇编函数
+    logger.info(f"\textracting asm functions from {test_bin.binary_path}")
+    asm_function_dict = extract_asm_functions(asm_functions_cache, test_bin)
+    logger.info(f"\t\textracted {len(asm_function_dict)} asm functions")
+
+    # 2. 过滤asm函数并生成模型输入数据
+    logger.info(f"\t\tfilter asm functions and generating model input data...")
+    data_items, found_functions = filter_and_generate_data_items(asm_function_dict, vul_functions)
+    logger.info(f"\t\tgenerated {len(data_items)} data items")
+    logger.info(f"\t\tvul functions: {[vf.function_name for vf in vul_functions]}")
+    logger.info(f"\t\tvul functions in data items: {found_functions}")
+    if len(tc.ground_truth.contained_vul_function_names) != len(found_functions):
+        logger.warning(f"\t\t!!!!! vul functions not found in data items")
+        logger.warning(f"\t\tcontained_vul_function_names: {tc.ground_truth.contained_vul_function_names}")
+    # return None, None
+    # 3. 调用模型
+    predictions = model.confirm(data_items)
+
+    # 4. 预览ground truth
+    logger.info(f"\tground truth: ")
+    logger.info(f"\t\tvul: {tc.public_id}")
+    logger.info(f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}")
+    logger.info(f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}")
+    logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
+    logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
+
+    # 5. 确认结果
+    logger.info(f"\tconfirmed functions:")
+    confirmed_function_name = None
+    confirmed_prob = 0
+    asm_codes_list = []
+    for data_item, (pred, prob) in zip(data_items, predictions):
+        src_function_name = data_item.function_name
+        if src_function_name.startswith("*"):
+            src_function_name = src_function_name[1:]
+
+        if pred == 1 and prob > prob_threshold:
+            if prob > confirmed_prob:
+                confirmed_function_name = data_item.bin_function_name
+                confirmed_prob = prob
+
+            # 预览结果
+            if src_function_name == data_item.bin_function_name:
+                logger.info(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
+            else:
+                logger.info(f'\t\t {data_item.function_name} {data_item.bin_function_name} {prob}')
+            asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes[:40]}")
+        else:
+            if src_function_name == data_item.bin_function_name:
+                logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
+                asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes[:40]}")
+    logger.info(f"\tconfirmed asm codes:")
+    for asm_codes in asm_codes_list:
+        logger.info(f"\t\t{asm_codes}")
+    logger.info(f"\tconfirm result: {confirmed_function_name} {confirmed_prob}")
+    return confirmed_function_name, confirmed_prob
 
 
 def run_experiment():
