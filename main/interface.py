@@ -366,12 +366,15 @@ class DataItemForCodeSnippetPositioningModel:
     def __init__(self, function_name: str,
                  src_codes: List[str],
                  asm_codes: List[str],
-                 answer_asm_codes: List[str], ):
+                 answer_asm_codes: List[str] = None):
         self.id = 0
         self.function_name = function_name
         self.src_codes = src_codes
         self.asm_codes = asm_codes
-        self.answer_asm_codes = answer_asm_codes
+        if answer_asm_codes is None:
+            self.answer_asm_codes = []
+        else:
+            self.answer_asm_codes = answer_asm_codes
 
         self.src_length = len(self.src_codes)
         self.effective_src_length = count_function_effective_lines(self.src_codes)

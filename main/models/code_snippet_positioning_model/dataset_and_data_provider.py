@@ -1,3 +1,5 @@
+from typing import List
+
 from loguru import logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -139,6 +141,29 @@ def create_dataset(file_path, tokenizer, max_len=512):
                                             tokenizer,
                                             max_len=max_len)
     return dataset
+
+
+def create_dataset_from_model_input(data_items: List[DataItemForCodeSnippetPositioningModel], tokenizer, max_len=512):
+    questions = []
+    contexts = []
+    answer_start_indexes = []
+    answer_end_indexes = []
+    for data_item in data_items:
+        questions.append(data_item.get_question_text())
+        contexts.append(data_item.get_context_text())
+        answer_start_index, answer_end_index = data_item.get_answer_position()
+        answer_start_indexes.append(answer_start_index)
+        answer_end_indexes.append(answer_end_index)
+
+    print("原始数据数量: ", len(questions))
+    dataset = CodeSnippetPositioningDataset(questions,
+                                            contexts,
+                                            answer_start_indexes,
+                                            answer_end_indexes,
+                                            tokenizer,
+                                            max_len=max_len)
+    return dataset
+    pass
 
 
 def create_dataloaders(train_dataset, val_dataset, test_dataset, batch_size=16):
