@@ -1,7 +1,9 @@
+import multiprocessing
 import random
 
 import transformers
 from torch.utils.data import DataLoader
+from tqdm import tqdm
 
 from bintools.general.file_tool import load_from_json_file
 from main.interface import DataItemForCodeSnippetConfirmModelMC
@@ -55,14 +57,19 @@ class CodeSnippetConfirmDataset(Dataset):
             'labels': torch.tensor(choice_index, dtype=torch.long)
         }
 
+def init_data_item_obj_from_dict(item):
+    data_item = DataItemForCodeSnippetConfirmModelMC.init_from_dict(item)
+    data_item.normalize()
+    return data_item
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    data_items = []
-    for item in train_data_json:
-        data_item = DataItemForCodeSnippetConfirmModelMC.init_from_dict(item)
-        data_item.normalize()
-        data_items.append(data_item)
+    pool = multiprocessing.Pool(multiprocessing.cpu_count() - 4)
+    data_items = list(
+        tqdm(pool.imap_unordered(init_data_item_obj_from_dict, train_data_json), total=len(train_data_json),
+             desc="多进程初始化训练对象"))
+    pool.close()
+    pool.join()
 
     questions = []
     choice_0_list = []
