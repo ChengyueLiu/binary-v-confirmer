@@ -2,6 +2,7 @@ import multiprocessing
 import random
 
 import transformers
+from loguru import logger
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
@@ -26,7 +27,6 @@ class CodeSnippetConfirmDataset(Dataset):
         self.choice_index_list = choice_index_list
         self.tokenizer = tokenizer
         self.max_len = max_len
-
 
     def __len__(self):
         return len(self.questions)
@@ -57,13 +57,17 @@ class CodeSnippetConfirmDataset(Dataset):
             'labels': torch.tensor(choice_index, dtype=torch.long)
         }
 
+
 def init_data_item_obj_from_dict(item):
     data_item = DataItemForCodeSnippetConfirmModelMC.init_from_dict(item)
     data_item.normalize()
     return data_item
 
+
 def create_dataset(file_path, tokenizer, max_len=512):
-    train_data_json = load_from_json_file(file_path)
+    logger.info(f"读取文件：{file_path}")
+    train_data_json = load_from_json_file(file_path)[:200000]  # 先用20万个做实验。完整的跑一遍要24小时，太久了。
+
     pool = multiprocessing.Pool(multiprocessing.cpu_count() - 4)
     data_items = list(
         tqdm(pool.imap_unordered(init_data_item_obj_from_dict, train_data_json), total=len(train_data_json),
