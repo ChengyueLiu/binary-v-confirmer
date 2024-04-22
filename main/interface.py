@@ -1078,6 +1078,114 @@ class TrainFunction:
 
 
 @dataclass
+class LibraryVul:
+    library_id: int
+    library_name: str
+    vendor: str
+    platform: str
+    version_id: int
+    version_number: str
+    public_id: str
+
+    @classmethod
+    def init_from_csv(cls, csv_path):
+        import pandas as pd
+        # load csv
+        df = pd.read_csv(csv_path)
+        # walk
+        library_vuls = []
+        for index, row in df.iterrows():
+            public_id = row['public_id']
+            library_id = row['library_id']
+            library_name = row['library_name']
+            vendor = row['vendor']
+            platform = row['platform']
+            version_id = row['version_id']
+            version_number = row['version_number']
+            library_vuls.append(cls(library_id, library_name, vendor, platform, version_id, version_number, public_id))
+        library_vuls.sort(key=lambda x: x.public_id)
+        library_vuls.sort(key=lambda x: x.version_number)
+        library_vuls.sort(key=lambda x: x.library_name)
+
+        return library_vuls
+
+
+@dataclass
+class VulDetail:
+    """
+      {
+    "public_id": "CVE-2016-10746",
+    "url": "https://github.com/libvirt/libvirt/commit/506e9d6c2d4baaf580d489fff0690c0ff2ff588.patch",
+    "raw": "From 506e9d6c2d4baaf580d489fff0690c0ff2ff588f Mon Sep 17 00:00:00 2001\nFrom: Michal Privoznik <mprivozn@redhat.com>\nDate: Mon, 11 Jan 2016 13:34:17 +0100\nSubject: [PATCH] virDomainGetTime: Deny on RO connections\n\nWe have a policy that if API may end up talking to a guest agent\nit should require RW connection. We don't obey the rule in\nvirDomainGetTime().\n\nSigned-off-by: Michal Privoznik <mprivozn@redhat.com>\n---\n src/libvirt-domain.c |    1 +\n 1 files changed, 1 insertions(+), 0 deletions(-)\n\ndiff --git a/src/libvirt-domain.c b/src/libvirt-domain.c\nindex 02fc4df..9491845 100644\n--- a/src/libvirt-domain.c\n+++ b/src/libvirt-domain.c\n@@ -10934,6 +10934,7 @@ virDomainGetTime(virDomainPtr dom,\n     virResetLastError();\n \n     virCheckDomainReturn(dom, -1);\n+    virCheckReadOnlyGoto(dom->conn->flags, error);\n \n     if (dom->conn->driver->domainGetTime) {\n         int ret = dom->conn->driver->domainGetTime(dom, seconds,\n-- \n1.7.1\n\n",
+    "hunk_code": "@@ -10934,6 +10934,7 @@ virDomainGetTime(virDomainPtr dom,\n     virResetLastError();\n \n     virCheckDomainReturn(dom, -1);\n+    virCheckReadOnlyGoto(dom->conn->flags, error);\n \n     if (dom->conn->driver->domainGetTime) {\n         int ret = dom->conn->driver->domainGetTime(dom, seconds,\n",
+    "affected_file": "b/src/libvirt-domain.c",
+    "affected_function": ""
+  },
+    """
+    public_id: str
+    url: str
+    raw: str
+    hunk_code: str
+    affected_file: str
+    affected_function: str
+
+    def __hash__(self):
+        return hash(
+            f"{self.public_id}-{self.url}-{self.raw}-{self.hunk_code}-{self.affected_file}-{self.affected_function}")
+
+    def __eq__(self, other):
+        return (self.public_id == other.public_id
+                and self.url == other.url
+                and self.raw == other.raw
+                and self.hunk_code == other.hunk_code
+                and self.affected_file == other.affected_file
+                and self.affected_function == other.affected_function)
+
+    @classmethod
+    def init_from_json(cls, json_path):
+        json_items = load_from_json_file(json_path)
+        vul_details = []
+        for json_item in json_items:
+            public_id = json_item['public_id']
+            url = json_item['url']
+            raw = json_item['raw']
+            hunk_code = json_item['hunk_code']
+            affected_file = json_item['affected_file']
+            affected_function = json_item['affected_function']
+            vul_details.append(cls(public_id, url, raw, hunk_code, affected_file, affected_function))
+        vul_details.sort(key=lambda x: x.public_id)
+        return vul_details
+
+    @classmethod
+    def load_all_effective_vul_details(cls, json_dir_path):
+        # load
+        file_names = os.listdir(json_dir_path)
+        file_paths = [os.path.join(json_dir_path, file_name) for file_name in file_names if file_name.endswith('.json')]
+        vul_details = []
+        for json_path in file_paths:
+            try:
+                vul_details.extend(cls.init_from_json(json_path))
+            except Exception as e:
+                print(f"load {json_path} failed, {e}")
+
+        # filter
+        vul_detail_dict = {}
+        for vul_detail in vul_details:
+            ext = os.path.splitext(vul_detail.affected_file)[-1]
+            if ext in {'.c', '.cpp', '.h', '.hpp', '.cc'} and vul_detail.raw and vul_detail.hunk_code:
+                public_id = vul_detail.public_id
+                if (details := vul_detail_dict.get(public_id)) is None:
+                    vul_detail_dict[public_id] = details = []
+                details.append(vul_detail)
+
+        # deduplication
+        for public_id, details in vul_detail_dict.items():
+            vul_detail_dict[public_id] = list(set(details))
+
+        return vul_detail_dict
+
+
+@dataclass
 class CodeMapping(Serializable):
     src_function_name: str = None
     src_function_path: str = None

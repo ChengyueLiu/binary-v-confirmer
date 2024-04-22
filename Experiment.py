@@ -316,22 +316,23 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     # 分别定位开头和结尾
     above_context = patch.vul_snippet_codes[:3]
     below_context = patch.vul_snippet_codes[-3:]
-    data_items = []
+    start_data_items = []
+    end_data_items = []
     for window in asm_codes_windows:
         start_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
                                                                  src_codes=above_context,
                                                                  asm_codes=window)
         start_data_item.normalize()
-        data_items.append(start_data_item)
+        start_data_items.append(start_data_item)
 
         end_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
                                                                src_codes=below_context,
                                                                asm_codes=window)
         end_data_item.normalize()
-        data_items.append(end_data_item)
+        end_data_items.append(end_data_item)
 
     # 处理结果
-    all_predictions = locate_model.locate(data_items)
+    all_predictions = locate_model.locate(start_data_items + end_data_items)
     mid_index = len(all_predictions) // 2  # 获取中间索引，用于分割开头和结尾的预测结果
     start_predictions = all_predictions[:mid_index]
     end_predictions = all_predictions[mid_index:]
@@ -339,10 +340,11 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     # 找到最大概率的片段
     start_asm_codes, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
     print(f"start: {start_asm_codes_prob} {start_asm_codes}")
+    if start_asm_codes_prob < 0.9:
+        return None
 
     end_asm_codes, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
     print(f"end: {end_asm_codes_prob} {end_asm_codes}")
-    # TODO 实际上这里还应该过滤一下。比如，如果start和end的概率都很低，那么就不应该认为找到了。
 
     # 找到对应的snippet
     normalized_asm_codes = " ".join(normalize_asm_lines(asm_codes))
@@ -354,7 +356,7 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     return snippet
 
 
-def choice_snippet(choice_model,patch,asm_codes_snippet:str):
+def choice_snippet(choice_model, function_name, patch: VulFunctionPatch, asm_codes_snippet: str):
     pass
 
 
@@ -416,6 +418,7 @@ def run_experiment():
 
 def debug_judge_is_fixed():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
+    tc_save_path = r"C:\Users\chengyue\Desktop\DATA\test_cases\bin_vul_confirm_tcs\final_vul_confirm_test_cases.json"
     model_save_path = r"Resources/model_weights/model_2_weights_back.pth"
 
     logger.info(f"load test cases from {tc_save_path}")

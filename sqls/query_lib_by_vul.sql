@@ -2,7 +2,7 @@ SELECT sl2.id AS library_id, sl2."name" , sl2.vendor , sl2.platform , ss.public_
 FROM scantist_securityissue ss
 JOIN scantist_libraryversionissue sl
   ON ss.id = sl.security_issue_id
-  AND ss.public_id = 'CVE-2020-1730'
+  AND ss.public_id = 'CVE-2023-45322'
   AND sl.is_valid = TRUE
 JOIN scantist_library_version slv
   ON sl.library_version_id = slv.id

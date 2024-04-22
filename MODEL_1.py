@@ -179,4 +179,3 @@ if __name__ == '__main__':
     # prepare_train_data_for_model_1()
     # prepare_train_data_for_model_1_new()
     train_model_1()
-
