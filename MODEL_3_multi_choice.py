@@ -27,34 +27,22 @@ def prepare_data():
 
 
 def train_model_3():
-    train_data_save_path = "TestCases/model_train/model_3_multi_choice/data_items/train_data.json"
-    val_data_save_path = "TestCases/model_train/model_3_multi_choice/data_items/valid_data.json"
-    test_data_save_path = "TestCases/model_train/model_3_multi_choice/data_items/test_data.json"
-    model_save_path = "Resources/model_weights/model_3_weights_MC.pth"
+    train_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/train_data_items_for_model_3.json"
+    val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_3.json"
+    test_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/test_data_items_for_model_3.json"
+    model_save_path = "Resources/model_weights/model_3_weights.pth"
     run_train(train_data_save_path,
               val_data_save_path,
               test_data_save_path,
               model_save_path,
               test_only=False,
-              epochs=3,
+              epochs=30,
               batch_size=48)
 
 
-def test_model():
-    asm_code_text = ' call _ERR_new lea rdx,aPkcs12UnpackP7_1 mov esi,4Eh lea rdi,aCryptoPkcs12P1 call _ERR_set_debug xor eax,eax xor edx,edx mov esi,79h mov edi,23h call _ERR_set_error xor eax,eax pop rbx xor edx,edx xor esi,esi xor edi,edi ret'
 
-    src_code_before_commit = 'ERR_raise(ERR_LIB_PKCS12, PKCS12_R_CONTENT_TYPE_NOT_DATA); return NULL; } return ASN1_item_unpack_ex(p7->d.data, ASN1_ITEM_rptr(PKCS12_SAFEBAGS), ossl_pkcs7_ctx_get0_libctx(&p7->ctx), ossl_pkcs7_ctx_get0_propq(&p7->ctx));'
-
-    src_code_after_commit = 'ERR_raise(ERR_LIB_PKCS12, PKCS12_R_CONTENT_TYPE_NOT_DATA); return NULL; } if (p7->d.data == NULL) { ERR_raise(ERR_LIB_PKCS12, PKCS12_R_DECODE_ERROR); return NULL; } return ASN1_item_unpack_ex(p7->d.data, ASN1_ITEM_rptr(PKCS12_SAFEBAGS), ossl_pkcs7_ctx_get0_libctx(&p7->ctx), ossl_pkcs7_ctx_get0_propq(&p7->ctx));'
-    result = SnippetChoicer(
-        model_save_path="Resources/model_weights/model_3_weights_MC.pth",
-        batch_size=16).choice(asm_code_texts=[asm_code_text],
-                              vul_src_code_text=src_code_before_commit,
-                              patch_src_code_text=src_code_after_commit)
-    print(result)
 
 
 if __name__ == '__main__':
     # prepare_data()
-    # train_model_3()
-    test_model()
+    train_model_3()

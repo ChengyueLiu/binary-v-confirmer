@@ -395,7 +395,7 @@ def judge_is_fixed(locate_model, choice_model, vul_function: VulFunction, asm_co
 
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
-    model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
+    model_save_path = r"Resources/model_weights/model_1_weights.pth"
 
     logger.info(f"init model...")
     model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
@@ -417,7 +417,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[48:49]
+    test_cases = test_cases[:10]
     print(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
@@ -977,5 +977,11 @@ def debug_judge_is_fixed():
 
 
 if __name__ == '__main__':
-    # run_experiment()
-    debug_judge_is_fixed()
+    run_experiment()
+    # debug_judge_is_fixed()
+
+    """
+    model 1:
+        目前 back 4 效果最好，也不能叫最好，只能是凑巧最好。
+        最新的，感觉还不如back 4， 可能也是训练的不够，现在才 98.9%的准确率 以及 0.035的loss，还可以继续训练。但是先训练model 3，训练一个出来，把整体流程都走通。
+    """
