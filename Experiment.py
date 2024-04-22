@@ -316,41 +316,33 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     # 分别定位开头和结尾
     above_context = patch.vul_snippet_codes[:3]
     below_context = patch.vul_snippet_codes[-3:]
-    start_data_items = []
-    end_data_items = []
+    data_items = []
     for window in asm_codes_windows:
-        data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
-                                                           src_codes=above_context,
-                                                           asm_codes=window)
-        data_item.normalize()
-        start_data_items.append(data_item)
+        start_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
+                                                                 src_codes=above_context,
+                                                                 asm_codes=window)
+        start_data_item.normalize()
+        data_items.append(start_data_item)
 
-        data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
-                                                           src_codes=below_context,
-                                                           asm_codes=window)
-        data_item.normalize()
-        end_data_items.append(data_item)
+        end_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
+                                                               src_codes=below_context,
+                                                               asm_codes=window)
+        end_data_item.normalize()
+        data_items.append(end_data_item)
 
     # 处理结果
-    # 开头
-    start_predictions = locate_model.locate(start_data_items)
-    start_asm_codes = None
-    start_asm_codes_prob = 0
-    for answer, prob in start_predictions:
-        if prob > start_asm_codes_prob:
-            start_asm_codes = answer
-            start_asm_codes_prob = prob
+    all_predictions = locate_model.locate(data_items)
+    mid_index = len(all_predictions) // 2  # 获取中间索引，用于分割开头和结尾的预测结果
+    start_predictions = all_predictions[:mid_index]
+    end_predictions = all_predictions[mid_index:]
+
+    # 找到最大概率的片段
+    start_asm_codes, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
     print(f"start: {start_asm_codes_prob} {start_asm_codes}")
 
-    # 结尾
-    end_predictions = locate_model.locate(end_data_items)
-    end_asm_codes = None
-    end_asm_codes_prob = 0
-    for answer, prob in end_predictions:
-        if prob > end_asm_codes_prob:
-            end_asm_codes = answer
-            end_asm_codes_prob = prob
+    end_asm_codes, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
     print(f"end: {end_asm_codes_prob} {end_asm_codes}")
+    # TODO 实际上这里还应该过滤一下。比如，如果start和end的概率都很低，那么就不应该认为找到了。
 
     # 找到对应的snippet
     normalized_asm_codes = " ".join(normalize_asm_lines(asm_codes))
@@ -360,17 +352,23 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     print(f"asm length: {len(normalized_asm_codes)}, snippet length: {len(snippet)}, snippet: {snippet}")
 
     return snippet
+
+
+def choice_snippet(choice_model,patch,asm_codes_snippet:str):
+    pass
+
+
 def judge_is_fixed(locate_model, choice_model, vul_function: VulFunction, asm_codes: List[str]):
     """
     判断漏洞是否已修复
     """
-    # 先定位，成功定位到一个片段即可。
     print(f"patch num: {len(vul_function.patches)}")
     for patch in vul_function.patches:
-        locate_snippet(locate_model, vul_function.get_function_name(), patch, asm_codes)
-
-    # 再判断
-    # TODO
+        # 定位片段
+        asm_codes_snippet = locate_snippet(locate_model, vul_function.get_function_name(), patch, asm_codes)
+        # 判断是否修复
+        if asm_codes_snippet:
+            pass
 
 
 def run_experiment():
