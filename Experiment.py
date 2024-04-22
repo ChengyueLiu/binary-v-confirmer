@@ -13,7 +13,8 @@ from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import analyze_src_codes
 from main.extractors.bin_function_feature_extractor.objdump_parser import parse_objdump_file
-from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
+from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel, \
+    DataItemForCodeSnippetConfirmModelMC
 from main.models.code_snippet_positioning_model.new_model_application import SnippetPositioner
 from main.models.function_confirm_model.new_model_application import FunctionConfirmer
 from main.tc_models import VulConfirmTC, VulFunction, TestBin, VulFunctionPatch
@@ -305,7 +306,7 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
     return windows
 
 
-def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_codes: List[str]):
+def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_codes: List[str]) -> str:
     """
     片段定位
     """
@@ -314,6 +315,7 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     print(f"asm codes length: {len(asm_codes)}, window num: {len(asm_codes_windows)}")
 
     # 分别定位开头和结尾
+    # TODO 这里实际的源代码有点少，正规化处理后有可能不足3行。
     above_context = patch.vul_snippet_codes[:3]
     below_context = patch.vul_snippet_codes[-3:]
     start_data_items = []
@@ -347,30 +349,48 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     print(f"end: {end_asm_codes_prob} {end_asm_codes}")
 
     # 找到对应的snippet
-    normalized_asm_codes = " ".join(normalize_asm_lines(asm_codes))
-    start_index = normalized_asm_codes.index(start_asm_codes)
-    end_index = normalized_asm_codes.index(end_asm_codes)
-    snippet = normalized_asm_codes[start_index:end_index]
-    print(f"asm length: {len(normalized_asm_codes)}, snippet length: {len(snippet)}, snippet: {snippet}")
+    normalized_asm_codes_str = " ".join(normalize_asm_lines(asm_codes))
+    start_index = normalized_asm_codes_str.index(start_asm_codes)
+    end_index = normalized_asm_codes_str.index(end_asm_codes)
+    snippet = normalized_asm_codes_str[start_index:end_index]
+    print(f"asm length: {len(normalized_asm_codes_str)}, snippet length: {len(snippet)}, snippet: {snippet}")
 
     return snippet
 
 
-def choice_snippet(choice_model, function_name, patch: VulFunctionPatch, asm_codes_snippet: str):
-    pass
+def _judge_is_fixed(choice_model, function_name, patches: List[VulFunctionPatch], asm_codes_snippets: List[str]):
+    # 所有成功定位的片段，批量判断是否已经修复
+    data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
+    for patch, asm_codes_snippet in zip(patches, asm_codes_snippets):
+        # 无法定位则跳过
+        if asm_codes_snippet is None:
+            continue
+
+    # TODO 完善第三个模型
+    # 生成数据项
+    # 批量预测
+    # 根据预测结果多少，判断是否修复，并给出概率。
+
+    predictions = choice_model.choice(data_items)
+    return None
 
 
 def judge_is_fixed(locate_model, choice_model, vul_function: VulFunction, asm_codes: List[str]):
     """
-    判断漏洞是否已修复
+    判断函数是否被修复，任意一个片段被判定为修复，则认为函数被修复
     """
+
+    # 每个patch 单独定位
     print(f"patch num: {len(vul_function.patches)}")
+    asm_codes_snippets = []
     for patch in vul_function.patches:
         # 定位片段
         asm_codes_snippet = locate_snippet(locate_model, vul_function.get_function_name(), patch, asm_codes)
-        # 判断是否修复
-        if asm_codes_snippet:
-            pass
+
+        asm_codes_snippets.append(asm_codes_snippet)
+
+    print(f"succeed locate patch num: {len(asm_codes_snippets)}")
+    # _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches, asm_codes_snippets)
 
 
 def run_experiment():

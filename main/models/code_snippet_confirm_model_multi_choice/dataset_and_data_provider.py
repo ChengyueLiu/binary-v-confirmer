@@ -8,11 +8,13 @@ from main.interface import DataItemForCodeSnippetConfirmModelMC
 
 from torch.utils.data import Dataset
 import torch
+
 # 移除这个烦人的警告：Be aware, overflowing tokens are not returned for the setting you have chosen, i.e. sequence pairs with the 'longest_first' truncation strategy. So the returned list will always be empty even if some tokens have been removed.
 transformers.logging.set_verbosity_error()
 
+
 class CodeSnippetConfirmDataset(Dataset):
-    def __init__(self, questions, choice_1_list, choice_2_list, tokenizer, max_len=512,shuffle_choices=True):
+    def __init__(self, questions, choice_1_list, choice_2_list, tokenizer, max_len=512, shuffle_choices=True):
         """
         set choice 1 as the right answer when training
         """
@@ -22,6 +24,7 @@ class CodeSnippetConfirmDataset(Dataset):
         self.tokenizer = tokenizer
         self.max_len = max_len
         self.shuffle_choices = shuffle_choices
+
     def __len__(self):
         return len(self.questions)
 
@@ -74,7 +77,7 @@ def create_dataset(file_path, tokenizer, max_len=512):
         wrong_answers.append(data_item.get_wrong_answer_text())
 
     print("原始数据数量: ", len(questions))
-    dataset = CodeSnippetConfirmDataset(questions, right_answers,wrong_answers, tokenizer, max_len)
+    dataset = CodeSnippetConfirmDataset(questions, right_answers, wrong_answers, tokenizer, max_len)
     return dataset
 
 
