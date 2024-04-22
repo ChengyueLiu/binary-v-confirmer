@@ -14,31 +14,27 @@ transformers.logging.set_verbosity_error()
 
 
 class CodeSnippetConfirmDataset(Dataset):
-    def __init__(self, questions, choice_1_list, choice_2_list, tokenizer, max_len=512, shuffle_choices=True):
+    def __init__(self, questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len=512):
         """
         set choice 1 as the right answer when training
         """
         self.questions = questions
+        self.choice_0_list = choice_0_list
         self.choice_1_list = choice_1_list
-        self.choice_2_list = choice_2_list
+        self.choice_index_list = choice_index_list
         self.tokenizer = tokenizer
         self.max_len = max_len
-        self.shuffle_choices = shuffle_choices
+
 
     def __len__(self):
         return len(self.questions)
 
     def __getitem__(self, idx):
         question = self.questions[idx]
+        choice_0 = self.choice_0_list[idx]
         choice_1 = self.choice_1_list[idx]
-        choice_2 = self.choice_2_list[idx]
-
-        # 将正确答案和错误答案合并到一个列表中，并可能打乱它们的顺序
-        choices = [choice_1, choice_2]
-        if self.shuffle_choices:
-            random.shuffle(choices)
-        # 确定正确答案在打乱后的列表中的索引
-        label = choices.index(choice_1)
+        choice_index = self.choice_index_list[idx]
+        choices = [choice_0, choice_1]
 
         # 使用tokenizer的__call__方法同时处理问题和选项
         # 注意：我们需要为每个选项重复问题文本
@@ -56,7 +52,7 @@ class CodeSnippetConfirmDataset(Dataset):
         return {
             'input_ids': input_ids,
             'attention_mask': attention_mask,
-            'labels': torch.tensor(label, dtype=torch.long)
+            'labels': torch.tensor(choice_index, dtype=torch.long)
         }
 
 
@@ -69,15 +65,17 @@ def create_dataset(file_path, tokenizer, max_len=512):
         data_items.append(data_item)
 
     questions = []
-    right_answers = []
-    wrong_answers = []
+    choice_0_list = []
+    choice_1_list = []
+    choice_index_list = []
     for data_item in data_items:
         questions.append(data_item.get_question_text())
-        right_answers.append(data_item.get_right_answer_text())
-        wrong_answers.append(data_item.get_wrong_answer_text())
+        choice_0_list.append(data_item.get_src_codes_0_text())
+        choice_1_list.append(data_item.get_src_codes_1_text())
+        choice_index_list.append(data_item.choice_index)
 
     print("原始数据数量: ", len(questions))
-    dataset = CodeSnippetConfirmDataset(questions, right_answers, wrong_answers, tokenizer, max_len)
+    dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len)
     return dataset
 
 

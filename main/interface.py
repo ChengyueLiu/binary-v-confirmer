@@ -491,60 +491,54 @@ class DataItemForCodeSnippetConfirmModel:
         return SpecialToken.get_asm_special_tokens()
 
 
-class DataItemForCodeSnippetConfirmModelMC:
+@dataclass
+class DataItemForCodeSnippetConfirmModelMC(Serializable):
     """
     训练数据项，用于代码片段确认模型
     """
+    function_name: str
+    choice_index: int
+    wrong_type: int
+    asm_codes: List[str]
+    src_codes_0: List[str]
+    src_codes_1: List[str]
 
-    def __init__(self, asm_codes: List[str],
-                 right_src_codes: List[str],
-                 wrong_src_codes: List[str]):
+    def __init__(self,
+                 function_name: str,
+                 asm_codes: List[str],
+                 src_codes_0: List[str],
+                 src_codes_1: List[str],
+                 choice_index=0,
+                 wrong_type=1):
+        self.function_name = function_name
+        self.choice_index = choice_index
+        self.wrong_type = wrong_type
         self.asm_codes = asm_codes
-        self.right_src_codes = right_src_codes
-        self.wrong_src_codes = wrong_src_codes
+        self.src_codes_0 = src_codes_0
+        self.src_codes_1 = src_codes_1
 
-    def custom_serialize(self):
-        return {
-            "asm_codes": self.asm_codes,
-            "right_src_codes": self.right_src_codes,
-            "wrong_src_codes": self.wrong_src_codes
-        }
 
     @classmethod
     def get_special_tokens(cls):
         return SpecialToken.get_asm_special_tokens()
 
-    @classmethod
-    def init_from_dict(cls, data: dict):
-        return cls(
-            asm_codes=data['asm_codes'],
-            right_src_codes=data['right_src_codes'],
-            wrong_src_codes=data['wrong_src_codes']
-        )
-
     def get_question_text(self):
         # 限制最多50行汇编代码
         return " ".join(self.asm_codes[:50])
 
-    def get_right_answer_text(self):
-        return remove_comments(" ".join(self.right_src_codes))
+    def get_src_codes_0_text(self):
+        return remove_comments(" ".join(self.src_codes_0))
 
-    def get_wrong_answer_text(self):
-        return remove_comments(" ".join(self.wrong_src_codes))
+    def get_src_codes_1_text(self):
+        return remove_comments(" ".join(self.src_codes_1))
+
+    def get_choice_index(self):
+        return self.choice_index
 
     def normalize(self):
-        self.right_src_codes = [normalized_line for line in self.right_src_codes
-                                if (normalized_line := line.strip())]
-        self.wrong_src_codes = [normalized_line for line in self.wrong_src_codes
-                                if (normalized_line := line.strip())]
-        self.asm_codes = [normalized_code for code in self.asm_codes
-                          if (normalized_code := normalize_asm_code(code,
-                                                                    reg_token=SpecialToken.ASM_REG.value,
-                                                                    num_token=SpecialToken.ASM_NUM.value,
-                                                                    jump_token=SpecialToken.ASM_JUMP.value,
-                                                                    loc_token=SpecialToken.ASM_LOC.value,
-                                                                    mem_token=SpecialToken.ASM_MEM.value))]
-
+        self.src_codes_0 = normalize_src_lines(self.src_codes_0)
+        self.src_codes_1 = normalize_src_lines(self.src_codes_1)
+        self.asm_codes = normalize_asm_lines(self.asm_codes)
 
 @dataclass
 class Patch:
