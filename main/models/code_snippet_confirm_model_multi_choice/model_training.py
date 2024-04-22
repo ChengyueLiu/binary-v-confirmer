@@ -111,7 +111,7 @@ def run_train(train_data_json_file_path,
               test_only=False,
               **kwargs):
     batch_size = kwargs.get('batch_size', 32)
-    epochs = kwargs.get('epochs', 3)
+    epochs = kwargs.get('epochs', 30)
 
     # 初始化训练
     logger.info('init train...')
@@ -124,15 +124,29 @@ def run_train(train_data_json_file_path,
     if not test_only:
         logger.info('inited, start train, epochs: 3, batch_size: 32...')
         # train scheduler
+        best_valid_loss = float('inf')  # 初始化最佳验证损失
+        no_improvement_count = 0  # 用于跟踪验证损失未改进的epoch数
         for epoch in range(epochs):
             logger.info(f'Epoch {epoch + 1}/{epochs}')
             train_loss, train_acc = train_or_evaluate(model, train_loader, optimizer, scheduler, device, is_train=True)
             valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
             print(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
             print(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
-        logger.info('train done, save model...')
-        torch.save(model.state_dict(), model_save_path)
-        logger.info('model saved, start test')
+            # 如果当前验证损失更低，保存模型
+            if valid_loss < best_valid_loss:
+                best_valid_loss = valid_loss
+                no_improvement_count = 0  # 重置计数器
+                logger.info('Validation loss improved, saving model...')
+                torch.save(model.state_dict(), model_save_path)
+                logger.info('Model saved.')
+            else:
+                no_improvement_count += 1
+                logger.info(f'No improvement in validation loss for {no_improvement_count} epochs.')
+
+            # 如果连续5个epoch没有改进，提前停止训练
+            if no_improvement_count >= 3:
+                logger.info('Early stopping triggered. Training stopped.')
+                break
 
     logger.info('load model from model_weights.pth...')
     model.load_state_dict(torch.load(model_save_path))
