@@ -143,7 +143,7 @@ def extract_asm_functions(asm_functions_cache, test_bin):
     return asm_function_dict
 
 
-def check_result(tc:VulConfirmTC, confirmed_function_name:str, analysis):
+def check_result(tc: VulConfirmTC, confirmed_function_name: str, analysis):
     ground_truth = tc.ground_truth
     # 如果ground truth中有漏洞
     if ground_truth.contained_vul_function_names:
@@ -177,10 +177,14 @@ def check_result(tc:VulConfirmTC, confirmed_function_name:str, analysis):
 
 @dataclass
 class Analysis:
-    tp: int = 0
-    fp: int = 0
-    tn: int = 0
-    fn: int = 0
+    tp: int = 0  # True Positives
+    fp: int = 0  # False Positives
+    tn: int = 0  # True Negatives
+    fn: int = 0  # False Negatives
+
+    @property
+    def total(self):
+        return self.tp + self.tn + self.fp + self.fn
 
     @property
     def precision(self):
@@ -192,8 +196,31 @@ class Analysis:
 
     @property
     def f1(self):
-        return 2 * self.precision * self.recall / (
-                self.precision + self.recall) if self.precision + self.recall > 0 else 0
+        precision = self.precision
+        recall = self.recall
+        return 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
+
+    @property
+    def accuracy(self):
+        total = self.total
+        return (self.tp + self.tn) / total if total > 0 else 0
+
+    @property
+    def specificity(self):
+        return self.tn / (self.tn + self.fp) if self.tn + self.fp > 0 else 0
+
+    @property
+    def error_rate(self):
+        total = self.total
+        return (self.fp + self.fn) / total if total > 0 else 0
+
+    @property
+    def mcc(self):
+        # Matthews Correlation Coefficient calculation
+        numerator = (self.tp * self.tn - self.fp * self.fn)
+        denominator = ((self.tp + self.fp) * (self.tp + self.fn) *
+                       (self.tn + self.fp) * (self.tn + self.fn)) ** 0.5
+        return numerator / denominator if denominator != 0 else 0
 
 
 def parse_objdump_file_wrapper(file_path):
@@ -315,7 +342,8 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
     return windows
 
 
-def locate_snippet(locate_model:SnippetPositioner, function_name, patch: VulFunctionPatch, asm_codes: List[str]) -> str:
+def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFunctionPatch,
+                   asm_codes: List[str]) -> str:
     """
     片段定位
     """
@@ -404,7 +432,8 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     return None
 
 
-def judge_is_fixed(locate_model:SnippetPositioner, choice_model: SnippetChoicer, vul_function: VulFunction, asm_codes: List[str]):
+def judge_is_fixed(locate_model: SnippetPositioner, choice_model: SnippetChoicer, vul_function: VulFunction,
+                   asm_codes: List[str]):
     """
     判断函数是否被修复，任意一个片段被判定为修复，则认为函数被修复
     """
@@ -419,8 +448,34 @@ def judge_is_fixed(locate_model:SnippetPositioner, choice_model: SnippetChoicer,
         asm_codes_snippet_list.append(asm_codes_snippet)
 
     print(f"succeed locate patch num: {len(asm_codes_snippet_list)}")
-    result = _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches, asm_codes_snippet_list)
+    result = _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches,
+                             asm_codes_snippet_list)
     return result
+
+
+def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis, asm_functions_cache):
+    confirm_result = False
+
+    # locate vul function
+    confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
+
+    if confirmed_vul_function is not None:
+        # judge is fixed
+        is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
+        if is_fixed is not None and not is_fixed:
+            confirm_result = True
+
+    if tc.has_vul():
+        if confirm_result:
+            analysis.tp += 1  # TODO 这里当然有可能也是凑巧了，但是先不过多考虑。
+        else:
+            analysis.fn += 1
+    else:
+        if confirm_result:
+            analysis.fp += 1
+        else:
+            analysis.tn += 1
+
 
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
@@ -457,21 +512,14 @@ def run_experiment():
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):
         logger.info(f"confirm: {i} {tc.public_id}")
-        # confirm functions
-        confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
-        # check_result(tc, confirmed_vul_function.function_name, analysis)
-
-        # judge is fixed
-        is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
-
-
+        run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
     logger.info(f"test result:")
-    logger.info(f"\ttc num: {len(test_cases)}")
-    logger.info(f"test result:")
-    logger.info(f"\ttp: {analysis.tp} fp: {analysis.fp} tn: {analysis.tn} fn: {analysis.fn}")
+    logger.info(f"\ttotal: {analysis.total}")
+    logger.info(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
     logger.info(f"\tprecision: {analysis.precision}")
     logger.info(f"\trecall: {analysis.recall}")
     logger.info(f"\tf1: {analysis.f1}")
+    logger.info(f"\taccuracy: {analysis.accuracy}")
 
 
 def debug_judge_is_fixed():
@@ -1015,6 +1063,7 @@ def debug_judge_is_fixed():
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
     result = judge_is_fixed(locate_model, choice_model, vul_function, asm_codes)
     print(result)
+
 
 if __name__ == '__main__':
     run_experiment()

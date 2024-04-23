@@ -85,3 +85,12 @@ class VulConfirmTC(Serializable):
         else:
             self.vul_functions = filtered_vul_functions
             return True
+
+    def has_vul(self):
+        if self.ground_truth.is_fixed:
+            return False
+        else:
+            if self.ground_truth.contained_vul_function_names:
+                return True
+            else:
+                return False
