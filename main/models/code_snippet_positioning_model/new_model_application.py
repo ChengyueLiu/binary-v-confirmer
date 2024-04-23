@@ -79,13 +79,12 @@ class SnippetPositioner:
 
                 # 解码
                 answer = self.tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
-                if answer:
-                    predicted_answers.append(answer)
-                    # 计算平均置信度（开始和结束概率的平均）
-                    if predict_start:
-                        confidence_scores.append(start_prob.item())
-                    else:
-                        confidence_scores.append(end_prob.item())
+                predicted_answers.append(answer)
+                # 计算平均置信度（开始和结束概率的平均）
+                if predict_start:
+                    confidence_scores.append(start_prob.item())
+                else:
+                    confidence_scores.append(end_prob.item())
         predictions = [(answer, prob) for answer, prob in zip(predicted_answers, confidence_scores)]
         return predictions
 

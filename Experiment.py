@@ -364,19 +364,23 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
         end_data_items.append(end_data_item)
 
     # 处理结果
+    all_data_items = start_data_items + end_data_items
     all_predictions = locate_model.locate(start_data_items + end_data_items)
+    logger.info(f"locate result: {len(all_data_items)} ---> {len(all_predictions)}")
     mid_index = len(all_predictions) // 2  # 获取中间索引，用于分割开头和结尾的预测结果
     start_predictions = all_predictions[:mid_index]
     end_predictions = all_predictions[mid_index:]
 
     # 找到最大概率的片段
     start_asm_codes_str, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
+    logger.info(f"start src codes: {above_context}")
     logger.info(f"\tpatch location start: {start_asm_codes_prob} {start_asm_codes_str}")
 
     end_asm_codes_str, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
+    logger.info(f"end src codes: {below_context}")
     logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes_str}")
 
-    if start_asm_codes_prob < 0.8:
+    if not start_asm_codes_str or start_asm_codes_prob < 0.8:
         return None
 
     # 找到开始位置
@@ -549,7 +553,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[34:35]
+    test_cases = test_cases[:10]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
