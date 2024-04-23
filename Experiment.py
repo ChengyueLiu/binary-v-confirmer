@@ -1,5 +1,6 @@
 import difflib
 import multiprocessing
+import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -378,8 +379,8 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     # 找到最大概率的片段
     start_asm_codes, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
     logger.info(f"\tpatch location start: {start_asm_codes_prob} {start_asm_codes}")
-    # if start_asm_codes_prob < 0.9:
-    #     return None
+    if start_asm_codes_prob < 0.8:
+        return None
 
     end_asm_codes, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
     logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes}")
@@ -460,12 +461,25 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
 
     if confirmed_vul_function is not None:
-        has_vul = True
-        has_vul_function = True
-        # judge is fixed
-        is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
-        if is_fixed:
-            has_vul = False
+        # locate vul snippet
+        logger.info(f"\tpatch num: {len(confirmed_vul_function.patches)}")
+        asm_codes_snippet_list = []
+        for patch in confirmed_vul_function.patches:
+            asm_codes_snippet = locate_snippet(locate_model, confirmed_vul_function.get_function_name(), patch,
+                                               confirmed_asm_codes)
+            if asm_codes_snippet is not None:
+                asm_codes_snippet_list.append(asm_codes_snippet)
+        logger.info(f"\tsucceed locate patch num: {len(asm_codes_snippet_list)}")
+
+        # 如果有定位到
+        if asm_codes_snippet_list:
+            has_vul_function = True
+            is_fixed = _judge_is_fixed(choice_model,
+                                       confirmed_vul_function.get_function_name(),
+                                       confirmed_vul_function.patches,
+                                       asm_codes_snippet_list)
+            if not is_fixed:
+                has_vul = True
 
     if tc.has_vul():
         if has_vul:
@@ -482,7 +496,8 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             analysis.tn += 1
             tc_conclusion = 'TN'
     logger.success(f"\ttest summary: ")
-    logger.success(f"\t\ttc:\thas_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
+    logger.success(
+        f"\t\ttc:\thas_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
     logger.success(f"\t\tresult:\thas_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
     logger.success(f"\t\tconclusion: {tc_conclusion}")
 
@@ -533,6 +548,7 @@ def run_experiment():
 
 
 if __name__ == '__main__':
+    os.environ['TOKENIZERS_PARALLELISM'] = 'false'
     run_experiment()
 
     """
