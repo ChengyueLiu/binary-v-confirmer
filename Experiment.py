@@ -274,7 +274,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
 
     # 4. 确认结果
     logger.info(f"\tconfirmed functions:")
-    confirmed_function_name = None
+    confirmed_data_item = None
     confirmed_prob = 0
     confirmed_asm_codes = None
     asm_codes_list = []
@@ -285,7 +285,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
 
         if pred == 1 and prob > prob_threshold:
             if prob > confirmed_prob:
-                confirmed_function_name = data_item.function_name
+                confirmed_data_item = data_item
                 confirmed_prob = prob
                 confirmed_asm_codes = data_item.asm_codes
             # 预览结果
@@ -308,6 +308,12 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     logger.info(f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}")
     logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
     logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
+
+    # 确认结果
+    if confirmed_data_item:
+        confirmed_function_name = confirmed_data_item.bin_function_name
+    else:
+        confirmed_function_name = None
     logger.info(f"\tconfirm function: {confirmed_function_name} {confirmed_prob}")
 
     confirmed_vul_function = None
@@ -393,6 +399,7 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
         snippet = normalized_asm_codes_str[start_index:end_index]
     else:
         snippet = normalized_asm_codes_str[start_index:start_index + 50]
+    logger.info(f"above context src codes: {above_context}")
     logger.info(f"\tasm length: {len(normalized_asm_codes_str)}, snippet length: {len(snippet)}, snippet: {snippet}")
 
     return snippet
@@ -420,13 +427,14 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     vul_count = 0
     fix_count = 0
     for pred, prob in predictions:
+        logger.info(f"function_name choice: {pred}: {prob}")
         if prob > 0.9:
             if pred == 0:
                 vul_count += 1
             else:
                 fix_count += 1
+    logger.info(f"\tvul count: {vul_count} fix count: {fix_count}")
     if vul_count > fix_count:
-        logger.info(f"\tvul count: {vul_count} fix count: {fix_count}")
         return True
     elif vul_count < fix_count:
         return False
@@ -459,7 +467,8 @@ def judge_is_fixed(locate_model: SnippetPositioner, choice_model: SnippetChoicer
 def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis, asm_functions_cache):
     has_vul = False
     has_vul_function = False
-    is_fixed = False
+    is_located = False
+    is_fixed = None
     # locate vul function
     confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
 
@@ -533,7 +542,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[3:10]
+    test_cases = test_cases[30:40]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
