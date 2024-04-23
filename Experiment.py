@@ -271,15 +271,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     # 3. 调用模型
     predictions = model.confirm(data_items)
 
-    # 4. 预览ground truth
-    logger.info(f"\tground truth: ")
-    logger.info(f"\t\tvul: {tc.public_id}")
-    logger.info(f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}")
-    logger.info(f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}")
-    logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
-    logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
-
-    # 5. 确认结果
+    # 4. 确认结果
     logger.info(f"\tconfirmed functions:")
     confirmed_function_name = None
     confirmed_prob = 0
@@ -305,9 +297,16 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
             if src_function_name == data_item.bin_function_name:
                 logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
                 asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes}")
-    logger.info(f"\tconfirmed asm codes:")
-    for asm_codes in asm_codes_list:
-        logger.info(f"\t\t{asm_codes}")
+    # logger.info(f"\tconfirmed asm codes:")
+    # for asm_codes in asm_codes_list:
+    #     logger.info(f"\t\t{asm_codes}")
+    # 4. 预览ground truth
+    logger.info(f"\tground truth: ")
+    logger.info(f"\t\tvul: {tc.public_id}")
+    logger.info(f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}")
+    logger.info(f"\t\ttest_bin: {tc.test_bin.library_name} {tc.test_bin.version_tag} {tc.test_bin.binary_name}")
+    logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
+    logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
     logger.info(f"\tconfirm function: {confirmed_function_name} {confirmed_prob}")
 
     confirmed_vul_function = None
@@ -482,11 +481,10 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         else:
             analysis.tn += 1
             tc_conclusion = 'TN'
-    logger.success(
-        f"\tsummary: "
-        f"\t\ttc.has_vul: {tc.has_vul()}。\n"
-        f"\t\tresult.has_vul: {has_vul}. "
-        f"\t\thas_vul_function: {has_vul_function}, is_fixed: {is_fixed}, conclusion: {tc_conclusion}")
+    logger.success(f"\ttest summary: ")
+    logger.success(f"\t\ttc.has_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
+    logger.success(f"\t\tresult.has_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
+    logger.success(f"\t\tconclusion: {tc_conclusion}")
 
 
 def run_experiment():

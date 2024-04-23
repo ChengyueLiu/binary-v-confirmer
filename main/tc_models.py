@@ -87,6 +87,10 @@ class VulConfirmTC(Serializable):
             return True
 
     def has_vul(self):
+        """
+        是否有漏洞（已修复的算作没有漏洞）
+        """
+
         if self.ground_truth.is_fixed:
             return False
         else:
@@ -94,3 +98,18 @@ class VulConfirmTC(Serializable):
                 return True
             else:
                 return False
+
+    def has_vul_function(self):
+        """
+        是否有漏洞函数（不考虑是否已经修复）
+        """
+        if self.ground_truth.contained_vul_function_names:
+            return True
+        else:
+            return False
+
+    def is_fixed(self):
+        """
+        是否已经修复
+        """
+        return self.ground_truth.is_fixed
