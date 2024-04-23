@@ -385,9 +385,17 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
         start_index += 1
     start_index -= 1
 
+    # 找到结束位置
+    end_index = len(normalized_asm_codes)
+    while end_asm_codes_str in " ".join(normalized_asm_codes[:end_index]):
+        end_index -= 1
+    end_index += 1
+    logger.info(f"\tstart index: {start_index}, end index: {end_index}")
+    if end_index - start_index < 20:
+        end_index = start_index + 50
     # 取前50个汇编码指令
-    snippet = normalized_asm_codes[start_index:50]
-    logger.info(f"above context src codes: {above_context}")
+    snippet = normalized_asm_codes[start_index:end_index]
+    logger.info(f"\tabove context src codes: {above_context}")
     logger.info(
         f"\tall asm length: {len(normalized_asm_codes)}, asm snippet length: {len(snippet)}, snippet: {snippet}")
 
@@ -445,12 +453,10 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     # 根据概率
     vul_prob = 0
     fix_prob = 0
-    for pred, prob in predictions:
-        logger.info(f"function_name choice: {pred}: {prob}")
-        if pred == 0:
-            vul_prob += prob
-        else:
-            fix_prob += prob
+    print(predictions)
+    for (choice_0, choice_0_prob), (choice_1, choice_1_prob) in predictions:
+        vul_prob += choice_0_prob
+        fix_prob += choice_1_prob
     logger.info(f"\tvul prob: {vul_prob}, fix prob: {fix_prob}")
 
     return fix_prob > vul_prob

@@ -60,16 +60,13 @@ class SnippetChoicer:
 
             # 对每个问题处理，提取每个选项的信息
             for i in range(logits.size(0)):  # 遍历batch中的每个样本，即每个问题
-                most_prob = 0
-                most_index = 0
+                question_answer = []
                 for option_index in range(logits.size(1)):  # 遍历该问题的每个选项
                     score = round(logits[i, option_index].item(), 4)  # 该选项的得分
                     prob = probabilities[i, option_index].item()  # 该选项的概率
                     print(option_index, score, prob)
-                    if prob > most_prob:
-                        most_prob = prob
-                        most_index = option_index
-                predictions.append((most_index, most_prob))
+                    question_answer.append((option_index, prob))
+                predictions.append(question_answer)
 
         return predictions
 
