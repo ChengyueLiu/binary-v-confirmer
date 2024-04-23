@@ -454,29 +454,39 @@ def judge_is_fixed(locate_model: SnippetPositioner, choice_model: SnippetChoicer
 
 
 def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis, asm_functions_cache):
-    confirm_result = False
-
+    has_vul = False
+    has_vul_function = False
+    is_fixed = False
     # locate vul function
     confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
 
     if confirmed_vul_function is not None:
-        confirm_result = True
-        
+        has_vul = True
+        has_vul_function = True
         # judge is fixed
         is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
         if is_fixed:
-            confirm_result = False
+            has_vul = False
 
     if tc.has_vul():
-        if confirm_result:
+        if has_vul:
             analysis.tp += 1  # TODO 这里当然有可能也是凑巧了，但是先不过多考虑。
+            tc_conclusion = 'TP'
         else:
             analysis.fn += 1
+            tc_conclusion = 'FN'
     else:
-        if confirm_result:
+        if has_vul:
             analysis.fp += 1
+            tc_conclusion = 'FP'
         else:
             analysis.tn += 1
+            tc_conclusion = 'TN'
+    logger.success(
+        f"\tsummary: "
+        f"\t\ttc.has_vul: {tc.has_vul()}。\n"
+        f"\t\tresult.has_vul: {has_vul}. "
+        f"\t\thas_vul_function: {has_vul_function}, is_fixed: {is_fixed}, conclusion: {tc_conclusion}")
 
 
 def run_experiment():
