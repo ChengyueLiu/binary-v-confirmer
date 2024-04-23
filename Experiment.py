@@ -15,6 +15,7 @@ from bintools.general.src_tool import analyze_src_codes
 from main.extractors.bin_function_feature_extractor.objdump_parser import parse_objdump_file
 from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel, \
     DataItemForCodeSnippetConfirmModelMC
+from main.models.code_snippet_confirm_model_multi_choice.new_model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.new_model_application import SnippetPositioner
 from main.models.function_confirm_model.new_model_application import FunctionConfirmer
 from main.tc_models import VulConfirmTC, VulFunction, TestBin, VulFunctionPatch
@@ -142,7 +143,7 @@ def extract_asm_functions(asm_functions_cache, test_bin):
     return asm_function_dict
 
 
-def check_result(tc, confirmed_function_name, analysis):
+def check_result(tc:VulConfirmTC, confirmed_function_name:str, analysis):
     ground_truth = tc.ground_truth
     # 如果ground truth中有漏洞
     if ground_truth.contained_vul_function_names:
@@ -255,6 +256,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     logger.info(f"\tconfirmed functions:")
     confirmed_function_name = None
     confirmed_prob = 0
+    confirmed_asm_codes = None
     asm_codes_list = []
     for data_item, (pred, prob) in zip(data_items, predictions):
         src_function_name = data_item.function_name
@@ -265,7 +267,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
             if prob > confirmed_prob:
                 confirmed_function_name = data_item.bin_function_name
                 confirmed_prob = prob
-
+                confirmed_asm_codes = data_item.asm_codes
             # 预览结果
             if src_function_name == data_item.bin_function_name:
                 logger.info(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
@@ -280,7 +282,14 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     for asm_codes in asm_codes_list:
         logger.info(f"\t\t{asm_codes}")
     logger.info(f"\tconfirm result: {confirmed_function_name} {confirmed_prob}")
-    return confirmed_function_name, confirmed_prob
+
+    confirmed_vul_function = None
+    for vul_function in tc.vul_functions:
+        if vul_function.function_name == confirmed_function_name:
+            confirmed_vul_function = vul_function
+            break
+
+    return confirmed_vul_function, confirmed_asm_codes
 
 
 def split_list_by_sliding_window(input_list, window_length=70, step=20):
@@ -306,7 +315,7 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
     return windows
 
 
-def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_codes: List[str]) -> str:
+def locate_snippet(locate_model:SnippetPositioner, function_name, patch: VulFunctionPatch, asm_codes: List[str]) -> str:
     """
     片段定位
     """
@@ -358,47 +367,71 @@ def locate_snippet(locate_model, function_name, patch: VulFunctionPatch, asm_cod
     return snippet
 
 
-def _judge_is_fixed(choice_model, function_name, patches: List[VulFunctionPatch], asm_codes_snippets: List[str]):
-    # 所有成功定位的片段，批量判断是否已经修复
+def _judge_is_fixed(choice_model: SnippetChoicer,
+                    function_name,
+                    patches: List[VulFunctionPatch],
+                    asm_codes_snippet_list: List[str]):
+    # 生成模型输入
     data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
-    for patch, asm_codes_snippet in zip(patches, asm_codes_snippets):
-        # 无法定位则跳过
+    for patch, asm_codes_snippet in zip(patches, asm_codes_snippet_list):
         if asm_codes_snippet is None:
             continue
+        data_item = DataItemForCodeSnippetConfirmModelMC(function_name=function_name,
+                                                         asm_codes=asm_codes_snippet,
+                                                         src_codes_0=patch.vul_snippet_codes,
+                                                         src_codes_1=patch.fixed_snippet_codes)
+        data_items.append(data_item)
 
-    # TODO 完善第三个模型
-    # 生成数据项
-    # 批量预测
-    # 根据预测结果多少，判断是否修复，并给出概率。
-
+    # 批量确认
     predictions = choice_model.choice(data_items)
+
+    # 根据数量判断是否修复
+    vul_count = 0
+    fix_count = 0
+    for pred, prob in predictions:
+        if prob > 0.9:
+            if pred == 0:
+                vul_count += 1
+            else:
+                fix_count += 1
+    if vul_count > fix_count:
+        print(f"vul count: {vul_count} fix count: {fix_count}")
+        return True
+    elif vul_count < fix_count:
+        return False
+
+    # 数量相同，认为无法判断 TODO 是否需要考虑概率？
     return None
 
 
-def judge_is_fixed(locate_model, choice_model, vul_function: VulFunction, asm_codes: List[str]):
+def judge_is_fixed(locate_model:SnippetPositioner, choice_model: SnippetChoicer, vul_function: VulFunction, asm_codes: List[str]):
     """
     判断函数是否被修复，任意一个片段被判定为修复，则认为函数被修复
     """
 
     # 每个patch 单独定位
     print(f"patch num: {len(vul_function.patches)}")
-    asm_codes_snippets = []
+    asm_codes_snippet_list = []
     for patch in vul_function.patches:
         # 定位片段
         asm_codes_snippet = locate_snippet(locate_model, vul_function.get_function_name(), patch, asm_codes)
 
-        asm_codes_snippets.append(asm_codes_snippet)
+        asm_codes_snippet_list.append(asm_codes_snippet)
 
-    print(f"succeed locate patch num: {len(asm_codes_snippets)}")
-    # _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches, asm_codes_snippets)
-
+    print(f"succeed locate patch num: {len(asm_codes_snippet_list)}")
+    result = _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches, asm_codes_snippet_list)
+    return result
 
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
 
     logger.info(f"init model...")
-    model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
+    confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
+    model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
+    model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
+    locate_model = SnippetPositioner(model_save_path=model_2_save_path)
+    choice_model = SnippetChoicer(model_save_path=model_3_save_path)
     # model = None
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
@@ -424,8 +457,13 @@ def run_experiment():
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):
         logger.info(f"confirm: {i} {tc.public_id}")
-        confirmed_function_name, confirmed_prob = confirm_functions(model, tc, asm_functions_cache)
-        check_result(tc, confirmed_function_name, analysis)
+        # confirm functions
+        confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
+        # check_result(tc, confirmed_vul_function.function_name, analysis)
+
+        # judge is fixed
+        is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
+
 
     logger.info(f"test result:")
     logger.info(f"\ttc num: {len(test_cases)}")
@@ -439,7 +477,6 @@ def run_experiment():
 def debug_judge_is_fixed():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     tc_save_path = r"C:\Users\chengyue\Desktop\DATA\test_cases\bin_vul_confirm_tcs\final_vul_confirm_test_cases.json"
-    model_save_path = r"Resources/model_weights/model_2_weights_back.pth"
 
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
@@ -971,10 +1008,13 @@ def debug_judge_is_fixed():
                  'pop r12', 'pop r13', 'pop r14', 'pop r15', 'pop rbp', 'ret']
 
     logger.info(f"init model...")
-    locate_model = SnippetPositioner(model_save_path=model_save_path)
-    choice_model = None
-    judge_is_fixed(locate_model, choice_model, vul_function, asm_codes)
+    model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
+    model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
 
+    locate_model = SnippetPositioner(model_save_path=model_2_save_path)
+    choice_model = SnippetChoicer(model_save_path=model_3_save_path)
+    result = judge_is_fixed(locate_model, choice_model, vul_function, asm_codes)
+    print(result)
 
 if __name__ == '__main__':
     run_experiment()

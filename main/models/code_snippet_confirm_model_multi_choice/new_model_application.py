@@ -7,7 +7,8 @@ from tqdm import tqdm
 from transformers import RobertaTokenizer, RobertaForMultipleChoice
 
 from main.interface import DataItemForCodeSnippetConfirmModelMC
-from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import CodeSnippetConfirmDataset
+from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import CodeSnippetConfirmDataset, \
+    create_dataset_from_model_input
 
 
 class SnippetChoicer:
@@ -39,7 +40,38 @@ class SnippetChoicer:
         model.eval()
 
         return device, tokenizer, model
+    def create_dataloader(self, data_items):
+        # create dataset
+        dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
+        # create dataloader
+        dataloader = DataLoader(dataset, batch_size=self.batch_size, shuffle=False)
+        return dataloader
 
-    def predict(self, data: DataItemForCodeSnippetConfirmModelMC) -> List[int]:
-        dataloader = self.create_dataloader(data)
-        return self._predict(dataloader)
+    def _predict(self, dataloader):
+        predictions = []
+        for batch in dataloader:
+            input_ids = batch['input_ids'].to(self.device)
+            attention_mask = batch['attention_mask'].to(self.device)
+            with torch.no_grad():
+                outputs = self.model(input_ids, attention_mask=attention_mask)
+            logits = outputs.logits
+            probabilities = F.softmax(logits, dim=-1)
+
+            # 对每个问题处理，提取每个选项的信息
+            for i in range(logits.size(0)):  # 遍历batch中的每个样本，即每个问题
+                question_predictions = []
+                for option_index in range(logits.size(1)):  # 遍历该问题的每个选项
+                    score = round(logits[i, option_index].item(), 4)  # 该选项的得分
+                    prob = round(probabilities[i, option_index].item(), 4)  # 该选项的概率
+                    question_predictions.append((option_index, prob))
+                predictions.append(question_predictions)
+
+        return predictions
+
+    def choice(self, data_items: List[DataItemForCodeSnippetConfirmModelMC]):
+        data_loader = self.create_dataloader(data_items)
+
+        # predict
+        predictions = self._predict(data_loader)
+        return predictions
+

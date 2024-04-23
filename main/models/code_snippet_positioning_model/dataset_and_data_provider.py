@@ -163,7 +163,6 @@ def create_dataset_from_model_input(data_items: List[DataItemForCodeSnippetPosit
                                             tokenizer,
                                             max_len=max_len)
     return dataset
-    pass
 
 
 def create_dataloaders(train_dataset, val_dataset, test_dataset, batch_size=16):

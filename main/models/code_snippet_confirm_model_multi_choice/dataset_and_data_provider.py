@@ -63,7 +63,20 @@ def init_data_item_obj_from_dict(item):
     data_item.normalize()
     return data_item
 
+def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
+    questions = []
+    choice_0_list = []
+    choice_1_list = []
+    choice_index_list = []
+    for data_item in data_items:
+        questions.append(data_item.get_question_text())
+        choice_0_list.append(data_item.get_src_codes_0_text())
+        choice_1_list.append(data_item.get_src_codes_1_text())
+        choice_index_list.append(data_item.choice_index)
 
+    print("原始数据数量: ", len(questions))
+    dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len)
+    return dataset
 def create_dataset(file_path, tokenizer, max_len=512):
     logger.info(f"读取文件：{file_path}")
     train_data_json = load_from_json_file(file_path)
