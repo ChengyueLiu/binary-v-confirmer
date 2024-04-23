@@ -40,6 +40,7 @@ class SnippetChoicer:
         model.eval()
 
         return device, tokenizer, model
+
     def create_dataloader(self, data_items):
         # create dataset
         dataset = create_dataset_from_model_input(data_items, self.tokenizer, max_len=512)
@@ -59,12 +60,15 @@ class SnippetChoicer:
 
             # 对每个问题处理，提取每个选项的信息
             for i in range(logits.size(0)):  # 遍历batch中的每个样本，即每个问题
-                question_predictions = []
+                most_prob = 0
+                most_index = 0
                 for option_index in range(logits.size(1)):  # 遍历该问题的每个选项
                     score = round(logits[i, option_index].item(), 4)  # 该选项的得分
-                    prob = round(probabilities[i, option_index].item(), 4)  # 该选项的概率
-                    question_predictions.append((option_index, prob))
-                predictions.append(question_predictions)
+                    prob = probabilities[i, option_index].item()  # 该选项的概率
+                    if prob > most_prob:
+                        most_prob = prob
+                        most_index = option_index
+                predictions.append((most_index, most_prob))
 
         return predictions
 
@@ -74,4 +78,3 @@ class SnippetChoicer:
         # predict
         predictions = self._predict(data_loader)
         return predictions
-
