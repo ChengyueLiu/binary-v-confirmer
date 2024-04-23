@@ -65,6 +65,7 @@ class SnippetChoicer:
                 for option_index in range(logits.size(1)):  # 遍历该问题的每个选项
                     score = round(logits[i, option_index].item(), 4)  # 该选项的得分
                     prob = probabilities[i, option_index].item()  # 该选项的概率
+                    print(option_index, score, prob)
                     if prob > most_prob:
                         most_prob = prob
                         most_index = option_index

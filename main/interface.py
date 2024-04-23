@@ -268,6 +268,12 @@ class DataItemForFunctionConfirmModel:
         self.similarity = similarity
         self.is_normalized = False
 
+    def get_src_function_name(self):
+        src_function_name = self.function_name
+        if src_function_name.startswith("*"):
+            src_function_name = src_function_name[1:]
+        return src_function_name
+
     def custom_serialize(self):
         return {
             "id": self.id,
@@ -380,7 +386,7 @@ class DataItemForCodeSnippetPositioningModel:
         self.effective_src_length = count_function_effective_lines(self.src_codes)
         self.asm_length = len(self.asm_codes)
         self.answer_length = len(self.answer_asm_codes)
-
+        self.is_normalized = False
     def custom_serialize(self):
         return {
             "id": self.id,
@@ -424,7 +430,9 @@ class DataItemForCodeSnippetPositioningModel:
         end_index = start_index + len(self.get_answer_text()) - 1
         return start_index, end_index
 
-    def normalize(self):
+    def normalize_src_codes(self):
+        if self.is_normalized:
+            return
         # 正规化处理源代码
         lines = []
         for line in self.src_codes:
@@ -433,11 +441,17 @@ class DataItemForCodeSnippetPositioningModel:
             lines.append(line.strip())
         self.src_codes = normalize_src_lines(lines)
 
+    def normalize(self):
+        if self.is_normalized:
+            return
+        self.normalize_src_codes()
+
         # 正规化处理汇编代码
         self.asm_codes = normalize_asm_lines(self.asm_codes)
 
         self.answer_asm_codes = normalize_asm_lines(self.answer_asm_codes)
 
+        self.is_normalized = True
 
 class DataItemForCodeSnippetConfirmModel:
     """
@@ -516,8 +530,7 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
         self.asm_codes = asm_codes
         self.src_codes_0 = src_codes_0
         self.src_codes_1 = src_codes_1
-
-
+        self.is_normalized = False
     @classmethod
     def get_special_tokens(cls):
         return SpecialToken.get_asm_special_tokens()
@@ -535,10 +548,19 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
     def get_choice_index(self):
         return self.choice_index
 
+    def normalized_str_codes(self):
+        if self.is_normalized:
+            return
+        self.src_codes_0 = normalize_src_lines(self.src_codes_0)
+        self.src_codes_1 = normalize_src_lines(self.src_codes_1)
+
     def normalize(self):
+        if self.is_normalized:
+            return
         self.src_codes_0 = normalize_src_lines(self.src_codes_0)
         self.src_codes_1 = normalize_src_lines(self.src_codes_1)
         self.asm_codes = normalize_asm_lines(self.asm_codes)
+        self.is_normalized = True
 
 @dataclass
 class Patch:
@@ -1202,12 +1224,14 @@ class AsmFunction(Serializable):
             asm_function_path = asm_function_path[2:]
 
         return f"{asm_function_path}__{self.function_name}"
+
     def get_param_num(self):
         for code_mapping in self.code_mappings:
             for line in code_mapping.src_codes:
                 if "(" in line:
                     return line.count(",") + 1
         return 0
+
     def get_asm_codes(self, skip_function_def=False):
         if skip_function_def:
             start_flag = False
@@ -1236,4 +1260,3 @@ class AsmFunction(Serializable):
     def count_asm_codes(self):
         asm_codes, src_code_start_line = self.get_asm_codes()
         return len(asm_codes)
-

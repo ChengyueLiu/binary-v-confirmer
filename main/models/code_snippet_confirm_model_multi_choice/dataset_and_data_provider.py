@@ -74,7 +74,7 @@ def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
         choice_1_list.append(data_item.get_src_codes_1_text())
         choice_index_list.append(data_item.choice_index)
 
-    print("原始数据数量: ", len(questions))
+    # print("原始数据数量: ", len(questions))
     dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len)
     return dataset
 def create_dataset(file_path, tokenizer, max_len=512):

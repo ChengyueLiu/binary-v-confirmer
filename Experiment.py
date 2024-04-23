@@ -1,3 +1,4 @@
+import copy
 import difflib
 import multiprocessing
 import os
@@ -5,7 +6,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
-from typing import List
+from typing import List, Tuple
 from bintools.general.normalize import normalize_asm_lines
 from loguru import logger
 from tqdm import tqdm
@@ -93,9 +94,10 @@ def generate_model_input(asm_function, vul_function: VulFunction):
     src_body_start_index, src_param_count = analyze_src_codes(data_item.src_codes)
 
     if vul_function.get_function_name() == asm_function.function_name:
-        logger.info(vul_function.get_function_name(), src_param_count, asm_param_count)
-        logger.info(data_item.src_codes)
-        logger.info(data_item.asm_codes)
+        logger.info(f"\t\tfound vul function:")
+        logger.info(f"\t\t\tfunction_name: {vul_function.get_function_name()}, {src_param_count}, {asm_param_count}")
+        logger.info(f"\t\t\tsrc codes: {data_item.src_codes}")
+        logger.info(f"\t\t\tasm codes: {data_item.asm_codes}")
     if asm_param_count != src_param_count:
         return None
 
@@ -247,7 +249,8 @@ def generate_asm_function_cache(tcs):
     return cache_dict
 
 
-def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_threshold=0.99):
+def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_threshold=0.99) -> List[
+    Tuple[VulFunction, List[str]]]:
     """
     函数确认
     """
@@ -268,40 +271,30 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     if len(tc.ground_truth.contained_vul_function_names) != len(found_functions):
         logger.warning(f"\t\t!!!!! vul functions not found in data items")
         logger.warning(f"\t\tcontained_vul_function_names: {tc.ground_truth.contained_vul_function_names}")
-    # return None, None
+
     # 3. 调用模型
     predictions = model.confirm(data_items)
 
     # 4. 确认结果
     logger.info(f"\tconfirmed functions:")
-    confirmed_data_item = None
-    confirmed_prob = 0
-    confirmed_asm_codes = None
-    asm_codes_list = []
+    confirmed_items = []
     for data_item, (pred, prob) in zip(data_items, predictions):
-        src_function_name = data_item.function_name
-        if src_function_name.startswith("*"):
-            src_function_name = src_function_name[1:]
-
         if pred == 1 and prob > prob_threshold:
-            if prob > confirmed_prob:
-                confirmed_data_item = data_item
-                confirmed_prob = prob
-                confirmed_asm_codes = data_item.asm_codes
+            confirmed_items.append(data_item)
+
             # 预览结果
-            if src_function_name == data_item.bin_function_name:
-                logger.info(f"\t**** {data_item.function_name} {data_item.bin_function_name} {prob} ****")
+            print_info = f"{data_item.function_name} {data_item.bin_function_name}\t{prob}\t{data_item.asm_codes}"
+            if data_item.get_src_function_name() == data_item.bin_function_name:
+                print_info = f"\t**** {print_info}"
             else:
-                logger.info(f'\t\t {data_item.function_name} {data_item.bin_function_name} {prob}')
-            asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes}")
-        else:
-            if src_function_name == data_item.bin_function_name:
-                logger.info(f"\txxxx {data_item.function_name} {data_item.bin_function_name} {prob} xxxx")
-                asm_codes_list.append(f"{data_item.bin_function_name}: {data_item.asm_codes}")
-    # logger.info(f"\tconfirmed asm codes:")
-    # for asm_codes in asm_codes_list:
-    #     logger.info(f"\t\t{asm_codes}")
-    # 4. 预览ground truth
+                print_info = f"\t\t{print_info}"
+            logger.info(print_info)
+        elif data_item.get_src_function_name() == data_item.bin_function_name:
+            print_info = f"{data_item.function_name} {data_item.bin_function_name}\t{prob}\t{data_item.asm_codes}"
+            print_info = f"\txxxx {print_info}"
+            logger.info(print_info)
+
+    # 5. ground truth
     logger.info(f"\tground truth: ")
     logger.info(f"\t\tvul: {tc.public_id}")
     logger.info(f"\t\tvul functions: {[func.function_name for func in tc.vul_functions]}")
@@ -309,20 +302,12 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     logger.info(f"\t\tbin vul functions: {tc.ground_truth.contained_vul_function_names}")
     logger.info(f"\t\tis vul fixed: {tc.ground_truth.is_fixed}")
 
-    # 确认结果
-    if confirmed_data_item:
-        confirmed_function_name = confirmed_data_item.bin_function_name
-    else:
-        confirmed_function_name = None
-    logger.info(f"\tconfirm function: {confirmed_function_name} {confirmed_prob}")
+    results = []
+    vul_function_dict = {vf.get_function_name(): vf for vf in vul_functions}
+    for item in confirmed_items:
+        results.append((vul_function_dict[item.get_src_function_name()], item.asm_codes))
 
-    confirmed_vul_function = None
-    for vul_function in tc.vul_functions:
-        if vul_function.get_function_name() == confirmed_function_name:
-            confirmed_vul_function = vul_function
-            break
-
-    return confirmed_vul_function, confirmed_asm_codes
+    return results
 
 
 def split_list_by_sliding_window(input_list, window_length=70, step=20):
@@ -349,31 +334,33 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
 
 
 def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFunctionPatch,
-                   asm_codes: List[str]) -> str:
+                   normalized_asm_codes: List[str]) -> List[str]:
     """
     片段定位
     """
     # 滑动窗口
-    asm_codes_windows = split_list_by_sliding_window(asm_codes)
+    asm_codes_windows = split_list_by_sliding_window(normalized_asm_codes)
     # logger.info(f"asm codes length: {len(asm_codes)}, window num: {len(asm_codes_windows)}")
 
     # 分别定位开头和结尾
     # TODO 这里实际的源代码有点少，正规化处理后有可能不足3行。
-    above_context = patch.vul_snippet_codes[:3]
-    below_context = patch.vul_snippet_codes[-3:]
+    above_context = copy.deepcopy(patch.vul_snippet_codes[:3])
+    below_context = copy.deepcopy(patch.vul_snippet_codes[-3:])
     start_data_items = []
     end_data_items = []
     for window in asm_codes_windows:
         start_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
                                                                  src_codes=above_context,
                                                                  asm_codes=window)
-        start_data_item.normalize()
+        start_data_item.normalize_src_codes()
+        start_data_item.is_normalized = True
         start_data_items.append(start_data_item)
 
         end_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
                                                                src_codes=below_context,
                                                                asm_codes=window)
-        end_data_item.normalize()
+        end_data_item.normalize_src_codes()
+        start_data_item.is_normalized = True
         end_data_items.append(end_data_item)
 
     # 处理结果
@@ -383,115 +370,129 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     end_predictions = all_predictions[mid_index:]
 
     # 找到最大概率的片段
-    start_asm_codes, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
-    logger.info(f"\tpatch location start: {start_asm_codes_prob} {start_asm_codes}")
+    start_asm_codes_str, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
+    logger.info(f"\tpatch location start: {start_asm_codes_prob} {start_asm_codes_str}")
+
+    end_asm_codes_str, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
+    logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes_str}")
+
     if start_asm_codes_prob < 0.8:
         return None
 
-    end_asm_codes, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
-    logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes}")
+    # 找到开始位置
+    start_index = 0
+    while start_asm_codes_str in " ".join(normalized_asm_codes[start_index:]):
+        start_index += 1
+    start_index -= 1
 
-    # 找到对应的snippet
-    normalized_asm_codes_str = " ".join(normalize_asm_lines(asm_codes))
-    start_index = normalized_asm_codes_str.index(start_asm_codes)
-    end_index = normalized_asm_codes_str.index(end_asm_codes)
-    if end_asm_codes_prob > 0.8:
-        snippet = normalized_asm_codes_str[start_index:end_index]
-    else:
-        snippet = normalized_asm_codes_str[start_index:start_index + 50]
+    # 取前50个汇编码指令
+    snippet = normalized_asm_codes[start_index:50]
     logger.info(f"above context src codes: {above_context}")
-    logger.info(f"\tasm length: {len(normalized_asm_codes_str)}, snippet length: {len(snippet)}, snippet: {snippet}")
+    logger.info(
+        f"\tall asm length: {len(normalized_asm_codes)}, asm snippet length: {len(snippet)}, snippet: {snippet}")
 
     return snippet
+
+
+def find_minimal_containing_slice(str_list, sub_str):
+    n = len(str_list)
+    start, end = 0, n  # 初始化起始和终止指针
+
+    # 缩减左侧边界
+    while start < n:
+        if sub_str in " ".join(str_list[start:end]):
+            start += 1
+        else:
+            start -= 1
+            break
+
+    # 修正越界情况
+    start = max(start - 1, 0)
+
+    # 缩减右侧边界
+    while end > start:
+        if sub_str in " ".join(str_list[start:end]):
+            end -= 1
+        else:
+            end += 1
+            break
+
+    # 修正越界情况
+    end = min(end + 1, n)
+
+    # 返回最小切片
+    return str_list[start:end]
 
 
 def _judge_is_fixed(choice_model: SnippetChoicer,
                     function_name,
                     patches: List[VulFunctionPatch],
-                    asm_codes_snippet_list: List[str]):
+                    normalized_asm_codes_snippet_list: List[List[str]]):
     # 生成模型输入
     data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
-    for patch, asm_codes_snippet in zip(patches, asm_codes_snippet_list):
-        if asm_codes_snippet is None:
-            continue
+    for patch, normalized_asm_codes_snippet in zip(patches, normalized_asm_codes_snippet_list):
         data_item = DataItemForCodeSnippetConfirmModelMC(function_name=function_name,
-                                                         asm_codes=asm_codes_snippet,
+                                                         asm_codes=normalized_asm_codes_snippet,
                                                          src_codes_0=patch.vul_snippet_codes,
                                                          src_codes_1=patch.fixed_snippet_codes)
+        data_item.normalized_str_codes()
+        data_item.is_normalized = True
         data_items.append(data_item)
 
     # 批量确认
     predictions = choice_model.choice(data_items)
 
-    # 根据数量判断是否修复
-    vul_count = 0
-    fix_count = 0
+    # 根据概率
+    vul_prob = 0
+    fix_prob = 0
     for pred, prob in predictions:
         logger.info(f"function_name choice: {pred}: {prob}")
-        if prob > 0.9:
-            if pred == 0:
-                vul_count += 1
-            else:
-                fix_count += 1
-    logger.info(f"\tvul count: {vul_count} fix count: {fix_count}")
-    if vul_count > fix_count:
-        return True
-    elif vul_count < fix_count:
-        return False
+        if pred == 0:
+            vul_prob += prob
+        else:
+            fix_prob += prob
+    logger.info(f"\tvul prob: {vul_prob}, fix prob: {fix_prob}")
 
-    # 数量相同，认为无法判断 TODO 是否需要考虑概率？
-    return None
-
-
-def judge_is_fixed(locate_model: SnippetPositioner, choice_model: SnippetChoicer, vul_function: VulFunction,
-                   asm_codes: List[str]):
-    """
-    判断函数是否被修复，任意一个片段被判定为修复，则认为函数被修复
-    """
-
-    # 每个patch 单独定位
-    logger.info(f"\tpatch num: {len(vul_function.patches)}")
-    asm_codes_snippet_list = []
-    for patch in vul_function.patches:
-        # 定位片段
-        asm_codes_snippet = locate_snippet(locate_model, vul_function.get_function_name(), patch, asm_codes)
-
-        asm_codes_snippet_list.append(asm_codes_snippet)
-
-    logger.info(f"\tsucceed locate patch num: {len(asm_codes_snippet_list)}")
-    result = _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches,
-                             asm_codes_snippet_list)
-    return result
+    return fix_prob > vul_prob
 
 
 def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis, asm_functions_cache):
     has_vul = False
     has_vul_function = False
-    is_located = False
     is_fixed = None
+
     # locate vul function
-    confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
-
-    if confirmed_vul_function is not None:
+    results = confirm_functions(confirm_model, tc, asm_functions_cache)
+    confirmed_function_num = len(results)
+    for i, (confirmed_vul_function, confirmed_normalized_asm_codes) in enumerate(results, 1):
         # locate vul snippet
-        logger.info(f"\tpatch num: {len(confirmed_vul_function.patches)}")
-        asm_codes_snippet_list = []
+        logger.info(
+            f"\tlocate snippet: {i}/{confirmed_function_num}{confirmed_vul_function.function_name} patch num: {len(confirmed_vul_function.patches)}")
+        succeed_locate_patches = []
+        normalized_asm_codes_snippet_list = []
         for patch in confirmed_vul_function.patches:
-            asm_codes_snippet = locate_snippet(locate_model, confirmed_vul_function.get_function_name(), patch,
-                                               confirmed_asm_codes)
-            if asm_codes_snippet is not None:
-                asm_codes_snippet_list.append(asm_codes_snippet)
-        logger.info(f"\tsucceed locate patch num: {len(asm_codes_snippet_list)}")
+            normalized_asm_codes_snippet = locate_snippet(locate_model,
+                                               confirmed_vul_function.get_function_name(),
+                                               patch,
+                                               confirmed_normalized_asm_codes)
+            if normalized_asm_codes_snippet is not None:
+                succeed_locate_patches.append(patch)
+                normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
+        logger.info(f"\tsucceed locate patch num: {len(normalized_asm_codes_snippet_list)}")
 
-        # 如果有定位到
-        if asm_codes_snippet_list:
-            has_vul_function = True
-            is_fixed = _judge_is_fixed(choice_model,
-                                       confirmed_vul_function.get_function_name(),
-                                       confirmed_vul_function.patches,
-                                       asm_codes_snippet_list)
-            if not is_fixed:
-                has_vul = True
+        # if can not locate, may be this is a false positive
+        if not normalized_asm_codes_snippet_list:
+            continue
+
+        has_vul_function = True
+        is_fixed = _judge_is_fixed(choice_model,
+                                   confirmed_vul_function.get_function_name(),
+                                   succeed_locate_patches,
+                                   normalized_asm_codes_snippet_list)
+        if not is_fixed:
+            has_vul = True
+
+        break
 
     if tc.has_vul():
         if has_vul:
@@ -542,7 +543,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[30:40]
+    test_cases = test_cases[34:35]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
