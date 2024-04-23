@@ -284,7 +284,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
 
         if pred == 1 and prob > prob_threshold:
             if prob > confirmed_prob:
-                confirmed_function_name = data_item.bin_function_name
+                confirmed_function_name = data_item.function_name
                 confirmed_prob = prob
                 confirmed_asm_codes = data_item.asm_codes
             # 预览结果
@@ -311,7 +311,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
 
     confirmed_vul_function = None
     for vul_function in tc.vul_functions:
-        if vul_function.function_name == confirmed_function_name:
+        if vul_function.get_function_name() == confirmed_function_name:
             confirmed_vul_function = vul_function
             break
 
@@ -482,8 +482,8 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             analysis.tn += 1
             tc_conclusion = 'TN'
     logger.success(f"\ttest summary: ")
-    logger.success(f"\t\ttc.has_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
-    logger.success(f"\t\tresult.has_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
+    logger.success(f"\t\ttc:\thas_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
+    logger.success(f"\t\tresult:\thas_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
     logger.success(f"\t\tconclusion: {tc_conclusion}")
 
 
