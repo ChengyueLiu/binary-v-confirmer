@@ -92,9 +92,9 @@ def generate_model_input(asm_function, vul_function: VulFunction):
     src_body_start_index, src_param_count = analyze_src_codes(data_item.src_codes)
 
     if vul_function.get_function_name() == asm_function.function_name:
-        print(vul_function.get_function_name(), src_param_count, asm_param_count)
-        print(data_item.src_codes)
-        print(data_item.asm_codes)
+        logger.info(vul_function.get_function_name(), src_param_count, asm_param_count)
+        logger.info(data_item.src_codes)
+        logger.info(data_item.asm_codes)
     if asm_param_count != src_param_count:
         return None
 
@@ -143,7 +143,8 @@ def extract_asm_functions(asm_functions_cache, test_bin):
     return asm_function_dict
 
 
-def check_result(tc:VulConfirmTC, confirmed_function_name:str, analysis):
+def check_result(tc: VulConfirmTC, confirmed_function: VulFunction, analysis):
+    confirmed_function_name = confirmed_function.function_name if confirmed_function is not None else None
     ground_truth = tc.ground_truth
     # 如果ground truth中有漏洞
     if ground_truth.contained_vul_function_names:
@@ -315,13 +316,14 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
     return windows
 
 
-def locate_snippet(locate_model:SnippetPositioner, function_name, patch: VulFunctionPatch, asm_codes: List[str]) -> str:
+def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFunctionPatch,
+                   asm_codes: List[str]) -> str:
     """
     片段定位
     """
     # 滑动窗口
     asm_codes_windows = split_list_by_sliding_window(asm_codes)
-    print(f"asm codes length: {len(asm_codes)}, window num: {len(asm_codes_windows)}")
+    logger.info(f"asm codes length: {len(asm_codes)}, window num: {len(asm_codes_windows)}")
 
     # 分别定位开头和结尾
     # TODO 这里实际的源代码有点少，正规化处理后有可能不足3行。
@@ -350,19 +352,19 @@ def locate_snippet(locate_model:SnippetPositioner, function_name, patch: VulFunc
 
     # 找到最大概率的片段
     start_asm_codes, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
-    print(f"start: {start_asm_codes_prob} {start_asm_codes}")
-    if start_asm_codes_prob < 0.9:
-        return None
+    logger.info(f"start: {start_asm_codes_prob} {start_asm_codes}")
+    # if start_asm_codes_prob < 0.9:
+    #     return None
 
     end_asm_codes, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
-    print(f"end: {end_asm_codes_prob} {end_asm_codes}")
+    logger.info(f"end: {end_asm_codes_prob} {end_asm_codes}")
 
     # 找到对应的snippet
     normalized_asm_codes_str = " ".join(normalize_asm_lines(asm_codes))
     start_index = normalized_asm_codes_str.index(start_asm_codes)
     end_index = normalized_asm_codes_str.index(end_asm_codes)
     snippet = normalized_asm_codes_str[start_index:end_index]
-    print(f"asm length: {len(normalized_asm_codes_str)}, snippet length: {len(snippet)}, snippet: {snippet}")
+    logger.info(f"asm length: {len(normalized_asm_codes_str)}, snippet length: {len(snippet)}, snippet: {snippet}")
 
     return snippet
 
@@ -389,28 +391,30 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     vul_count = 0
     fix_count = 0
     for pred, prob in predictions:
-        if prob > 0.9:
+        logger.info(f"pred: {pred} prob: {prob}")
+        if prob > 0.75:
             if pred == 0:
                 vul_count += 1
             else:
                 fix_count += 1
-    if vul_count > fix_count:
-        print(f"vul count: {vul_count} fix count: {fix_count}")
+    logger.info(f"vul count: {vul_count} fix count: {fix_count}")
+    if fix_count > vul_count:
         return True
-    elif vul_count < fix_count:
+    elif fix_count < vul_count:
         return False
 
     # 数量相同，认为无法判断 TODO 是否需要考虑概率？
     return None
 
 
-def judge_is_fixed(locate_model:SnippetPositioner, choice_model: SnippetChoicer, vul_function: VulFunction, asm_codes: List[str]):
+def judge_is_fixed(locate_model: SnippetPositioner, choice_model: SnippetChoicer, vul_function: VulFunction,
+                   asm_codes: List[str]):
     """
     判断函数是否被修复，任意一个片段被判定为修复，则认为函数被修复
     """
 
     # 每个patch 单独定位
-    print(f"patch num: {len(vul_function.patches)}")
+    logger.info(f"patch num: {len(vul_function.patches)}")
     asm_codes_snippet_list = []
     for patch in vul_function.patches:
         # 定位片段
@@ -418,52 +422,48 @@ def judge_is_fixed(locate_model:SnippetPositioner, choice_model: SnippetChoicer,
 
         asm_codes_snippet_list.append(asm_codes_snippet)
 
-    print(f"succeed locate patch num: {len(asm_codes_snippet_list)}")
-    result = _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches, asm_codes_snippet_list)
+    logger.info(f"succeed locate patch num: {len(asm_codes_snippet_list)}")
+    result = _judge_is_fixed(choice_model, vul_function.get_function_name(), vul_function.patches,
+                             asm_codes_snippet_list)
     return result
 
-def run_experiment():
-    tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
-    model_save_path = r"Resources/model_weights/model_1_weights.pth"
 
-    logger.info(f"init model...")
-    confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
+def run_experiment():
+    # path
+    tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
+    model_1_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
     model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
     model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
+
+    # model
+    logger.info(f"init model...")
+    confirm_model = FunctionConfirmer(model_save_path=model_1_save_path, batch_size=128)
     locate_model = SnippetPositioner(model_save_path=model_2_save_path)
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
-    # model = None
+
+    # tc
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
     logger.info(f"loaded {len(test_cases)} test cases")
     test_cases = [tc for tc in test_cases if tc.is_effective()]
     logger.info(f"include {len(test_cases)} effective test cases")
 
-    # 分开测试的话，筛选一下
-    # # 不包含漏洞的测试用例
-    # test_cases = [tc for tc in test_cases
-    #               if not tc.ground_truth.contained_vul_function_names]
-    # # 包含，且没修复
-    # test_case = [tc for tc in test_cases
-    #              if tc.ground_truth.contained_vul_function_names and not tc.ground_truth.is_fixed]
-    #
-    # # 包含，且已修复
-    # test_case = [tc for tc in test_cases
-    #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[:10]
-    print(f"Experiment tc num: {len(test_cases)}")
+    test_cases = test_cases[:1]
+    logger.info(f"Experiment tc num: {len(test_cases)}")
 
+    # experiment
     asm_functions_cache = generate_asm_function_cache(test_cases)
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):
         logger.info(f"confirm: {i} {tc.public_id}")
         # confirm functions
         confirmed_vul_function, confirmed_asm_codes = confirm_functions(confirm_model, tc, asm_functions_cache)
-        # check_result(tc, confirmed_vul_function.function_name, analysis)
+        check_result(tc, confirmed_vul_function, analysis)
 
-        # judge is fixed
-        is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
-
+        if confirmed_vul_function is not None:
+            # judge is fixed
+            is_fixed = judge_is_fixed(locate_model, choice_model, confirmed_vul_function, confirmed_asm_codes)
+            logger.info(f"is_fixed: {is_fixed}")
 
     logger.info(f"test result:")
     logger.info(f"\ttc num: {len(test_cases)}")
@@ -476,7 +476,7 @@ def run_experiment():
 
 def debug_judge_is_fixed():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
-    tc_save_path = r"C:\Users\chengyue\Desktop\DATA\test_cases\bin_vul_confirm_tcs\final_vul_confirm_test_cases.json"
+    # tc_save_path = r"C:\Users\chengyue\Desktop\DATA\test_cases\bin_vul_confirm_tcs\final_vul_confirm_test_cases.json"
 
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
@@ -1014,7 +1014,9 @@ def debug_judge_is_fixed():
     locate_model = SnippetPositioner(model_save_path=model_2_save_path)
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
     result = judge_is_fixed(locate_model, choice_model, vul_function, asm_codes)
-    print(result)
+    logger.info(test_cases[48].ground_truth)
+    logger.info(f"is_fixed: {result}")
+
 
 if __name__ == '__main__':
     run_experiment()
@@ -1024,4 +1026,12 @@ if __name__ == '__main__':
     model 1:
         目前 back 4 效果最好，也不能叫最好，只能是凑巧最好。
         最新的，感觉还不如back 4， 可能也是训练的不够，现在才 98.9%的准确率 以及 0.035的loss，还可以继续训练。但是先训练model 3，训练一个出来，把整体流程都走通。
+    
+    
+    model 2:
+        0.84 precision and recall
+    
+    model 3: 
+    	Train Loss: 0.054 | Train Acc: 97.78%
+	    Val. Loss: 0.033 |  Val. Acc: 98.42%
     """
