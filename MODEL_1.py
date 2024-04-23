@@ -161,7 +161,7 @@ def train_model_1():
     model_1_weights_back_2: 正负1:1,140万个组件函数训练出来的结果
     model_1_weights_back: 使用75万个独立的函数训练的结果
     """
-    back_model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
+    back_model_save_path = r"Resources/model_weights/model_1_weights.pth"
     model_save_path = r"Resources/model_weights/model_1_weights.pth"
     run_train(
         train_data_json_file_path=train_data_save_path,

@@ -155,7 +155,7 @@ def create_dataset_from_model_input(data_items: List[DataItemForCodeSnippetPosit
         answer_start_indexes.append(answer_start_index)
         answer_end_indexes.append(answer_end_index)
 
-    print("原始数据数量: ", len(questions))
+    # print("原始数据数量: ", len(questions))
     dataset = CodeSnippetPositioningDataset(questions,
                                             contexts,
                                             answer_start_indexes,
