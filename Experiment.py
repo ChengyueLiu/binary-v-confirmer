@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
 from typing import List, Tuple
-from bintools.general.normalize import normalize_asm_lines
+
 from loguru import logger
 from tqdm import tqdm
 
@@ -403,7 +403,7 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     end_index += 1
     # TODO 结束位置应该在开始位置之后。
     logger.info(f"\toriginal start index: {start_index}, end index: {end_index}")
-    if end_index - start_index < 20:
+    if end_index - start_index < 20 or end_index - start_index > 50:
         end_index = start_index + 50
     # 取前50个汇编码指令
     snippet = normalized_asm_codes[start_index:end_index]
@@ -567,7 +567,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[:2]
+    test_cases = test_cases[:100]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
@@ -589,7 +589,12 @@ if __name__ == '__main__':
     run_experiment()
 
     """
+    判定逻辑：
+        1. 先用model 1 确认函数
+        2. 再用model 2 确认代码片段，找到能定位的函数，以及片段
+        3. 用model 3 判断是否修复
+    
     model 1:
-        目前 back 4 效果最好，也不能叫最好，只能是凑巧最好。
+        目前 back 4 效果最好
         最新的，感觉还不如back 4， 可能也是训练的不够，现在才 98.9%的准确率 以及 0.035的loss，还可以继续训练。但是先训练model 3，训练一个出来，把整体流程都走通。
     """
