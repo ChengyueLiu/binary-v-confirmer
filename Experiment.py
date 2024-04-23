@@ -343,8 +343,15 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     # logger.info(f"asm codes length: {len(asm_codes)}, window num: {len(asm_codes_windows)}")
 
     # 分别定位开头和结尾
-    # TODO 这里实际的源代码有点少，正规化处理后有可能不足3行。
-    above_context = copy.deepcopy(patch.vul_snippet_codes[:3])
+    # 开头至少要3行有效代码！开头比结尾更重要！
+    above_context = []
+    count = 0
+    for src_code in patch.vul_snippet_codes:
+        above_context.append(src_code)
+        if len(src_code.strip()) > 1:
+            count += 1
+        if count >= 3:
+            break
     below_context = copy.deepcopy(patch.vul_snippet_codes[-3:])
     start_data_items = []
     end_data_items = []
@@ -366,7 +373,7 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     # 处理结果
     all_data_items = start_data_items + end_data_items
     all_predictions = locate_model.locate(start_data_items + end_data_items)
-    logger.info(f"locate result: {len(all_data_items)} ---> {len(all_predictions)}")
+    # logger.info(f"locate result: {len(all_data_items)} ---> {len(all_predictions)}")
     mid_index = len(all_predictions) // 2  # 获取中间索引，用于分割开头和结尾的预测结果
     start_predictions = all_predictions[:mid_index]
     end_predictions = all_predictions[mid_index:]
@@ -394,11 +401,14 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     while end_asm_codes_str in " ".join(normalized_asm_codes[:end_index]):
         end_index -= 1
     end_index += 1
-    logger.info(f"\tstart index: {start_index}, end index: {end_index}")
+    # TODO 结束位置应该在开始位置之后。
+    logger.info(f"\toriginal start index: {start_index}, end index: {end_index}")
     if end_index - start_index < 20:
         end_index = start_index + 50
     # 取前50个汇编码指令
     snippet = normalized_asm_codes[start_index:end_index]
+
+    logger.info(f"\tfinal start index: {start_index}, end index: {end_index}")
     logger.info(f"\tabove context src codes: {above_context}")
     logger.info(
         f"\tall asm length: {len(normalized_asm_codes)}, asm snippet length: {len(snippet)}, snippet: {snippet}")
@@ -457,11 +467,15 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     # 根据概率
     vul_prob = 0
     fix_prob = 0
-    print(predictions)
-    for (choice_0, choice_0_prob), (choice_1, choice_1_prob) in predictions:
+    logger.info(f"\tjudge is fixed: {function_name}")
+    for data_item, ((choice_0, choice_0_prob), (choice_1, choice_1_prob)) in zip(data_items, predictions):
+        logger.info(f"\tquestion: {data_item.get_question_text()}")
+        logger.info(f"\tvul src codes: {choice_0_prob} {data_item.get_src_codes_0_text()}")
+        logger.info(f"\tfixed src codes: {choice_1_prob} {data_item.get_src_codes_1_text()}")
+
         vul_prob += choice_0_prob
         fix_prob += choice_1_prob
-    logger.info(f"\tvul prob: {vul_prob}, fix prob: {fix_prob}")
+    logger.info(f"\tchoice result: vul prob: {vul_prob}, fix prob: {fix_prob}")
 
     return fix_prob > vul_prob
 
@@ -482,9 +496,9 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         normalized_asm_codes_snippet_list = []
         for patch in confirmed_vul_function.patches:
             normalized_asm_codes_snippet = locate_snippet(locate_model,
-                                               confirmed_vul_function.get_function_name(),
-                                               patch,
-                                               confirmed_normalized_asm_codes)
+                                                          confirmed_vul_function.get_function_name(),
+                                                          patch,
+                                                          confirmed_normalized_asm_codes)
             if normalized_asm_codes_snippet is not None:
                 succeed_locate_patches.append(patch)
                 normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
@@ -553,7 +567,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[:10]
+    test_cases = test_cases[:2]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
