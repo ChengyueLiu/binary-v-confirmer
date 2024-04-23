@@ -389,7 +389,10 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     normalized_asm_codes_str = " ".join(normalize_asm_lines(asm_codes))
     start_index = normalized_asm_codes_str.index(start_asm_codes)
     end_index = normalized_asm_codes_str.index(end_asm_codes)
-    snippet = normalized_asm_codes_str[start_index:end_index]
+    if end_asm_codes_prob > 0.8:
+        snippet = normalized_asm_codes_str[start_index:end_index]
+    else:
+        snippet = normalized_asm_codes_str[start_index:start_index + 50]
     logger.info(f"\tasm length: {len(normalized_asm_codes_str)}, snippet length: {len(snippet)}, snippet: {snippet}")
 
     return snippet
@@ -530,7 +533,7 @@ def run_experiment():
     # # 包含，且已修复
     # test_case = [tc for tc in test_cases
     #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[:3]
+    test_cases = test_cases[3:10]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
