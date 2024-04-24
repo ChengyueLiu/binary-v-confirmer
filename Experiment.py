@@ -355,10 +355,10 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     #         count += 1
     #     if count >= 3:
     #         break
-    above_context = copy.deepcopy(patch.vul_snippet_codes[:3])
-    below_context = copy.deepcopy(patch.vul_snippet_codes[-3:])
     start_data_items = []
     end_data_items = []
+    above_context = patch.vul_snippet_codes[:3]
+    below_context = patch.vul_snippet_codes[-3:]
     for window in asm_codes_windows:
         start_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
                                                                  src_codes=above_context,
@@ -371,11 +371,10 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
                                                                src_codes=below_context,
                                                                asm_codes=window)
         end_data_item.normalize_src_codes()
-        start_data_item.is_normalized = True
+        end_data_item.is_normalized = True
         end_data_items.append(end_data_item)
 
     # 处理结果
-    all_data_items = start_data_items + end_data_items
     all_predictions = locate_model.locate(start_data_items + end_data_items)
     # logger.info(f"locate result: {len(all_data_items)} ---> {len(all_predictions)}")
     mid_index = len(all_predictions) // 2  # 获取中间索引，用于分割开头和结尾的预测结果
@@ -384,11 +383,11 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
 
     # 找到最大概率的片段
     start_asm_codes_str, start_asm_codes_prob = max(start_predictions, key=lambda x: x[1])
-    logger.info(f"start src codes: {above_context}")
+    logger.info(f"start src codes:\t{above_context}")
     logger.info(f"\tpatch location start: {start_asm_codes_prob} {start_asm_codes_str}")
 
     end_asm_codes_str, end_asm_codes_prob = max(end_predictions, key=lambda x: x[1])
-    logger.info(f"end src codes: {below_context}")
+    logger.info(f"end src codes:\t{below_context}")
     logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes_str}")
 
     # 开始结束位置，都能大概率定位到才可以
@@ -488,6 +487,8 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
 
 
 def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis:Analysis, asm_functions_cache):
+    function_location_success = False
+
     has_vul = False
     has_vul_function = False
     is_fixed = None
@@ -497,8 +498,8 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     confirmed_function_num = len(results)
     for i, (confirmed_vul_function, bin_function_name, confirmed_normalized_asm_codes) in enumerate(results, 1):
         # locate vul snippet
-        logger.info(
-            f"\tlocate snippet: {i}/{confirmed_function_num}{confirmed_vul_function.function_name} patch num: {len(confirmed_vul_function.patches)}")
+        logger.success(
+            f"\tlocate snippet: {i}/{confirmed_function_num} {confirmed_vul_function.function_name} in {bin_function_name} patch num: {len(confirmed_vul_function.patches)}")
         succeed_locate_patches = []
         normalized_asm_codes_snippet_list = []
         for patch in confirmed_vul_function.patches:
@@ -509,7 +510,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             if normalized_asm_codes_snippet is not None:
                 succeed_locate_patches.append(patch)
                 normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
-        logger.success(f"\tsucceed locate patch num: {len(normalized_asm_codes_snippet_list)}/{len(confirmed_vul_function.patches)}")
+                logger.success(f"\tsucceed locate patch num in bin_function {bin_function_name}: {len(normalized_asm_codes_snippet_list)}/{len(confirmed_vul_function.patches)}")
 
         # if can not locate, may be this is a false positive
         if not normalized_asm_codes_snippet_list:
@@ -517,6 +518,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         logger.success(f"\tlocate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
         if confirmed_vul_function.get_function_name() == bin_function_name:
             analysis.function_locate_success_count += 1
+            function_location_success = True
 
         has_vul_function = True
         is_fixed = _judge_is_fixed(choice_model,
@@ -545,6 +547,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     logger.success(
         f"\t\ttc:\thas_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
     logger.success(f"\t\tresult:\thas_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
+    logger.success(f"\t\tfunction_location_success: {function_location_success}")
     logger.success(f"\t\tconclusion: {tc_conclusion}")
 
 
@@ -567,7 +570,7 @@ def run_experiment():
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
     logger.success(f"model init success")
 
-    test_cases = test_cases[:10]
+    test_cases = test_cases[20:25]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
@@ -579,7 +582,7 @@ def run_experiment():
         run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
     logger.success(f"test result:")
     logger.success(f"\ttotal: {analysis.total}")
-    logger.success(f"function locate success count: {analysis.function_locate_success_count}")
+    logger.success(f"\tfunction locate success count: {analysis.function_locate_success_count}, rate = {analysis.function_locate_success_count / len([tc for tc in test_cases if tc.has_vul_function()])}")
     logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
     logger.success(f"\tprecision: {analysis.precision}")
     logger.success(f"\trecall: {analysis.recall}")
