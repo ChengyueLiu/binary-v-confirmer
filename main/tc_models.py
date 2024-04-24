@@ -82,10 +82,14 @@ class VulConfirmTC(Serializable):
             if not function.vul_source_codes:
                 continue
 
-            # 没有漏洞代码，跳过
+            # 源代码没有包含漏洞代码，跳过
             filtered_patches = []
             for patch in function.patches:
-                if " ".join(patch.vul_snippet_codes) not in " ".join(function.vul_source_codes):
+                vul_snippet_str = " ".join([remove_plus_minus(code).strip() for code in patch.vul_snippet_codes])
+                fix_snippet_str = " ".join([remove_plus_minus(code).strip() for code in patch.fixed_snippet_codes])
+                source_str = " ".join([code.strip() for code in function.vul_source_codes])
+                snippet_str = fix_snippet_str if self.ground_truth.is_fixed else vul_snippet_str
+                if snippet_str not in source_str:
                     continue
                 filtered_patches.append(patch)
             if not filtered_patches:
@@ -128,3 +132,7 @@ class VulConfirmTC(Serializable):
         是否已经修复
         """
         return self.ground_truth.is_fixed
+def remove_plus_minus(line):
+    if line.startswith(('+', '-')):
+        return line[1:]
+    return line

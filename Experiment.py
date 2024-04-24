@@ -389,9 +389,9 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes_str}")
 
     # 开始结束位置，都能大概率定位到才可以
-    if not start_asm_codes_str or start_asm_codes_prob < 0.8:
+    if not start_asm_codes_str or start_asm_codes_prob < 0.9:
         return None
-    if not end_asm_codes_str or end_asm_codes_prob < 0.8:
+    if not end_asm_codes_str or end_asm_codes_prob < 0.7:
         return None
 
     # 找到开始位置
@@ -474,8 +474,8 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     logger.info(f"\tjudge is fixed: {function_name}")
     for data_item, ((choice_0, choice_0_prob), (choice_1, choice_1_prob)) in zip(data_items, predictions):
         logger.info(f"\tquestion: {data_item.get_question_text()}")
-        logger.info(f"\tvul src codes:   {choice_0_prob} {data_item.get_src_codes_0_text()}")
-        logger.info(f"\tfixed src codes: {choice_1_prob} {data_item.get_src_codes_1_text()}")
+        logger.info(f"\tvul src codes:\t{choice_0_prob} {data_item.get_src_codes_0_text()}")
+        logger.info(f"\tfixed src codes:\t{choice_1_prob} {data_item.get_src_codes_1_text()}")
 
         vul_prob += choice_0_prob
         fix_prob += choice_1_prob
@@ -545,22 +545,21 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
 
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
-    model_save_path = r"Resources/model_weights/model_1_weights.pth"
-
-    logger.info(f"init model...")
-    confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
-    model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
-    model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
-    locate_model = SnippetPositioner(model_save_path=model_2_save_path)
-    choice_model = SnippetChoicer(model_save_path=model_3_save_path)
-    # model = None
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
     logger.info(f"loaded {len(test_cases)} test cases")
     wrong_test_case_public_ids = {"CVE-2012-2774"}
     test_cases = [tc for tc in test_cases if tc.is_effective() and tc.public_id not in wrong_test_case_public_ids]
     logger.info(f"include {len(test_cases)} effective test cases")
-    return
+
+    logger.info(f"init model...")
+    model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
+    model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
+    model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
+    confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
+    locate_model = SnippetPositioner(model_save_path=model_2_save_path)
+    choice_model = SnippetChoicer(model_save_path=model_3_save_path)
+
     test_cases = test_cases[:100]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
