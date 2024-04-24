@@ -182,6 +182,7 @@ def check_result(tc: VulConfirmTC, confirmed_function_name: str, analysis):
 
 @dataclass
 class Analysis:
+    function_locate_success_count: int = 0
     tp: int = 0  # True Positives
     fp: int = 0  # False Positives
     tn: int = 0  # True Negatives
@@ -307,7 +308,7 @@ def confirm_functions(model, tc: VulConfirmTC, asm_functions_cache: dict, prob_t
     results = []
     vul_function_dict = {vf.get_function_name(): vf for vf in vul_functions}
     for item in confirmed_items:
-        results.append((vul_function_dict[item.get_src_function_name()], item.asm_codes))
+        results.append((vul_function_dict[item.get_src_function_name()], item.bin_function_name, item.asm_codes))
 
     return results
 
@@ -486,7 +487,7 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     return fix_prob > vul_prob
 
 
-def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis, asm_functions_cache):
+def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis:Analysis, asm_functions_cache):
     has_vul = False
     has_vul_function = False
     is_fixed = None
@@ -494,7 +495,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     # locate vul function
     results = confirm_functions(confirm_model, tc, asm_functions_cache)
     confirmed_function_num = len(results)
-    for i, (confirmed_vul_function, confirmed_normalized_asm_codes) in enumerate(results, 1):
+    for i, (confirmed_vul_function, bin_function_name, confirmed_normalized_asm_codes) in enumerate(results, 1):
         # locate vul snippet
         logger.info(
             f"\tlocate snippet: {i}/{confirmed_function_num}{confirmed_vul_function.function_name} patch num: {len(confirmed_vul_function.patches)}")
@@ -508,11 +509,14 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             if normalized_asm_codes_snippet is not None:
                 succeed_locate_patches.append(patch)
                 normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
-        logger.success(f"\tsucceed locate patch num: {len(normalized_asm_codes_snippet_list)}")
+        logger.success(f"\tsucceed locate patch num: {len(normalized_asm_codes_snippet_list)}/{len(confirmed_vul_function.patches)}")
 
         # if can not locate, may be this is a false positive
         if not normalized_asm_codes_snippet_list:
             continue
+        logger.success(f"\tlocate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
+        if confirmed_vul_function.get_function_name() == bin_function_name:
+            analysis.function_locate_success_count += 1
 
         has_vul_function = True
         is_fixed = _judge_is_fixed(choice_model,
@@ -544,6 +548,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     logger.success(f"\t\tconclusion: {tc_conclusion}")
 
 
+
 def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     logger.info(f"load test cases from {tc_save_path}")
@@ -562,7 +567,7 @@ def run_experiment():
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
     logger.success(f"model init success")
 
-    test_cases = test_cases[:3]
+    test_cases = test_cases[:10]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
@@ -570,10 +575,11 @@ def run_experiment():
 
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):
-        logger.success(f"confirm: {i} {tc.public_id}")
+        logger.success(f"confirm tc: {i} {tc.public_id}")
         run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
     logger.success(f"test result:")
     logger.success(f"\ttotal: {analysis.total}")
+    logger.success(f"function locate success count: {analysis.function_locate_success_count}")
     logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
     logger.success(f"\tprecision: {analysis.precision}")
     logger.success(f"\trecall: {analysis.recall}")
