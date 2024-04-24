@@ -28,7 +28,7 @@ start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 logger.remove()
 logger.add(sys.stdout, level="SUCCESS")
 # 添加日志处理器，文件名包含脚本开始时间
-logger.add(f"logs/experiment_{start_time}.log", level="INFO")
+logger.add(f"logs/experiment_{start_time}.log", level="SUCCESS")
 
 
 def load_test_cases(tc_save_path) -> List[VulConfirmTC]:
