@@ -3,6 +3,7 @@ import difflib
 import multiprocessing
 import os
 import re
+import sys
 from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
@@ -24,7 +25,8 @@ from main.tc_models import VulConfirmTC, VulFunction, TestBin, VulFunctionPatch
 
 # 获取当前时间并格式化为字符串，例如 '20230418_101530'
 start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-
+logger.remove()
+logger.add(sys.stdout, level="SUCCESS")
 # 添加日志处理器，文件名包含脚本开始时间
 logger.add(f"logs/experiment_{start_time}.log", level="INFO")
 
@@ -506,7 +508,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             if normalized_asm_codes_snippet is not None:
                 succeed_locate_patches.append(patch)
                 normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
-        logger.info(f"\tsucceed locate patch num: {len(normalized_asm_codes_snippet_list)}")
+        logger.success(f"\tsucceed locate patch num: {len(normalized_asm_codes_snippet_list)}")
 
         # if can not locate, may be this is a false positive
         if not normalized_asm_codes_snippet_list:
@@ -519,7 +521,6 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
                                    normalized_asm_codes_snippet_list)
         if not is_fixed:
             has_vul = True
-
         break
 
     if tc.has_vul():
@@ -547,10 +548,10 @@ def run_experiment():
     tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
-    logger.info(f"loaded {len(test_cases)} test cases")
+    logger.success(f"loaded {len(test_cases)} test cases")
     wrong_test_case_public_ids = {"CVE-2012-2774"}
     test_cases = [tc for tc in test_cases if tc.is_effective() and tc.public_id not in wrong_test_case_public_ids]
-    logger.info(f"include {len(test_cases)} effective test cases")
+    logger.success(f"include {len(test_cases)} effective test cases")
 
     logger.info(f"init model...")
     model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
@@ -559,22 +560,25 @@ def run_experiment():
     confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
     locate_model = SnippetPositioner(model_save_path=model_2_save_path)
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
+    logger.success(f"model init success")
 
-    test_cases = test_cases[:100]
-    logger.info(f"Experiment tc num: {len(test_cases)}")
+    test_cases = test_cases[:3]
+    logger.success(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
+    logger.success(f"asm functions cache generated")
+
     analysis = Analysis()
     for i, tc in enumerate(test_cases, 1):
-        logger.info(f"confirm: {i} {tc.public_id}")
+        logger.success(f"confirm: {i} {tc.public_id}")
         run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
-    logger.info(f"test result:")
-    logger.info(f"\ttotal: {analysis.total}")
-    logger.info(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
-    logger.info(f"\tprecision: {analysis.precision}")
-    logger.info(f"\trecall: {analysis.recall}")
-    logger.info(f"\tf1: {analysis.f1}")
-    logger.info(f"\taccuracy: {analysis.accuracy}")
+    logger.success(f"test result:")
+    logger.success(f"\ttotal: {analysis.total}")
+    logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
+    logger.success(f"\tprecision: {analysis.precision}")
+    logger.success(f"\trecall: {analysis.recall}")
+    logger.success(f"\tf1: {analysis.f1}")
+    logger.success(f"\taccuracy: {analysis.accuracy}")
 
 
 if __name__ == '__main__':
