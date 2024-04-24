@@ -183,9 +183,11 @@ def check_result(tc: VulConfirmTC, confirmed_function_name: str, analysis):
 
 @dataclass
 class Analysis:
+    over_filter_count: int = 0
     model_1_find_count: int = 0
     model_1_2_find_count: int = 0
-    function_locate_success_count: int = 0
+    model_1_2_precisely_find_count: int = 0
+
     tp: int = 0  # True Positives
     fp: int = 0  # False Positives
     tn: int = 0  # True Negatives
@@ -275,7 +277,8 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
     logger.success(f"\tvul function names: {[vf.function_name for vf in vul_functions]}")
     logger.success(f"\tbin vul function names: {tc.ground_truth.contained_vul_function_names}")
     logger.success(f"\tfound vul function names: {found_vul_functions}")
-
+    if not found_vul_functions:
+        analysis.over_filter_count +=1
     # 3. 调用模型
     predictions = model.confirm(data_items)
 
@@ -505,6 +508,8 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
                 f"confirmed vul function: **** {highest_function_name} ---> {highest_bin_function_name}, prob: {highest_prob}")
             analysis.model_1_2_find_count += 1
             count+=1
+    if count ==1 and find_flag:
+        analysis.model_1_2_precisely_find_count +=1
     logger.success(f"confirmed functions: {all_count} ---> {count}")
     logger.success(f"confirm summary: {model_1_find_flag} {find_flag}\n")
     return
@@ -573,7 +578,7 @@ def run_experiment():
 
     analysis = Analysis()
     start = 0
-    batch_size = 30
+    batch_size = 20
     while start < len(test_cases):
         test_cases_batch = test_cases[start:start + batch_size]
         asm_functions_cache = generate_asm_function_cache(test_cases_batch)
@@ -582,12 +587,14 @@ def run_experiment():
         for i, tc in enumerate(test_cases_batch, start + 1):
             logger.success(f"confirm tc: {i} {tc.public_id}")
             run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
-        start += 50
+        start += batch_size
 
     logger.success(f"test result:")
     logger.success(f"\ttotal: {len(test_cases)}")
+    logger.success(f"over filter count: {analysis.over_filter_count}")
     logger.success(f"model 1 find count: {analysis.model_1_find_count}")
     logger.success(f"model 1 and 2 find count: {analysis.model_1_2_find_count}")
+    logger.success(f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}")
     logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
     logger.success(f"\tprecision: {analysis.precision}")
     logger.success(f"\trecall: {analysis.recall}")
