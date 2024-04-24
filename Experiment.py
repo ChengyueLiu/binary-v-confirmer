@@ -498,8 +498,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     confirmed_function_num = len(results)
     for i, (confirmed_vul_function, bin_function_name, confirmed_normalized_asm_codes) in enumerate(results, 1):
         # locate vul snippet
-        logger.success(
-            f"\tlocate snippet: {i}/{confirmed_function_num} {confirmed_vul_function.function_name} in {bin_function_name} patch num: {len(confirmed_vul_function.patches)}")
+        logger.info(f"\tlocate snippet: {i}/{confirmed_function_num} {confirmed_vul_function.function_name} in {bin_function_name} patch num: {len(confirmed_vul_function.patches)}")
         succeed_locate_patches = []
         normalized_asm_codes_snippet_list = []
         for patch in confirmed_vul_function.patches:
@@ -510,15 +509,20 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             if normalized_asm_codes_snippet is not None:
                 succeed_locate_patches.append(patch)
                 normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
-                logger.success(f"\tsucceed locate patch num in bin_function {bin_function_name}: {len(normalized_asm_codes_snippet_list)}/{len(confirmed_vul_function.patches)}")
+        logger.info(f"\tsucceed locate patch num in bin_function {bin_function_name}: {len(normalized_asm_codes_snippet_list)}/{len(confirmed_vul_function.patches)}")
 
         # if can not locate, may be this is a false positive
         if not normalized_asm_codes_snippet_list:
             continue
-        logger.success(f"\tlocate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
+
         if confirmed_vul_function.get_function_name() == bin_function_name:
             analysis.function_locate_success_count += 1
             function_location_success = True
+            logger.success(
+                f"\tsucceed locate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
+        else:
+            logger.warning(
+                f"\tfailed locate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
 
         has_vul_function = True
         is_fixed = _judge_is_fixed(choice_model,
