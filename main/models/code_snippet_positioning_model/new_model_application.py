@@ -50,7 +50,7 @@ class SnippetPositioner:
     def _predict(self, data_loader: DataLoader, predict_start=True):
         predicted_answers = []
         confidence_scores = []
-        for batch in tqdm(data_loader, desc=f"locate patch(batch_size: {self.batch_size}):"):
+        for batch in data_loader:
             # 转移到设备
             batch_input_ids = batch['input_ids'].to(self.device)
             batch_attention_mask = batch['attention_mask'].to(self.device)
