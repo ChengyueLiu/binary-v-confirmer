@@ -71,19 +71,22 @@ class VulConfirmTC(Serializable):
         """
         检查是否有效的测试用例，且移除无效的漏洞函数
         """
+        # 没有二进制文件，False
         if not self.test_bin.binary_name:
             return False
 
-        # filter functions
+        # 挑选有源代码的函数
         filtered_vul_functions = []
         for function in self.vul_functions:
             if function.vul_source_codes:
                 filtered_vul_functions.append(function)
 
+        # 没有函数，False
         if not filtered_vul_functions:
             return False
         else:
             self.vul_functions = filtered_vul_functions
+
             return True
 
     def has_vul(self):

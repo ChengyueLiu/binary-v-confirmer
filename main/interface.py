@@ -387,6 +387,7 @@ class DataItemForCodeSnippetPositioningModel:
         self.asm_length = len(self.asm_codes)
         self.answer_length = len(self.answer_asm_codes)
         self.is_normalized = False
+
     def custom_serialize(self):
         return {
             "id": self.id,
@@ -452,6 +453,7 @@ class DataItemForCodeSnippetPositioningModel:
         self.answer_asm_codes = normalize_asm_lines(self.answer_asm_codes)
 
         self.is_normalized = True
+
 
 class DataItemForCodeSnippetConfirmModel:
     """
@@ -531,6 +533,7 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
         self.src_codes_0 = src_codes_0
         self.src_codes_1 = src_codes_1
         self.is_normalized = False
+
     @classmethod
     def get_special_tokens(cls):
         return SpecialToken.get_asm_special_tokens()
@@ -551,6 +554,12 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
     def normalized_str_codes(self):
         if self.is_normalized:
             return
+        def remove_plus_minus(line):
+            if line.startswith(('+', '-')):
+                return line[1:]
+            return line
+        self.src_codes_0 = [remove_plus_minus(line) for line in self.src_codes_0]
+        self.src_codes_1 = [remove_plus_minus(line) for line in self.src_codes_1]
         self.src_codes_0 = normalize_src_lines(self.src_codes_0)
         self.src_codes_1 = normalize_src_lines(self.src_codes_1)
 
@@ -561,6 +570,7 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
         self.src_codes_1 = normalize_src_lines(self.src_codes_1)
         self.asm_codes = normalize_asm_lines(self.asm_codes)
         self.is_normalized = True
+
 
 @dataclass
 class Patch:

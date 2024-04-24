@@ -159,8 +159,8 @@ def run_train(train_data_json_file_path,
         for epoch in range(epochs):
             logger.info(f'Epoch {epoch + 1}/{epochs}')
             train_loss, train_acc = train_or_evaluate(model, train_loader, optimizer, scheduler, device, is_train=True)
-            valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
             logger.info(f'\tTrain Loss: {train_loss:.3f} | Train Acc: {train_acc * 100:.2f}%')
+            valid_loss, valid_acc = train_or_evaluate(model, val_loader, optimizer, scheduler, device, is_train=False)
             logger.info(f'\t Val. Loss: {valid_loss:.3f} |  Val. Acc: {valid_acc * 100:.2f}%')
             # 如果当前验证损失更低，保存模型
             if valid_loss < best_valid_loss:

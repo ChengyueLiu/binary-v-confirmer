@@ -128,7 +128,7 @@ def filter_and_generate_data_items(asm_function_dict, vul_functions: List[VulFun
              for asm_function in asm_function_dict.values()]
     with Pool() as pool:
         results = pool.imap_unordered(generate_model_input_wrapper, tasks)
-        for data_item in results:
+        for data_item in tqdm(results, f"filter_and_generate_data_items"):
             if data_item is None:
                 continue
             data_items.append(data_item)
@@ -340,18 +340,19 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     """
     # 滑动窗口
     asm_codes_windows = split_list_by_sliding_window(normalized_asm_codes)
-    # logger.info(f"asm codes length: {len(asm_codes)}, window num: {len(asm_codes_windows)}")
+    logger.info(f"asm codes length: {len(normalized_asm_codes)}, window num: {len(asm_codes_windows)}")
 
     # 分别定位开头和结尾
     # 开头至少要3行有效代码！开头比结尾更重要！
-    above_context = []
-    count = 0
-    for src_code in patch.vul_snippet_codes:
-        above_context.append(src_code)
-        if len(src_code.strip()) > 1:
-            count += 1
-        if count >= 3:
-            break
+    # above_context = []
+    # count = 0
+    # for src_code in patch.vul_snippet_codes:
+    #     above_context.append(src_code)
+    #     if len(src_code.strip()) > 1:
+    #         count += 1
+    #     if count >= 3:
+    #         break
+    above_context = copy.deepcopy(patch.vul_snippet_codes[:3])
     below_context = copy.deepcopy(patch.vul_snippet_codes[-3:])
     start_data_items = []
     end_data_items = []
@@ -387,7 +388,10 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     logger.info(f"end src codes: {below_context}")
     logger.info(f"\tpatch location end: {end_asm_codes_prob} {end_asm_codes_str}")
 
+    # 开始结束位置，都能大概率定位到才可以
     if not start_asm_codes_str or start_asm_codes_prob < 0.8:
+        return None
+    if not end_asm_codes_str or end_asm_codes_prob < 0.8:
         return None
 
     # 找到开始位置
@@ -553,21 +557,11 @@ def run_experiment():
     logger.info(f"load test cases from {tc_save_path}")
     test_cases = load_test_cases(tc_save_path)
     logger.info(f"loaded {len(test_cases)} test cases")
-    test_cases = [tc for tc in test_cases if tc.is_effective()]
+    wrong_test_case_public_ids = {"CVE-2012-2774"}
+    test_cases = [tc for tc in test_cases if tc.is_effective() and tc.public_id not in wrong_test_case_public_ids]
     logger.info(f"include {len(test_cases)} effective test cases")
 
-    # 分开测试的话，筛选一下
-    # # 不包含漏洞的测试用例
-    # test_cases = [tc for tc in test_cases
-    #               if not tc.ground_truth.contained_vul_function_names]
-    # # 包含，且没修复
-    # test_case = [tc for tc in test_cases
-    #              if tc.ground_truth.contained_vul_function_names and not tc.ground_truth.is_fixed]
-    #
-    # # 包含，且已修复
-    # test_case = [tc for tc in test_cases
-    #              if tc.ground_truth.contained_vul_function_names and tc.ground_truth.is_fixed]
-    test_cases = test_cases[:100]
+    test_cases = test_cases[:5]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
