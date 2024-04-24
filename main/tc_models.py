@@ -78,15 +78,27 @@ class VulConfirmTC(Serializable):
         # 挑选有源代码的函数
         filtered_vul_functions = []
         for function in self.vul_functions:
-            if function.vul_source_codes:
-                filtered_vul_functions.append(function)
+            # 没有源代码，跳过
+            if not function.vul_source_codes:
+                continue
+
+            # 没有漏洞代码，跳过
+            filtered_patches = []
+            for patch in function.patches:
+                if " ".join(patch.vul_snippet_codes) not in " ".join(function.vul_source_codes):
+                    continue
+                filtered_patches.append(patch)
+            if not filtered_patches:
+                continue
+
+            function.patches = filtered_patches
+            filtered_vul_functions.append(function)
 
         # 没有函数，False
         if not filtered_vul_functions:
             return False
         else:
             self.vul_functions = filtered_vul_functions
-
             return True
 
     def has_vul(self):

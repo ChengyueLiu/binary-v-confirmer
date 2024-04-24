@@ -474,7 +474,7 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     logger.info(f"\tjudge is fixed: {function_name}")
     for data_item, ((choice_0, choice_0_prob), (choice_1, choice_1_prob)) in zip(data_items, predictions):
         logger.info(f"\tquestion: {data_item.get_question_text()}")
-        logger.info(f"\tvul src codes: {choice_0_prob} {data_item.get_src_codes_0_text()}")
+        logger.info(f"\tvul src codes:   {choice_0_prob} {data_item.get_src_codes_0_text()}")
         logger.info(f"\tfixed src codes: {choice_1_prob} {data_item.get_src_codes_1_text()}")
 
         vul_prob += choice_0_prob
@@ -560,8 +560,8 @@ def run_experiment():
     wrong_test_case_public_ids = {"CVE-2012-2774"}
     test_cases = [tc for tc in test_cases if tc.is_effective() and tc.public_id not in wrong_test_case_public_ids]
     logger.info(f"include {len(test_cases)} effective test cases")
-
-    test_cases = test_cases[:5]
+    return
+    test_cases = test_cases[:100]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     asm_functions_cache = generate_asm_function_cache(test_cases)
