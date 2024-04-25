@@ -494,9 +494,17 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
                     confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
                 # 全部添加至临时结果
                 tmp_results.append((vul_function_name, bin_function_name, avg_prob))
+
+
+
     # 如果有多个，而且概率都不超过95%，则取最大的一个
-    if not confirmed_results:
+    if not confirmed_results and tmp_results:
         confirmed_results = [max(tmp_results, key=lambda x: x[2])]
+    else:
+        confirmed_results = []
+
+    # 按照概率排序，取前3个
+    confirmed_results = sorted(confirmed_results, key=lambda x: x[2], reverse=True)[:3]
 
     # 检查结果
     find_flag = False
@@ -504,10 +512,10 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     for vul_function_name, bin_function_name, prob in confirmed_results:
         if vul_function_name == bin_function_name:
             find_flag = True
-            logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name} {prob}")
+            logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name}")
         else:
             find_false_flag = True
-            logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name} {prob}")
+            logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name}")
     if find_flag:
         analysis.model_1_2_find_count += 1
     if not find_false_flag:
@@ -576,7 +584,7 @@ def run_experiment():
     choice_model = None
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()][190:200]
+    test_cases = [tc for tc in test_cases if tc.has_vul()]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
@@ -593,7 +601,7 @@ def run_experiment():
         start += batch_size
 
         logger.success(f"test result:")
-        logger.success(f"\ttotal: {len(test_cases)}")
+        logger.success(f"\ttotal: {start + batch_size}")
         logger.success(f"over filter count: {analysis.over_filter_count}")
         logger.success(f"model 1 find count: {analysis.model_1_find_count}")
         logger.success(f"model 1 and 2 find count: {analysis.model_1_2_find_count}")
