@@ -462,15 +462,12 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     is_fixed = None
 
     # locate vul function
-    confirmed_function_dict,model_1_find_flag = confirm_functions(confirm_model, tc, analysis, asm_functions_cache)
+    confirmed_function_dict, model_1_find_flag = confirm_functions(confirm_model, tc, analysis, asm_functions_cache)
 
     # locate and filter
-    count = 0
     all_count = 0
-    find_flag = False
-    highest_prob = 0
-    highest_function_name = None
-    highest_bin_function_name = None
+    tmp_results = []
+    confirmed_results = []
     for i, (vul_function_name, results) in enumerate(confirmed_function_dict.items(), 1):
         all_count += len(results)
         for confirmed_vul_function, bin_function_name, confirmed_normalized_asm_codes in results:
@@ -488,32 +485,36 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
                 prob_list.append(start_asm_codes_prob)
 
             avg_prob = sum(prob_list) / len(prob_list)
-            if avg_prob > highest_prob:
-                highest_function_name = vul_function_name
-                highest_bin_function_name = bin_function_name
-                highest_prob = avg_prob
+            # 如果只有一个，直接用
+            if len(results) == 1:
+                confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
+            else:
+                # 如果有多个，确认所有概率大于0.95的
+                if avg_prob > 0.95:
+                    confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
+                # 全部添加至临时结果
+                tmp_results.append((vul_function_name, bin_function_name, avg_prob))
+    # 如果有多个，而且概率都不超过95%，则取最大的一个
+    if not confirmed_results:
+        confirmed_results = [max(tmp_results, key=lambda x: x[2])]
 
-            if len(results) == 1 or avg_prob > 0.95:
-                count += 1
-                if vul_function_name != bin_function_name:
-                    judge = " xxxx "
-                else:
-                    judge = " **** "
-                    find_flag = True
-                logger.success(
-                    f"confirmed vul function:{judge}, prob: {avg_prob} {vul_function_name} ---> {bin_function_name}")
+    # 检查结果
+    find_flag = False
+    find_false_flag = False
+    for vul_function_name, bin_function_name, prob in confirmed_results:
+        if vul_function_name == bin_function_name:
+            find_flag = True
+            logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name} {prob}")
+        else:
+            find_false_flag = True
+            logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name} {prob}")
     if find_flag:
         analysis.model_1_2_find_count += 1
-    else:
-        if highest_function_name == highest_bin_function_name and highest_function_name!= None:
-            logger.success(
-                f"confirmed vul function: **** {highest_function_name} ---> {highest_bin_function_name}, prob: {highest_prob}")
-            analysis.model_1_2_find_count += 1
-            count+=1
-    if count ==1 and find_flag:
-        analysis.model_1_2_precisely_find_count +=1
-    logger.success(f"confirmed functions: {all_count} ---> {count}")
-    logger.success(f"confirm summary: {model_1_find_flag} {find_flag}\n")
+    if not find_false_flag:
+        analysis.model_1_2_precisely_find_count += 1
+    # 打印预览
+    logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
+    logger.success(f"confirm summary: {model_1_find_flag} {find_flag} {find_false_flag}\n")
     return
     #
     #     if confirmed_vul_function.get_function_name() == bin_function_name:
@@ -575,7 +576,7 @@ def run_experiment():
     choice_model = None
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][190:200]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
