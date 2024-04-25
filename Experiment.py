@@ -95,12 +95,12 @@ def generate_model_input(asm_function, vul_function: VulFunction):
     asm_body_start_index, asm_param_count = analyze_asm_codes(data_item.asm_codes)
     src_body_start_index, src_param_count = analyze_src_codes(data_item.src_codes)
 
-    if vul_function.get_function_name() == asm_function.function_name:
-        logger.info(f"\t\tfound vul function:")
-        logger.info(f"\t\t\tfunction_name: {vul_function.get_function_name()}, {src_param_count}, {asm_param_count}")
-        logger.info(f"\t\t\tsrc codes: {data_item.src_codes}")
-        logger.info(f"\t\t\tasm codes: {data_item.asm_codes}")
     if asm_param_count != src_param_count:
+        if vul_function.get_function_name() == asm_function.function_name:
+            logger.warning(
+                f"\t\tmissing vul function:: {vul_function.get_function_name()}, {src_param_count}, {asm_param_count}")
+            logger.warning(f"\t\tsrc codes: {data_item.src_codes}")
+            logger.warning(f"\t\tasm codes: {data_item.asm_codes}")
         return None
 
     # 截去函数定义和参数部分
@@ -187,7 +187,7 @@ class Analysis:
     model_1_find_count: int = 0
     model_1_2_find_count: int = 0
     model_1_2_precisely_find_count: int = 0
-
+    model_3_find_count: int = 0
     tp: int = 0  # True Positives
     fp: int = 0  # False Positives
     tn: int = 0  # True Negatives
@@ -304,8 +304,8 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
             logger.info(print_info)
         elif data_item.get_src_function_name() == data_item.bin_function_name:
             print_info = f"{data_item.function_name} {data_item.bin_function_name}\t{prob}\t{data_item.asm_codes}"
-            print_info = f"\txxxx {print_info}"
-            logger.info(print_info)
+            print_info = f"\tmodel 1 missed: xxxx {print_info}"
+            logger.warning(print_info)
     if model_1_find_flag:
         analysis.model_1_find_count += 1
 
@@ -459,23 +459,81 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
         fix_prob += choice_1_prob
     logger.info(f"\tchoice result: vul prob: {vul_prob}, fix prob: {fix_prob}")
 
-    return fix_prob > vul_prob
+    return vul_prob, fix_prob
 
 
 def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis: Analysis, asm_functions_cache):
-    has_vul = False
     has_vul_function = False
-    is_fixed = None
+    has_vul = False
 
-    # locate vul function
+    # step 1: locate vul function
     confirmed_function_dict, filter_find_flag, model_1_find_flag = confirm_functions(confirm_model,
                                                                                      tc,
                                                                                      analysis,
                                                                                      asm_functions_cache)
 
-    # locate and filter
-    all_count = 0
+    # step 2: locate and filter
+    all_count, confirmed_results, model_1_2_find_flag, precisely_find_flag = locate_snippets(analysis,
+                                                                                             confirmed_function_dict,
+                                                                                             locate_model)
+    logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
+    logger.success(
+        f"confirm summary: {filter_find_flag} {model_1_find_flag} {model_1_2_find_flag} {precisely_find_flag}")
 
+    # step 3: 判断是否已经修复
+    fix_prob, has_vul, has_vul_function, is_fixed, vul_prob = judge_located_snippets(choice_model,
+                                                                                     confirmed_results,
+                                                                                     has_vul, has_vul_function)
+    if is_fixed == tc.is_fixed():
+        analysis.model_3_find_count += 1
+    logger.success(f"fix prob: {fix_prob}, vul prob: {vul_prob}")
+
+    # step 4: 检查结果
+    if tc.has_vul():
+        if has_vul:
+            analysis.tp += 1
+            tc_conclusion = 'TP'
+        else:
+            analysis.fn += 1
+            tc_conclusion = 'FN'
+    else:
+        if has_vul:
+            analysis.fp += 1
+            tc_conclusion = 'FP'
+        else:
+            analysis.tn += 1
+            tc_conclusion = 'TN'
+    logger.success(f"\ttc summary: ")
+    logger.success(
+        f"\t\tground truth:\thas_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
+    logger.success(
+        f"\t\tconfirm result:\thas_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
+    logger.success(f"\t\tconclusion: {tc_conclusion}")
+
+
+def judge_located_snippets(choice_model, confirmed_results, has_vul, has_vul_function):
+    vul_prob, fix_prob = 0, 0
+    is_fixed = None
+    for vul_function_name, bin_function_name, vul_prob, succeed_locate_patches, normalized_asm_codes_snippet_list in confirmed_results:
+        cur_vul_prob, cur_fix_prob = _judge_is_fixed(choice_model,
+                                                     vul_function_name,
+                                                     succeed_locate_patches,
+                                                     normalized_asm_codes_snippet_list)
+        vul_prob += cur_vul_prob
+        fix_prob += cur_fix_prob
+    if confirmed_results:
+        has_vul_function = True
+        if vul_prob > fix_prob:
+            is_fixed = False
+            has_vul = True
+        else:
+            is_fixed = True
+            has_vul = False
+    return fix_prob, has_vul, has_vul_function, is_fixed, vul_prob
+
+
+def locate_snippets(analysis, confirmed_function_dict, locate_model):
+    all_count = 0
     confirmed_results = []
     for i, (vul_function_name, results) in enumerate(confirmed_function_dict.items(), 1):
         all_count += len(results)
@@ -486,25 +544,40 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             normalized_asm_codes_snippet_list = []
             prob_list = []
             for patch in confirmed_vul_function.patches:
+                # locate snippet
                 normalized_asm_codes_snippet, start_asm_codes_prob = locate_snippet(locate_model,
                                                                                     confirmed_vul_function.get_function_name(),
                                                                                     patch,
                                                                                     confirmed_normalized_asm_codes)
 
-                succeed_locate_patches.append(patch)
-                normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
                 prob_list.append(start_asm_codes_prob)
+                if start_asm_codes_prob > 0.9 and normalized_asm_codes_snippet:
+                    succeed_locate_patches.append(patch)
+                    normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
 
+            # 汇总函数确认结果，用于分析
             avg_prob = sum(prob_list) / len(prob_list)
             # 如果只有一个，直接用
             if len(results) == 1:
-                tmp_confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
+                tmp_confirmed_results.append((vul_function_name,
+                                              bin_function_name,
+                                              avg_prob,
+                                              succeed_locate_patches,
+                                              normalized_asm_codes_snippet_list))
             else:
                 # 如果有多个，确认所有概率大于0.95的
                 if avg_prob > 0.95:
-                    tmp_confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
+                    tmp_confirmed_results.append((vul_function_name,
+                                                  bin_function_name,
+                                                  avg_prob,
+                                                  succeed_locate_patches,
+                                                  normalized_asm_codes_snippet_list))
                 # 全部添加至临时结果
-                tmp_results.append((vul_function_name, bin_function_name, avg_prob))
+                tmp_results.append((vul_function_name,
+                                    bin_function_name,
+                                    avg_prob,
+                                    succeed_locate_patches,
+                                    normalized_asm_codes_snippet_list))
 
         # 如果没有确认到，取最大的
         if not tmp_confirmed_results and tmp_results:
@@ -514,11 +587,11 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         tmp_confirmed_results = sorted(tmp_confirmed_results, key=lambda x: x[2], reverse=True)[:3]
         confirmed_results.extend(tmp_confirmed_results)
 
-    # 检查结果
+    # 检查确认结果
     model_1_2_find_flag = False
     find_false_flag = False
     precisely_find_flag = False
-    for vul_function_name, bin_function_name, prob in confirmed_results:
+    for vul_function_name, bin_function_name, prob, _, _ in confirmed_results:
         if vul_function_name == bin_function_name:
             model_1_2_find_flag = True
             logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name}")
@@ -530,49 +603,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         if not find_false_flag:
             precisely_find_flag = True
             analysis.model_1_2_precisely_find_count += 1
-    # 打印预览
-    logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
-    logger.success(f"confirm summary: {filter_find_flag} {model_1_find_flag} {model_1_2_find_flag} {precisely_find_flag}\n")
-    return
-    #
-    #     if confirmed_vul_function.get_function_name() == bin_function_name:
-    #         analysis.function_locate_success_count += 1
-    #         function_location_success = True
-    #         logger.success(
-    #             f"\tsucceed locate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
-    #     else:
-    #         logger.warning(
-    #             f"\tfailed locate vul function: {confirmed_vul_function.get_function_name()} ---> {bin_function_name}")
-    #
-    #     has_vul_function = True
-    #     is_fixed = _judge_is_fixed(choice_model,
-    #                                confirmed_vul_function.get_function_name(),
-    #                                succeed_locate_patches,
-    #                                normalized_asm_codes_snippet_list)
-    #     if not is_fixed:
-    #         has_vul = True
-    #     break
-    #
-    # if tc.has_vul():
-    #     if has_vul:
-    #         analysis.tp += 1  # TODO 这里当然有可能也是凑巧了，但是先不过多考虑。
-    #         tc_conclusion = 'TP'
-    #     else:
-    #         analysis.fn += 1
-    #         tc_conclusion = 'FN'
-    # else:
-    #     if has_vul:
-    #         analysis.fp += 1
-    #         tc_conclusion = 'FP'
-    #     else:
-    #         analysis.tn += 1
-    #         tc_conclusion = 'TN'
-    # logger.success(f"\ttest summary: ")
-    # logger.success(
-    #     f"\t\ttc:\thas_vul: {tc.has_vul()}, has_vul_function: {tc.has_vul_function()}, is_fixed: {tc.is_fixed()}")
-    # logger.success(f"\t\tresult:\thas_vul: {has_vul}, has_vul_function: {has_vul_function}, is_fixed: {is_fixed}")
-    # logger.success(f"\t\tfunction_location_success: {function_location_success}")
-    # logger.success(f"\t\tconclusion: {tc_conclusion}")
+    return all_count, confirmed_results, model_1_2_find_flag, precisely_find_flag
 
 
 def run_experiment():
@@ -590,11 +621,12 @@ def run_experiment():
     model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
     confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
     locate_model = SnippetPositioner(model_save_path=model_2_save_path)
-    # choice_model = SnippetChoicer(model_save_path=model_3_save_path)
-    choice_model = None
+    choice_model = SnippetChoicer(model_save_path=model_3_save_path)
+
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][:3]
+
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
@@ -622,6 +654,7 @@ def run_experiment():
             f"model 1 and 2 find count: {analysis.model_1_2_find_count}, {round((analysis.model_1_2_find_count / total) * 100, 2)}%")
         logger.success(
             f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}, {round((analysis.model_1_2_precisely_find_count / total) * 100, 2)}%")
+        logger.success(f"model 3 find count: {analysis.model_3_find_count}, {round((analysis.model_3_find_count / total) * 100, 2)}")
         logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
         logger.success(f"\tprecision: {analysis.precision}")
         logger.success(f"\trecall: {analysis.recall}")
