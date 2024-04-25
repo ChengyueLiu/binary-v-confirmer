@@ -516,18 +516,19 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
 
     # 检查结果
     model_1_2_find_flag = False
+    find_false_flag = False
     precisely_find_flag = False
     for vul_function_name, bin_function_name, prob in confirmed_results:
         if vul_function_name == bin_function_name:
             model_1_2_find_flag = True
-            precisely_find_flag = True
             logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name}")
         else:
-            precisely_find_flag = False
+            find_false_flag = True
             logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name}")
     if model_1_2_find_flag:
         analysis.model_1_2_find_count += 1
-        if precisely_find_flag:
+        if not find_false_flag:
+            precisely_find_flag = True
             analysis.model_1_2_precisely_find_count += 1
     # 打印预览
     logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
