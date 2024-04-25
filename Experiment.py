@@ -130,7 +130,7 @@ def filter_and_generate_data_items(asm_function_dict, vul_functions: List[VulFun
              for asm_function in asm_function_dict.values()]
     with Pool() as pool:
         results = pool.imap_unordered(generate_model_input_wrapper, tasks)
-        for data_item in tqdm(results, f"filter_and_generate_data_items",total=len(tasks)):
+        for data_item in tqdm(results, f"filter_and_generate_data_items", total=len(tasks)):
             if data_item is None:
                 continue
             data_items.append(data_item)
@@ -270,6 +270,7 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
     logger.info(f"\t\textracted {len(asm_function_dict)} asm functions")
 
     # 2. 过滤asm函数并生成模型输入数据
+    filter_find_flag = False
     logger.info(f"\t\tfilter asm functions and generating model input data...")
     data_items, found_vul_functions = filter_and_generate_data_items(asm_function_dict, vul_functions)
     logger.info(f"\t\tgenerated {len(data_items)} data items")
@@ -277,14 +278,17 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
     logger.success(f"\tvul function names: {[vf.function_name for vf in vul_functions]}")
     logger.success(f"\tbin vul function names: {tc.ground_truth.contained_vul_function_names}")
     logger.success(f"\tfound vul function names: {found_vul_functions}")
-    if not found_vul_functions:
-        analysis.over_filter_count +=1
+    if found_vul_functions:
+        filter_find_flag = True
+    else:
+        analysis.over_filter_count += 1
+
     # 3. 调用模型
     predictions = model.confirm(data_items)
 
     # 4. 确认结果
     logger.info(f"\tconfirmed functions:")
-    find_flag = False
+    model_1_find_flag = False
     confirmed_items = []
     for data_item, (pred, prob) in zip(data_items, predictions):
         if pred == 1 and prob > prob_threshold:
@@ -294,7 +298,7 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
             print_info = f"{data_item.function_name} {data_item.bin_function_name}\t{prob}\t{data_item.asm_codes}"
             if data_item.get_src_function_name() == data_item.bin_function_name:
                 print_info = f"\t**** {print_info}"
-                find_flag = True
+                model_1_find_flag = True
             else:
                 print_info = f"\t\t{print_info}"
             logger.info(print_info)
@@ -302,8 +306,9 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
             print_info = f"{data_item.function_name} {data_item.bin_function_name}\t{prob}\t{data_item.asm_codes}"
             print_info = f"\txxxx {print_info}"
             logger.info(print_info)
-    if find_flag:
+    if model_1_find_flag:
         analysis.model_1_find_count += 1
+
     # 5. ground truth
     logger.info(f"\tground truth: ")
     logger.info(f"\t\tvul: {tc.public_id}")
@@ -322,7 +327,7 @@ def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions
             confirmed_function_dict[function_name] = []
         confirmed_function_dict[function_name].append(
             (vul_function_dict[function_name], item.bin_function_name, item.asm_codes))
-    return confirmed_function_dict,find_flag
+    return confirmed_function_dict, filter_find_flag, model_1_find_flag
 
 
 def split_list_by_sliding_window(input_list, window_length=70, step=20):
@@ -382,7 +387,8 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
 
     # 找到定位的片段在原始汇编代码中的位置
     start_index = 0
-    while start_asm_codes_str in " ".join(normalized_asm_codes[start_index:]) and start_index < len(normalized_asm_codes):
+    while start_asm_codes_str in " ".join(normalized_asm_codes[start_index:]) and start_index < len(
+            normalized_asm_codes):
         start_index += 1
     start_index -= 1
 
@@ -462,14 +468,19 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     is_fixed = None
 
     # locate vul function
-    confirmed_function_dict, model_1_find_flag = confirm_functions(confirm_model, tc, analysis, asm_functions_cache)
+    confirmed_function_dict, filter_find_flag, model_1_find_flag = confirm_functions(confirm_model,
+                                                                                     tc,
+                                                                                     analysis,
+                                                                                     asm_functions_cache)
 
     # locate and filter
     all_count = 0
-    tmp_results = []
+
     confirmed_results = []
     for i, (vul_function_name, results) in enumerate(confirmed_function_dict.items(), 1):
         all_count += len(results)
+        tmp_results = []
+        tmp_confirmed_results = []
         for confirmed_vul_function, bin_function_name, confirmed_normalized_asm_codes in results:
             succeed_locate_patches = []
             normalized_asm_codes_snippet_list = []
@@ -487,24 +498,21 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             avg_prob = sum(prob_list) / len(prob_list)
             # 如果只有一个，直接用
             if len(results) == 1:
-                confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
+                tmp_confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
             else:
                 # 如果有多个，确认所有概率大于0.95的
                 if avg_prob > 0.95:
-                    confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
+                    tmp_confirmed_results.append((vul_function_name, bin_function_name, avg_prob))
                 # 全部添加至临时结果
                 tmp_results.append((vul_function_name, bin_function_name, avg_prob))
 
+        # 如果没有确认到，取最大的
+        if not tmp_confirmed_results and tmp_results:
+            tmp_confirmed_results = [max(tmp_results, key=lambda x: x[2])]
 
-
-    # 如果有多个，而且概率都不超过95%，则取最大的一个
-    if not confirmed_results and tmp_results:
-        confirmed_results = [max(tmp_results, key=lambda x: x[2])]
-    else:
-        confirmed_results = []
-
-    # 按照概率排序，取前3个
-    confirmed_results = sorted(confirmed_results, key=lambda x: x[2], reverse=True)[:3]
+        # 排序
+        tmp_confirmed_results = sorted(tmp_confirmed_results, key=lambda x: x[2], reverse=True)[:3]
+        confirmed_results.extend(tmp_confirmed_results)
 
     # 检查结果
     find_flag = False
@@ -518,11 +526,11 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
             logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name}")
     if find_flag:
         analysis.model_1_2_find_count += 1
-    if not find_false_flag:
-        analysis.model_1_2_precisely_find_count += 1
+        if not find_false_flag:
+            analysis.model_1_2_precisely_find_count += 1
     # 打印预览
     logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
-    logger.success(f"confirm summary: {model_1_find_flag} {find_flag} {find_false_flag}\n")
+    logger.success(f"confirm summary: {filter_find_flag} {model_1_find_flag} {find_flag} {find_false_flag}\n")
     return
     #
     #     if confirmed_vul_function.get_function_name() == bin_function_name:
@@ -584,7 +592,7 @@ def run_experiment():
     choice_model = None
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][98:100]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
@@ -598,19 +606,26 @@ def run_experiment():
         for i, tc in enumerate(test_cases_batch, start + 1):
             logger.success(f"confirm tc: {i} {tc.public_id}")
             run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
-        start += batch_size
 
+        # 预览阶段结果
+        total = start + batch_size
         logger.success(f"test result:")
-        logger.success(f"\ttotal: {start + batch_size}")
-        logger.success(f"over filter count: {analysis.over_filter_count}")
-        logger.success(f"model 1 find count: {analysis.model_1_find_count}")
-        logger.success(f"model 1 and 2 find count: {analysis.model_1_2_find_count}")
-        logger.success(f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}")
+        logger.success(f"\ttotal: {total}")
+        logger.success(
+            f"over filter count: {analysis.over_filter_count}, {round(analysis.over_filter_count / total, 2)}%")
+        logger.success(
+            f"model 1 find count: {analysis.model_1_find_count}, {round(analysis.model_1_find_count / total, 2)}%")
+        logger.success(
+            f"model 1 and 2 find count: {analysis.model_1_2_find_count}, {round(analysis.model_1_2_find_count / total, 2)}%")
+        logger.success(
+            f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}, {round(analysis.model_1_2_precisely_find_count / total, 2)}%")
         logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
         logger.success(f"\tprecision: {analysis.precision}")
         logger.success(f"\trecall: {analysis.recall}")
         logger.success(f"\tf1: {analysis.f1}")
         logger.success(f"\taccuracy: {analysis.accuracy}")
+
+        start += batch_size
     logger.success(f"all done.")
 
 
