@@ -481,12 +481,14 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         f"confirm summary: {filter_find_flag} {model_1_find_flag} {model_1_2_find_flag} {precisely_find_flag}")
 
     # step 3: 判断是否已经修复
-    fix_prob, has_vul, has_vul_function, is_fixed, vul_prob = judge_located_snippets(choice_model,
-                                                                                     confirmed_results,
-                                                                                     has_vul, has_vul_function)
-    if is_fixed == tc.is_fixed():
-        analysis.model_3_find_count += 1
-    logger.success(f"fix prob: {fix_prob}, vul prob: {vul_prob}")
+    if confirmed_results:
+        vul_prob, fix_prob, has_vul_function, has_vul, is_fixed = judge_located_snippets(choice_model,
+                                                                                         confirmed_results,
+                                                                                         has_vul,
+                                                                                         has_vul_function)
+        if is_fixed == tc.is_fixed():
+            analysis.model_3_find_count += 1
+        logger.success(f"vul prob: {vul_prob}, fix prob: {fix_prob}")
 
     # step 4: 检查结果
     if tc.has_vul():
@@ -512,9 +514,10 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
 
 
 def judge_located_snippets(choice_model, confirmed_results, has_vul, has_vul_function):
-    vul_prob, fix_prob = 0, 0
+    vul_prob = 0.0
+    fix_prob = 0.0
     is_fixed = None
-    for vul_function_name, bin_function_name, vul_prob, succeed_locate_patches, normalized_asm_codes_snippet_list in confirmed_results:
+    for vul_function_name, bin_function_name, locate_prob, succeed_locate_patches, normalized_asm_codes_snippet_list in confirmed_results:
         cur_vul_prob, cur_fix_prob = _judge_is_fixed(choice_model,
                                                      vul_function_name,
                                                      succeed_locate_patches,
@@ -529,7 +532,7 @@ def judge_located_snippets(choice_model, confirmed_results, has_vul, has_vul_fun
         else:
             is_fixed = True
             has_vul = False
-    return fix_prob, has_vul, has_vul_function, is_fixed, vul_prob
+    return vul_prob, fix_prob, has_vul_function, has_vul, is_fixed
 
 
 def locate_snippets(analysis, confirmed_function_dict, locate_model):
@@ -625,7 +628,7 @@ def run_experiment():
 
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()][:3]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][:100]
 
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
@@ -654,7 +657,8 @@ def run_experiment():
             f"model 1 and 2 find count: {analysis.model_1_2_find_count}, {round((analysis.model_1_2_find_count / total) * 100, 2)}%")
         logger.success(
             f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}, {round((analysis.model_1_2_precisely_find_count / total) * 100, 2)}%")
-        logger.success(f"model 3 find count: {analysis.model_3_find_count}, {round((analysis.model_3_find_count / total) * 100, 2)}")
+        logger.success(
+            f"model 3 find count: {analysis.model_3_find_count}, {round((analysis.model_3_find_count / total) * 100, 2)}%")
         logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
         logger.success(f"\tprecision: {analysis.precision}")
         logger.success(f"\trecall: {analysis.recall}")
