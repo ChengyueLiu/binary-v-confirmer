@@ -592,7 +592,7 @@ def run_experiment():
     choice_model = None
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()][98:100]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][100:200]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
