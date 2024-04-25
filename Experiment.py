@@ -349,7 +349,7 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
 
 
 def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFunctionPatch,
-                   normalized_asm_codes: List[str]) -> List[str]:
+                   normalized_asm_codes: List[str]):
     """
     片段定位
     """
@@ -377,10 +377,12 @@ def locate_snippet(locate_model: SnippetPositioner, function_name, patch: VulFun
     logger.info(f"vul snippet src codes start:\t{above_context}")
     logger.info(f"\tlocate prob: {start_asm_codes_prob}")
     logger.info(f"\tlocated asm codes: {start_asm_codes_str}")
+    if not start_asm_codes_str:
+        return [], 0
 
     # 找到定位的片段在原始汇编代码中的位置
     start_index = 0
-    while start_asm_codes_str in " ".join(normalized_asm_codes[start_index:]):
+    while start_asm_codes_str in " ".join(normalized_asm_codes[start_index:]) and start_index < len(normalized_asm_codes):
         start_index += 1
     start_index -= 1
 
@@ -589,17 +591,18 @@ def run_experiment():
             run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
         start += batch_size
 
-    logger.success(f"test result:")
-    logger.success(f"\ttotal: {len(test_cases)}")
-    logger.success(f"over filter count: {analysis.over_filter_count}")
-    logger.success(f"model 1 find count: {analysis.model_1_find_count}")
-    logger.success(f"model 1 and 2 find count: {analysis.model_1_2_find_count}")
-    logger.success(f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}")
-    logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
-    logger.success(f"\tprecision: {analysis.precision}")
-    logger.success(f"\trecall: {analysis.recall}")
-    logger.success(f"\tf1: {analysis.f1}")
-    logger.success(f"\taccuracy: {analysis.accuracy}")
+        logger.success(f"test result:")
+        logger.success(f"\ttotal: {len(test_cases)}")
+        logger.success(f"over filter count: {analysis.over_filter_count}")
+        logger.success(f"model 1 find count: {analysis.model_1_find_count}")
+        logger.success(f"model 1 and 2 find count: {analysis.model_1_2_find_count}")
+        logger.success(f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}")
+        logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
+        logger.success(f"\tprecision: {analysis.precision}")
+        logger.success(f"\trecall: {analysis.recall}")
+        logger.success(f"\tf1: {analysis.f1}")
+        logger.success(f"\taccuracy: {analysis.accuracy}")
+    logger.success(f"all done.")
 
 
 if __name__ == '__main__':
