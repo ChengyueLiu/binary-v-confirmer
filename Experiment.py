@@ -598,8 +598,10 @@ def run_experiment():
     analysis = Analysis()
     start = 0
     batch_size = 20
+    total = 0
     while start < len(test_cases):
         test_cases_batch = test_cases[start:start + batch_size]
+        total += len(test_cases_batch)
         asm_functions_cache = generate_asm_function_cache(test_cases_batch)
         logger.success(f"asm functions cache generated")
 
@@ -608,17 +610,16 @@ def run_experiment():
             run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
 
         # 预览阶段结果
-        total = start + batch_size
         logger.success(f"test result:")
         logger.success(f"\ttotal: {total}")
         logger.success(
-            f"over filter count: {analysis.over_filter_count}, {round(analysis.over_filter_count / total, 2)}%")
+            f"over filter count: {analysis.over_filter_count}, {round((analysis.over_filter_count / total) * 100, 2)}%")
         logger.success(
-            f"model 1 find count: {analysis.model_1_find_count}, {round(analysis.model_1_find_count / total, 2)}%")
+            f"model 1 find count: {analysis.model_1_find_count}, {round((analysis.model_1_find_count / total) * 100, 2)}%")
         logger.success(
-            f"model 1 and 2 find count: {analysis.model_1_2_find_count}, {round(analysis.model_1_2_find_count / total, 2)}%")
+            f"model 1 and 2 find count: {analysis.model_1_2_find_count}, {round((analysis.model_1_2_find_count / total) * 100, 2)}%")
         logger.success(
-            f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}, {round(analysis.model_1_2_precisely_find_count / total, 2)}%")
+            f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}, {round((analysis.model_1_2_precisely_find_count / total) * 100, 2)}%")
         logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
         logger.success(f"\tprecision: {analysis.precision}")
         logger.success(f"\trecall: {analysis.recall}")
