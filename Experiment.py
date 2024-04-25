@@ -515,22 +515,23 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
         confirmed_results.extend(tmp_confirmed_results)
 
     # 检查结果
-    find_flag = False
-    find_false_flag = False
+    model_1_2_find_flag = False
+    precisely_find_flag = False
     for vul_function_name, bin_function_name, prob in confirmed_results:
         if vul_function_name == bin_function_name:
-            find_flag = True
+            model_1_2_find_flag = True
+            precisely_find_flag = True
             logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name}")
         else:
-            find_false_flag = True
+            precisely_find_flag = False
             logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name}")
-    if find_flag:
+    if model_1_2_find_flag:
         analysis.model_1_2_find_count += 1
-        if not find_false_flag:
+        if precisely_find_flag:
             analysis.model_1_2_precisely_find_count += 1
     # 打印预览
     logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
-    logger.success(f"confirm summary: {filter_find_flag} {model_1_find_flag} {find_flag} {find_false_flag}\n")
+    logger.success(f"confirm summary: {filter_find_flag} {model_1_find_flag} {model_1_2_find_flag} {precisely_find_flag}\n")
     return
     #
     #     if confirmed_vul_function.get_function_name() == bin_function_name:
@@ -592,7 +593,7 @@ def run_experiment():
     choice_model = None
     logger.success(f"model init success")
 
-    test_cases = [tc for tc in test_cases if tc.has_vul()][100:200]
+    test_cases = [tc for tc in test_cases if tc.has_vul()]
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
