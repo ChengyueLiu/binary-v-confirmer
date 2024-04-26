@@ -7,7 +7,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
-from typing import List, Tuple
+from typing import List
 
 from loguru import logger
 from tqdm import tqdm
@@ -465,13 +465,12 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
 def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis: Analysis, asm_functions_cache):
     has_vul_function = False
     has_vul = False
-
+    is_fixed = False
     # step 1: locate vul function
     confirmed_function_dict, filter_find_flag, model_1_find_flag = confirm_functions(confirm_model,
                                                                                      tc,
                                                                                      analysis,
                                                                                      asm_functions_cache)
-
     # step 2: locate and filter
     all_count, confirmed_results, model_1_2_find_flag, precisely_find_flag = locate_snippets(analysis,
                                                                                              confirmed_function_dict,
@@ -627,8 +626,9 @@ def run_experiment():
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
 
     logger.success(f"model init success")
-
-    test_cases = [tc for tc in test_cases if tc.has_vul()][:100]
+    failed_index_list = [218, 219, 220, 221, 222, 223, 224, 225, 227, 228, 231, 232, 233, 243, 263, 266, 268, 273, 274, 280, 285, 294, 301, 303, 304, 329, 332, 333, 339]
+    test_cases = [tc for tc in test_cases if tc.has_vul()]
+    test_cases = [tc for i, tc in enumerate(test_cases, 1) if i in failed_index_list]
 
     logger.success(f"Experiment tc num: {len(test_cases)}")
 

@@ -80,7 +80,6 @@ def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
 def create_dataset(file_path, tokenizer, max_len=512):
     logger.info(f"读取文件：{file_path}")
     train_data_json = load_from_json_file(file_path)
-    random.shuffle(train_data_json)
     pool = multiprocessing.Pool(multiprocessing.cpu_count() - 4)
     data_items = list(
         tqdm(pool.imap_unordered(init_data_item_obj_from_dict, train_data_json), total=len(train_data_json),
