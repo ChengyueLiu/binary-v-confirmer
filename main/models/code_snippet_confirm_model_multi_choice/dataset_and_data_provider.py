@@ -18,9 +18,6 @@ transformers.logging.set_verbosity_error()
 
 class CodeSnippetConfirmDataset(Dataset):
     def __init__(self, questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len=512):
-        """
-        set choice 1 as the right answer when training
-        """
         self.questions = questions
         self.choice_0_list = choice_0_list
         self.choice_1_list = choice_1_list
@@ -36,25 +33,27 @@ class CodeSnippetConfirmDataset(Dataset):
         choice_0 = self.choice_0_list[idx]
         choice_1 = self.choice_1_list[idx]
         choice_index = self.choice_index_list[idx]
-        choices = [choice_0, choice_1]
+
 
         # 使用tokenizer的__call__方法同时处理问题和选项
         # 注意：我们需要为每个选项重复问题文本
-        prompts = [question] * len(choices)  # 重复问题以匹配每个选项
+        prompts = [question, question]
+        choices = [choice_0, choice_1]
         encoding = self.tokenizer(prompts, choices,
                                   max_length=self.max_len,
                                   truncation=True,
                                   padding='max_length',
                                   return_tensors='pt')
 
+        # 注意：不要使用squeeze(0)，因为我们需要保持批量维度
         input_ids = encoding['input_ids']
         attention_mask = encoding['attention_mask']
+        labels = torch.tensor(choice_index, dtype=torch.long)  # 不需要unsqueeze(0)
 
-        # 由于在这种情况下不需要手动堆叠，返回值保持不变
         return {
-            'input_ids': input_ids,
-            'attention_mask': attention_mask,
-            'labels': torch.tensor(choice_index, dtype=torch.long)
+            'input_ids': input_ids,  # Shape: [1, num_choices, sequence_length]
+            'attention_mask': attention_mask,  # Shape: [1, num_choices, sequence_length]
+            'labels': labels
         }
 
 
@@ -79,7 +78,7 @@ def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
     return dataset
 def create_dataset(file_path, tokenizer, max_len=512):
     logger.info(f"读取文件：{file_path}")
-    train_data_json = load_from_json_file(file_path)
+    train_data_json = load_from_json_file(file_path)[:1000]
     pool = multiprocessing.Pool(multiprocessing.cpu_count() - 4)
     data_items = list(
         tqdm(pool.imap_unordered(init_data_item_obj_from_dict, train_data_json), total=len(train_data_json),
