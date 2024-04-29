@@ -626,9 +626,9 @@ def run_experiment():
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
 
     logger.success(f"model init success")
-    failed_index_list = [218, 219, 220, 221, 222, 223, 224, 225, 227, 228, 231, 232, 233, 243, 263, 266, 268, 273, 274, 280, 285, 294, 301, 303, 304, 329, 332, 333, 339]
-    test_cases = [tc for tc in test_cases if tc.has_vul()]
-    test_cases = [tc for i, tc in enumerate(test_cases, 1) if i in failed_index_list]
+    # failed_index_list = [218, 219, 220, 221, 222, 223, 224, 225, 227, 228, 231, 232, 233, 243, 263, 266, 268, 273, 274, 280, 285, 294, 301, 303, 304, 329, 332, 333, 339]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][:10]
+    # test_cases = [tc for i, tc in enumerate(test_cases, 1) if i in failed_index_list]
 
     logger.success(f"Experiment tc num: {len(test_cases)}")
 

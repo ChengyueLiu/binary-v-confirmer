@@ -1,3 +1,4 @@
+import multiprocessing
 from typing import List
 
 from loguru import logger
@@ -113,14 +114,19 @@ class CodeSnippetPositioningDataset(Dataset):
             'end_positions': answer_tokens_end_index_tensor,
         }
 
+def init_data_item_obj_from_dict(item):
+    data_item = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
+    data_item.normalize()
+    return data_item
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
-    data_items = []
-    for item in tqdm(train_data_json, desc="init data items"):
-        data_item = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
-        data_item.normalize()
-        data_items.append(data_item)
+    pool = multiprocessing.Pool(multiprocessing.cpu_count() - 4)
+    data_items = list(
+        tqdm(pool.imap_unordered(init_data_item_obj_from_dict, train_data_json), total=len(train_data_json),
+             desc="多进程初始化训练对象"))
+    pool.close()
+    pool.join()
 
     questions = []
     contexts = []

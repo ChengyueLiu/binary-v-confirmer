@@ -160,11 +160,12 @@ def run_train(train_data_json_file_path,
             logger.info(f'Epoch {epoch + 1}/{epochs}')
             train_loss, train_precision, train_recall, train_f1 = train_or_evaluate(model, train_loader, optimizer,
                                                                                     scheduler, device, is_train=True)
+            print(
+                f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
             valid_loss, valid_precision, valid_recall, valid_f1 = train_or_evaluate(model, val_loader, optimizer,
                                                                                     scheduler,
                                                                                     device, is_train=False)
-            print(
-                f'\tTrain Loss: {train_loss:.3f} | Train Precision: {train_precision:.2f} | Train Recall: {train_recall:.2f} | Train F1: {train_f1:.2f}')
+
             print(
                 f'\t Val. Loss: {valid_loss:.3f} |  Val Precision: {valid_precision:.2f} | Val Recall: {valid_recall:.2f} | Val F1: {valid_f1:.2f}')
             # 如果当前验证损失更低，保存模型
