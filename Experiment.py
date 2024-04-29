@@ -432,6 +432,7 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
                     function_name,
                     patches: List[VulFunctionPatch],
                     normalized_asm_codes_snippet_list: List[List[str]]):
+    logger.success(f"\tjudge is fixed: {function_name}, patch num: {len(patches)}")
     # 生成模型输入
     data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
     for patch, normalized_asm_codes_snippet in zip(patches, normalized_asm_codes_snippet_list):
@@ -449,15 +450,14 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     # 根据概率
     vul_prob = 0
     fix_prob = 0
-    logger.info(f"\tjudge is fixed: {function_name}")
     for data_item, ((choice_0, choice_0_prob), (choice_1, choice_1_prob)) in zip(data_items, predictions):
-        logger.info(f"\tquestion: {data_item.get_question_text()}")
-        logger.info(f"\tvul src codes:\t{choice_0_prob} {data_item.get_src_codes_0_text()}")
-        logger.info(f"\tfixed src codes:\t{choice_1_prob} {data_item.get_src_codes_1_text()}")
-
+        logger.success(f"\tquestion: {data_item.get_question_text()}")
+        logger.success(f"\tvul src codes:\t\t{choice_0_prob} {data_item.get_src_codes_0_text()}")
+        logger.success(f"\tfixed src codes:\t{choice_1_prob} {data_item.get_src_codes_1_text()}")
+        logger.success(f"\t\t patch choice result: vul prob: {choice_0_prob}, fix prob: {choice_1_prob}")
         vul_prob += choice_0_prob
         fix_prob += choice_1_prob
-    logger.info(f"\tchoice result: vul prob: {vul_prob}, fix prob: {fix_prob}")
+    logger.success(f"\t\tchoice result: vul prob: {vul_prob}, fix prob: {fix_prob}")
 
     return vul_prob, fix_prob
 
@@ -475,7 +475,7 @@ def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis
     all_count, confirmed_results, model_1_2_find_flag, precisely_find_flag = locate_snippets(analysis,
                                                                                              confirmed_function_dict,
                                                                                              locate_model)
-    logger.success(f"confirmed functions: {all_count} ---> {len(confirmed_results)}")
+    logger.success(f"located functions: {all_count} ---> {len(confirmed_results)}")
     logger.success(
         f"confirm summary: {filter_find_flag} {model_1_find_flag} {model_1_2_find_flag} {precisely_find_flag}")
 
@@ -553,7 +553,8 @@ def locate_snippets(analysis, confirmed_function_dict, locate_model):
                                                                                     confirmed_normalized_asm_codes)
 
                 prob_list.append(start_asm_codes_prob)
-                if start_asm_codes_prob > 0.9 and normalized_asm_codes_snippet:
+                # if start_asm_codes_prob > 0.9 and normalized_asm_codes_snippet:
+                if normalized_asm_codes_snippet:
                     succeed_locate_patches.append(patch)
                     normalized_asm_codes_snippet_list.append(normalized_asm_codes_snippet)
 
@@ -596,10 +597,10 @@ def locate_snippets(analysis, confirmed_function_dict, locate_model):
     for vul_function_name, bin_function_name, prob, _, _ in confirmed_results:
         if vul_function_name == bin_function_name:
             model_1_2_find_flag = True
-            logger.success(f"confirmed functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name}")
+            logger.success(f"located functions: ***** , {prob}, {vul_function_name} ---> {bin_function_name}")
         else:
             find_false_flag = True
-            logger.warning(f"confirmed functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name}")
+            logger.warning(f"located functions: xxxxx , {prob}, {vul_function_name} ---> {bin_function_name}")
     if model_1_2_find_flag:
         analysis.model_1_2_find_count += 1
         if not find_false_flag:
@@ -627,7 +628,7 @@ def run_experiment():
 
     logger.success(f"model init success")
     # failed_index_list = [218, 219, 220, 221, 222, 223, 224, 225, 227, 228, 231, 232, 233, 243, 263, 266, 268, 273, 274, 280, 285, 294, 301, 303, 304, 329, 332, 333, 339]
-    test_cases = [tc for tc in test_cases if tc.has_vul()][:10]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][:5]
     # test_cases = [tc for i, tc in enumerate(test_cases, 1) if i in failed_index_list]
 
     logger.success(f"Experiment tc num: {len(test_cases)}")
