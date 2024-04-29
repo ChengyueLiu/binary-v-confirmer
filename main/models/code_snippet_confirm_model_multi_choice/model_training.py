@@ -125,9 +125,9 @@ def run_train(train_data_json_file_path,
         epochs=epochs)
     if not test_only:
         if model_save_path_back_up:
-            logger.info('save model to model_weights_back.pth...')
+            logger.info(f'load model state from {model_save_path}...')
             model.load_state_dict(torch.load(model_save_path))
-            logger.info('model saved.')
+            logger.info('model loaded.')
         logger.info('inited, start train, epochs: 3, batch_size: 32...')
         # train scheduler
         best_valid_loss = float('inf')  # 初始化最佳验证损失
