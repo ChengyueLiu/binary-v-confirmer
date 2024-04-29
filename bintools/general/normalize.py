@@ -81,10 +81,16 @@ def normalize_src_lines(lines):
                 or line.endswith("*/")  # 注释行结尾
                 or line in ["", "*"]):  # 空行
             continue
+
         # 移除字符串
         normalized_line = re.sub(r'\".*?\"', '"STR"', line)
+        # 不管连续多少个\t都替换为一个空格
+        normalized_line = re.sub(r'\t+', ' ', normalized_line)
+        # 不管连续多少个空格都替换为一个空格
+        normalized_line = re.sub(r' +', ' ', normalized_line)
         # 移除注释
         normalized_line = remove_comments(normalized_line)
+
         normalized_lines.append(normalized_line)
     return normalized_lines
 

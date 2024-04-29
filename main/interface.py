@@ -542,11 +542,35 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
         # 限制最多50行汇编代码
         return " ".join(self.asm_codes[:50])
 
+    def get_diff_start_index(self):
+        """
+        不同前的行，增加一行相同的，避免内容太少
+        """
+        for i, (line_0, line_1) in enumerate(zip(self.src_codes_0, self.src_codes_1)):
+            if line_0 != line_1:
+                return i - 1 if i > 0 else 0
+        return -1
+
+    def get_diff_end_index(self):
+        """
+        不同后的行，增加一行相同的，避免内容太少
+        """
+        for i, (line_0, line_1) in enumerate(zip(self.src_codes_0[::-1], self.src_codes_1[::-1])):
+            if line_0 != line_1:
+                return len(self.src_codes_0)
+        return -1
+
     def get_src_codes_0_text(self):
-        return remove_comments(" ".join(self.src_codes_0))
+        diff_start_index = self.get_diff_start_index()
+        diff_end_index = self.get_diff_end_index()
+        src_codes_0_text = remove_comments(" ".join(self.src_codes_0[diff_start_index:diff_end_index]))
+        return src_codes_0_text
 
     def get_src_codes_1_text(self):
-        return remove_comments(" ".join(self.src_codes_1))
+        diff_start_index = self.get_diff_start_index()
+        diff_end_index = self.get_diff_end_index()
+        src_codes_1_text = remove_comments(" ".join(self.src_codes_1[diff_start_index:diff_end_index]))
+        return src_codes_1_text
 
     def get_choice_index(self):
         return self.choice_index
@@ -554,10 +578,12 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
     def normalized_str_codes(self):
         if self.is_normalized:
             return
+
         def remove_plus_minus(line):
             if line.startswith(('+', '-')):
                 return line[1:]
             return line
+
         self.src_codes_0 = [remove_plus_minus(line) for line in self.src_codes_0]
         self.src_codes_1 = [remove_plus_minus(line) for line in self.src_codes_1]
         self.src_codes_0 = normalize_src_lines(self.src_codes_0)

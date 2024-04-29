@@ -452,8 +452,8 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     fix_prob = 0
     for data_item, ((choice_0, choice_0_prob), (choice_1, choice_1_prob)) in zip(data_items, predictions):
         logger.success(f"\tquestion: {data_item.get_question_text()}")
-        logger.success(f"\tvul src codes:\t\t{choice_0_prob} {data_item.get_src_codes_0_text()}")
-        logger.success(f"\tfixed src codes:\t{choice_1_prob} {data_item.get_src_codes_1_text()}")
+        logger.success(f"\tvul src codes:\t\t{choice_0_prob}\t{data_item.get_src_codes_0_text()}")
+        logger.success(f"\tfixed src codes:\t{choice_1_prob}\t{data_item.get_src_codes_1_text()}")
         logger.success(f"\t\t patch choice result: vul prob: {choice_0_prob}, fix prob: {choice_1_prob}")
         vul_prob += choice_0_prob
         fix_prob += choice_1_prob
@@ -621,14 +621,14 @@ def run_experiment():
     logger.info(f"init model...")
     model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
     model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
-    model_3_save_path = r"Resources/model_weights/model_3_weights.pth"
+    model_3_save_path = r"Resources/model_weights/model_3_weights_back_up.pth"
     confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
     locate_model = SnippetPositioner(model_save_path=model_2_save_path)
     choice_model = SnippetChoicer(model_save_path=model_3_save_path)
 
     logger.success(f"model init success")
     # failed_index_list = [218, 219, 220, 221, 222, 223, 224, 225, 227, 228, 231, 232, 233, 243, 263, 266, 268, 273, 274, 280, 285, 294, 301, 303, 304, 329, 332, 333, 339]
-    test_cases = [tc for tc in test_cases if tc.has_vul()][:5]
+    test_cases = [tc for tc in test_cases if tc.has_vul()][:10]
     # test_cases = [tc for i, tc in enumerate(test_cases, 1) if i in failed_index_list]
 
     logger.success(f"Experiment tc num: {len(test_cases)}")

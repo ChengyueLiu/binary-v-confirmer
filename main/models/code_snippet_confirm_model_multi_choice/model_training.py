@@ -4,7 +4,8 @@ from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForMultipleChoice
 
 from main.interface import DataItemForCodeSnippetConfirmModelMC
-from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import create_dataloaders, create_dataset
+from main.models.code_snippet_confirm_model_multi_choice.dataset_and_data_provider import create_dataloaders, \
+    create_dataset
 
 
 def init_train(train_data_json_file_path,
@@ -107,6 +108,7 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
 def run_train(train_data_json_file_path,
               val_data_json_file_path,
               test_data_json_file_path,
+              model_save_path_back_up="model_weights_back.pth",
               model_save_path="model_weights.pth",
               test_only=False,
               **kwargs):
@@ -122,6 +124,10 @@ def run_train(train_data_json_file_path,
         batch_size=batch_size,
         epochs=epochs)
     if not test_only:
+        if model_save_path_back_up:
+            logger.info('save model to model_weights_back.pth...')
+            model.load_state_dict(torch.load(model_save_path))
+            logger.info('model saved.')
         logger.info('inited, start train, epochs: 3, batch_size: 32...')
         # train scheduler
         best_valid_loss = float('inf')  # 初始化最佳验证损失

@@ -132,6 +132,8 @@ class VulConfirmTC(Serializable):
         是否已经修复
         """
         return self.ground_truth.is_fixed
+
+
 def remove_plus_minus(line):
     if line.startswith(('+', '-')):
         return line[1:]

@@ -31,7 +31,7 @@ def train_model_3():
     val_data_save_path = "TestCases/model_train/model_3/data_items/valid_data.json"
     test_data_save_path = "TestCases/model_train/model_3/data_items/test_data.json"
     model_save_path = "Resources/model_weights/model_3_weights.pth"
-    run_train(train_data_save_path,
+    run_train(test_data_save_path,
               val_data_save_path,
               test_data_save_path,
               model_save_path,
