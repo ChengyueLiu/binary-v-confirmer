@@ -1,10 +1,7 @@
-import copy
-import difflib
-import multiprocessing
+import os
 import os
 import re
 import sys
-from dataclasses import dataclass
 from datetime import datetime
 from multiprocessing import Pool
 from typing import List
@@ -13,20 +10,16 @@ from loguru import logger
 from tqdm import tqdm
 
 from bintools.general.bin_tool import analyze_asm_codes
-from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import analyze_src_codes
 from experiments import tc_manager
 from experiments.experiment_analysis import Analysis
 from experiments.extractor_runner import generate_asm_function_cache, extract_asm_functions
-from experiments.model_manager import init_models
 from experiments.tc_manager import split_test_cases
 from experiments.tc_runner import TCRunner
-from main.extractors.bin_function_feature_extractor.objdump_parser import parse_objdump_file
 from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel, \
     DataItemForCodeSnippetConfirmModelMC
 from main.models.code_snippet_confirm_model_multi_choice.new_model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.new_model_application import SnippetPositioner
-from main.models.function_confirm_model.new_model_application import FunctionConfirmer
 from main.tc_models import VulConfirmTC, VulFunction, TestBin, VulFunctionPatch
 
 # 获取当前时间并格式化为字符串，例如 '20230418_101530'
