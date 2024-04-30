@@ -126,7 +126,7 @@ def split_list_by_sliding_window(input_list, window_length=70, step=20):
     return windows
 
 
-def generate_snippet_locate_model_input(function_name, bin_function_name, patch, normalized_asm_codes) -> List[
+def generate_snippet_locate_model_input(function_name, bin_function_name, source_codes, normalized_asm_codes) -> List[
     DataItemForCodeSnippetPositioningModel]:
     # 滑动窗口
     asm_codes_windows = split_list_by_sliding_window(normalized_asm_codes)
@@ -137,7 +137,7 @@ def generate_snippet_locate_model_input(function_name, bin_function_name, patch,
     start_data_items = []
     for window in asm_codes_windows:
         start_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
-                                                                 src_codes=patch.vul_snippet_codes,
+                                                                 src_codes=source_codes,
                                                                  asm_codes=window)
         start_data_item.normalize_src_codes()
         start_data_item.is_normalized = True
