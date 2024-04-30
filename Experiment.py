@@ -16,7 +16,11 @@ from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import analyze_src_codes
 from experiments import tc_manager
+from experiments.experiment_analysis import Analysis
+from experiments.extractor_runner import generate_asm_function_cache, extract_asm_functions
 from experiments.model_manager import init_models
+from experiments.tc_manager import split_test_cases
+from experiments.tc_runner import TCRunner
 from main.extractors.bin_function_feature_extractor.objdump_parser import parse_objdump_file
 from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel, \
     DataItemForCodeSnippetConfirmModelMC
@@ -28,7 +32,7 @@ from main.tc_models import VulConfirmTC, VulFunction, TestBin, VulFunctionPatch
 # 获取当前时间并格式化为字符串，例如 '20230418_101530'
 start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
 logger.remove()
-logger.add(sys.stdout, level="SUCCESS")
+logger.add(sys.stdout, level="INFO")
 # 添加日志处理器，文件名包含脚本开始时间
 logger.add(f"logs/experiment_{start_time}.log", level="SUCCESS")
 
@@ -108,13 +112,6 @@ def generate_model_input_wrapper(args):
     return generate_model_input(asm_function, vul_function)
 
 
-def cal_similarity(asm_codes_1, asm_codes_2):
-    s1 = " ".join(asm_codes_1[:40])
-    s2 = " ".join(asm_codes_2[:40])
-    similarity = difflib.SequenceMatcher(None, s1, s2).quick_ratio()
-    return similarity
-
-
 def filter_and_generate_data_items(asm_function_dict, vul_functions: List[VulFunction]):
     found_functions = []
     data_items = []
@@ -133,13 +130,7 @@ def filter_and_generate_data_items(asm_function_dict, vul_functions: List[VulFun
     return data_items, found_functions
 
 
-def extract_asm_functions(asm_functions_cache, test_bin):
-    if test_bin.binary_path not in asm_functions_cache:
-        asm_function_dict = parse_objdump_file(test_bin.binary_path, ignore_warnings=True)
-        asm_functions_cache[test_bin.binary_path] = asm_function_dict
-    else:
-        asm_function_dict = asm_functions_cache[test_bin.binary_path]
-    return asm_function_dict
+
 
 
 def check_result(tc: VulConfirmTC, confirmed_function_name: str, analysis):
@@ -172,82 +163,6 @@ def check_result(tc: VulConfirmTC, confirmed_function_name: str, analysis):
             analysis.fp += 1
             logger.info(f"\t\tcheck result: FP")
     logger.info("\n")
-
-
-@dataclass
-class Analysis:
-    over_filter_count: int = 0
-    model_1_find_count: int = 0
-    model_1_2_find_count: int = 0
-    model_1_2_precisely_find_count: int = 0
-    model_3_find_count: int = 0
-    tp: int = 0  # True Positives
-    fp: int = 0  # False Positives
-    tn: int = 0  # True Negatives
-    fn: int = 0  # False Negatives
-
-    @property
-    def total(self):
-        return self.tp + self.tn + self.fp + self.fn
-
-    @property
-    def precision(self):
-        return self.tp / (self.tp + self.fp) if self.tp + self.fp > 0 else 0
-
-    @property
-    def recall(self):
-        return self.tp / (self.tp + self.fn) if self.tp + self.fn > 0 else 0
-
-    @property
-    def f1(self):
-        precision = self.precision
-        recall = self.recall
-        return 2 * precision * recall / (precision + recall) if precision + recall > 0 else 0
-
-    @property
-    def accuracy(self):
-        total = self.total
-        return (self.tp + self.tn) / total if total > 0 else 0
-
-    @property
-    def specificity(self):
-        return self.tn / (self.tn + self.fp) if self.tn + self.fp > 0 else 0
-
-    @property
-    def error_rate(self):
-        total = self.total
-        return (self.fp + self.fn) / total if total > 0 else 0
-
-    @property
-    def mcc(self):
-        # Matthews Correlation Coefficient calculation
-        numerator = (self.tp * self.tn - self.fp * self.fn)
-        denominator = ((self.tp + self.fp) * (self.tp + self.fn) *
-                       (self.tn + self.fp) * (self.tn + self.fn)) ** 0.5
-        return numerator / denominator if denominator != 0 else 0
-
-
-def parse_objdump_file_wrapper(file_path):
-    asm_function_dict = parse_objdump_file(file_path, ignore_warnings=True)
-    return file_path, asm_function_dict
-
-
-def generate_asm_function_cache(tcs):
-    path_set = set()
-    for tc in tcs:
-        path_set.add(tc.test_bin.binary_path)
-
-    paths = list(path_set)
-
-    cache_dict = {}
-    with Pool(multiprocessing.cpu_count() - 6) as pool:
-        results = list(tqdm(pool.imap_unordered(parse_objdump_file_wrapper, paths), total=len(paths),
-                            desc="generate_asm_function_cache"))
-
-    for path, asm_function_dict in results:
-        cache_dict[path] = asm_function_dict
-
-    return cache_dict
 
 
 def confirm_functions(model, tc: VulConfirmTC, analysis: Analysis, asm_functions_cache: dict, prob_threshold=0.99):
@@ -455,7 +370,7 @@ def _judge_is_fixed(choice_model: SnippetChoicer,
     return vul_prob, fix_prob
 
 
-def run_tc(choice_model, confirm_model, locate_model, tc: VulConfirmTC, analysis: Analysis, asm_functions_cache):
+def run_tc(confirm_model,locate_model,choice_model, tc: VulConfirmTC, analysis: Analysis, asm_functions_cache):
     has_vul_function = False
     has_vul = False
     is_fixed = False
@@ -603,54 +518,40 @@ def locate_snippets(analysis, confirmed_function_dict, locate_model):
 
 
 def run_experiment():
-    # init models
-    model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
-    model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
-    model_3_save_path = r"Resources/model_weights/model_3_weights_back_up.pth"
-    confirm_model, choice_model, locate_model = init_models(model_2_save_path, model_3_save_path, model_save_path)
-
     # load test_cases
     tc_json_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
-    test_cases = tc_manager.load_test_cases(tc_json_path)
+    test_cases: List[VulConfirmTC] = tc_manager.load_test_cases(tc_json_path)
+
+    # tc runner
+    function_confirm_model_pth = r"Resources/model_weights/model_1_weights_back_4.pth"
+    snippet_position_model_pth = r"Resources/model_weights/model_2_weights_back.pth"
+    snippet_choice_model_pth = r"Resources/model_weights/model_3_weights_back_up.pth"
+    tc_runner = TCRunner(function_confirm_model_pth, snippet_position_model_pth, snippet_choice_model_pth)
 
     # experiment test cases
-    test_cases = [tc for tc in test_cases if not tc.has_vul_function()][:10]
-    logger.success(f"Experiment tc num: {len(test_cases)}")
+    test_cases: List[VulConfirmTC] = [tc for tc in test_cases if not tc.has_vul_function()][:10]
+    logger.info(f"Experiment tc num: {len(test_cases)}")
 
-    analysis = Analysis()
-    start = 0
+    # run test cases
     batch_size = 20
-    total = 0
-    while start < len(test_cases):
-        test_cases_batch = test_cases[start:start + batch_size]
-        total += len(test_cases_batch)
+    test_cases_batches: List[List[VulConfirmTC]] = split_test_cases(test_cases, batch_size)
+
+    tc_count = 0
+    for batch_i, test_cases_batch in enumerate(test_cases_batches, 0):
+        start = batch_size * batch_i + 1
+        tc_count += len(test_cases_batch)
+
+        # generate asm cache
         asm_functions_cache = generate_asm_function_cache(test_cases_batch)
-        logger.success(f"asm functions cache generated")
 
-        for i, tc in enumerate(test_cases_batch, start + 1):
-            logger.success(f"confirm tc: {i} {tc.public_id}")
-            run_tc(choice_model, confirm_model, locate_model, tc, analysis, asm_functions_cache)
+        # run test cases
+        for i, tc in enumerate(test_cases_batch, start):
+            logger.info(f"run tc: {i} {tc.public_id}")
+            tc_runner.run(tc, asm_functions_cache)
 
-        # 预览阶段结果
-        logger.success(f"test result:")
-        logger.success(f"\ttotal: {total}")
-        logger.success(
-            f"over filter count: {analysis.over_filter_count}, {round((analysis.over_filter_count / total) * 100, 2)}%")
-        logger.success(
-            f"model 1 find count: {analysis.model_1_find_count}, {round((analysis.model_1_find_count / total) * 100, 2)}%")
-        logger.success(
-            f"model 1 and 2 find count: {analysis.model_1_2_find_count}, {round((analysis.model_1_2_find_count / total) * 100, 2)}%")
-        logger.success(
-            f"model 1 and 2 precisely find count: {analysis.model_1_2_precisely_find_count}, {round((analysis.model_1_2_precisely_find_count / total) * 100, 2)}%")
-        logger.success(
-            f"model 3 find count: {analysis.model_3_find_count}, {round((analysis.model_3_find_count / total) * 100, 2)}%")
-        logger.success(f"\ttp: {analysis.tp}, fp: {analysis.fp}, tn: {analysis.tn}, fn: {analysis.fn}")
-        logger.success(f"\tprecision: {analysis.precision}")
-        logger.success(f"\trecall: {analysis.recall}")
-        logger.success(f"\tf1: {analysis.f1}")
-        logger.success(f"\taccuracy: {analysis.accuracy}")
+        # analysis result
+        tc_runner.analysis.print_analysis_result(tc_count)
 
-        start += batch_size
     logger.success(f"all done.")
 
 

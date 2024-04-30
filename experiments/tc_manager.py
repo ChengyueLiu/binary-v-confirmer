@@ -16,9 +16,19 @@ def load_test_cases(tc_json_path) -> List[VulConfirmTC]:
     test_cases = load_from_json_file(tc_json_path)
 
     test_cases = [VulConfirmTC.init_from_dict(tc) for tc in test_cases]
-    logger.success(f"loaded {len(test_cases)} test cases")
+    logger.info(f"loaded {len(test_cases)} test cases")
 
     test_cases = [tc for tc in test_cases if tc.is_effective() and tc.public_id not in WRONG_TC_SET]
-    logger.success(f"include {len(test_cases)} effective test cases")
+    logger.info(f"include {len(test_cases)} effective test cases")
 
     return test_cases
+
+
+def split_test_cases(test_cases, batch_size=20) -> List[List[VulConfirmTC]]:
+    start = 0
+    batches = []
+    while start < len(test_cases):
+        test_cases_batch = test_cases[start:start + batch_size]
+        batches.append(test_cases_batch)
+
+    return batches
