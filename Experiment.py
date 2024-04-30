@@ -15,6 +15,8 @@ from tqdm import tqdm
 from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.file_tool import load_from_json_file
 from bintools.general.src_tool import analyze_src_codes
+from experiments import tc_manager
+from experiments.model_manager import init_models
 from main.extractors.bin_function_feature_extractor.objdump_parser import parse_objdump_file
 from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel, \
     DataItemForCodeSnippetConfirmModelMC
@@ -29,15 +31,6 @@ logger.remove()
 logger.add(sys.stdout, level="SUCCESS")
 # 添加日志处理器，文件名包含脚本开始时间
 logger.add(f"logs/experiment_{start_time}.log", level="SUCCESS")
-
-
-def load_test_cases(tc_save_path) -> List[VulConfirmTC]:
-    """
-    加载测试用例
-    """
-    test_cases = load_from_json_file(tc_save_path)
-    test_cases = [VulConfirmTC.init_from_dict(tc) for tc in test_cases]
-    return test_cases
 
 
 def is_reserved_function_name(function_name):
@@ -610,27 +603,18 @@ def locate_snippets(analysis, confirmed_function_dict, locate_model):
 
 
 def run_experiment():
-    tc_save_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
-    logger.info(f"load test cases from {tc_save_path}")
-    test_cases = load_test_cases(tc_save_path)
-    logger.success(f"loaded {len(test_cases)} test cases")
-    wrong_test_case_public_ids = {"CVE-2012-2774"}
-    test_cases = [tc for tc in test_cases if tc.is_effective() and tc.public_id not in wrong_test_case_public_ids]
-    logger.success(f"include {len(test_cases)} effective test cases")
-
-    logger.info(f"init model...")
+    # init models
     model_save_path = r"Resources/model_weights/model_1_weights_back_4.pth"
     model_2_save_path = r"Resources/model_weights/model_2_weights_back.pth"
     model_3_save_path = r"Resources/model_weights/model_3_weights_back_up.pth"
-    confirm_model = FunctionConfirmer(model_save_path=model_save_path, batch_size=128)
-    locate_model = SnippetPositioner(model_save_path=model_2_save_path)
-    choice_model = SnippetChoicer(model_save_path=model_3_save_path)
+    confirm_model, choice_model, locate_model = init_models(model_2_save_path, model_3_save_path, model_save_path)
 
-    logger.success(f"model init success")
-    # failed_index_list = [218, 219, 220, 221, 222, 223, 224, 225, 227, 228, 231, 232, 233, 243, 263, 266, 268, 273, 274, 280, 285, 294, 301, 303, 304, 329, 332, 333, 339]
+    # load test_cases
+    tc_json_path = "/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/final_vul_confirm_test_cases.json"
+    test_cases = tc_manager.load_test_cases(tc_json_path)
+
+    # experiment test cases
     test_cases = [tc for tc in test_cases if not tc.has_vul_function()][:10]
-    # test_cases = [tc for i, tc in enumerate(test_cases, 1) if i in failed_index_list]
-
     logger.success(f"Experiment tc num: {len(test_cases)}")
 
     analysis = Analysis()
@@ -675,12 +659,7 @@ if __name__ == '__main__':
     run_experiment()
 
     """
-    判定逻辑：
-        1. 先用model 1 确认函数
-        2. 再用model 2 确认代码片段，找到能定位的函数，以及片段
-        3. 用model 3 判断是否修复
+    目标：Less False Positive
     
-    model 1:
-        目前 back 4 效果最好
-        最新的，感觉还不如back 4， 可能也是训练的不够，现在才 98.9%的准确率 以及 0.035的loss，还可以继续训练。但是先训练model 3，训练一个出来，把整体流程都走通。
+    2. 
     """
