@@ -30,5 +30,5 @@ def split_test_cases(test_cases, batch_size=20) -> List[List[VulConfirmTC]]:
     while start < len(test_cases):
         test_cases_batch = test_cases[start:start + batch_size]
         batches.append(test_cases_batch)
-
+        start += batch_size
     return batches

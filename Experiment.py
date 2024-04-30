@@ -522,7 +522,7 @@ def run_experiment():
     tc_runner = TCRunner(function_confirm_model_pth, snippet_position_model_pth, snippet_choice_model_pth)
 
     # experiment test cases
-    test_cases: List[VulConfirmTC] = [tc for tc in test_cases if not tc.has_vul_function()][:10]
+    test_cases: List[VulConfirmTC] = [tc for tc in test_cases if tc.has_vul()][:10]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     # run test cases
@@ -543,7 +543,7 @@ def run_experiment():
             tc_runner.run(tc, asm_functions_cache)
 
         # analysis result
-        tc_runner.analysis.print_analysis_result(tc_count)
+        # tc_runner.analysis.print_analysis_result(tc_count)
 
     logger.success(f"all done.")
 

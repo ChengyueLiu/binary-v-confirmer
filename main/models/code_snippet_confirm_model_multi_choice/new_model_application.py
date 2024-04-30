@@ -65,7 +65,7 @@ class SnippetChoicer:
                 for option_index in range(logits.size(1)):  # 遍历该问题的每个选项
                     score = round(logits[i, option_index].item(), 4)  # 该选项的得分
                     prob = probabilities[i, option_index].item()  # 该选项的概率
-                    logger.info(f"{option_index} {score} {prob}")
+                    logger.debug(f"{option_index} {score} {prob}")
                     question_answer.append((option_index, prob))
                 predictions.append(question_answer)
 

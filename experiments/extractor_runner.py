@@ -1,5 +1,6 @@
 import multiprocessing
 
+from loguru import logger
 from tqdm import tqdm
 
 from main.extractors.bin_function_feature_extractor.objdump_parser import parse_objdump_file

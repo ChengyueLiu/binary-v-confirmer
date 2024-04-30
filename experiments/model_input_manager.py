@@ -7,7 +7,8 @@ from tqdm import tqdm
 
 from bintools.general.bin_tool import analyze_asm_codes
 from bintools.general.src_tool import analyze_src_codes
-from main.interface import DataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel, \
+    DataItemForCodeSnippetConfirmModelMC
 from main.tc_models import VulFunction
 
 
@@ -86,7 +87,8 @@ def _generate_function_confirm_model_input_wrapper(args):
     return _generate_function_confirm_model_input(asm_function, vul_function)
 
 
-def filter_and_generate_function_confirm_model_input(vul_functions: List[VulFunction], asm_function_dict):
+def filter_and_generate_function_confirm_model_input(vul_functions: List[VulFunction], asm_function_dict) \
+        -> List[DataItemForFunctionConfirmModel]:
     data_items = []
     tasks = [(asm_function, vul_function)
              for vul_function in vul_functions
@@ -97,5 +99,63 @@ def filter_and_generate_function_confirm_model_input(vul_functions: List[VulFunc
             if data_item is None:
                 continue
             data_items.append(data_item)
-    logger.success(f"filter: {len(tasks)} ---> {len(data_items)}")
+    logger.debug(f"filter: {len(tasks)} ---> {len(data_items)}")
+    return data_items
+
+
+def split_list_by_sliding_window(input_list, window_length=70, step=20):
+    # 初始化一个空列表来存放所有窗口
+    windows = []
+
+    # 如果输入列表长度小于等于窗口长度，直接返回
+    if len(input_list) <= window_length:
+        return [input_list]
+
+    # 滑动窗口
+    window_end = window_length
+    while True:
+        windows.append(input_list[window_end - window_length:window_end])
+        if window_end + step > len(input_list):
+            break
+        window_end += step
+
+    # 如果最后一个窗口的长度不足，补齐
+    if window_end < len(input_list):
+        windows.append(input_list[-window_length:])
+
+    return windows
+
+
+def generate_snippet_locate_model_input(function_name, bin_function_name, patch, normalized_asm_codes) -> List[
+    DataItemForCodeSnippetPositioningModel]:
+    # 滑动窗口
+    asm_codes_windows = split_list_by_sliding_window(normalized_asm_codes)
+    logger.debug(
+        f"{bin_function_name}: asm codes length: {len(normalized_asm_codes)}, window num: {len(asm_codes_windows)}")
+
+    # 生成模型输入：漏洞片段的前10行 + 汇编代码窗口
+    start_data_items = []
+    for window in asm_codes_windows:
+        start_data_item = DataItemForCodeSnippetPositioningModel(function_name=function_name,
+                                                                 src_codes=patch.vul_snippet_codes,
+                                                                 asm_codes=window)
+        start_data_item.normalize_src_codes()
+        start_data_item.is_normalized = True
+        start_data_item.src_codes = start_data_item.src_codes[:10]
+        start_data_items.append(start_data_item)
+
+    return start_data_items
+
+
+def generate_snippet_choice_model_input(locate_results):
+    data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
+    for function_name, patch, bin_funciton_name, normalized_asm_codes_snippet in locate_results:
+        data_item = DataItemForCodeSnippetConfirmModelMC(function_name=function_name,
+                                                         asm_codes=normalized_asm_codes_snippet,
+                                                         src_codes_0=patch.vul_snippet_codes,
+                                                         src_codes_1=patch.fixed_snippet_codes)
+        data_item.normalized_str_codes()
+        data_item.is_normalized = True
+        data_items.append(data_item)
+
     return data_items
