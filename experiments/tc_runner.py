@@ -56,6 +56,7 @@ class TCRunner:
         confirmed_data_items = []
         for data_item, (pred, prob) in zip(filtered_data_items, predictions):
             if pred == 1 and prob > self.confirm_threshold:
+                data_item.prob = prob
                 confirmed_data_items.append(data_item)
                 logger.debug(f"confirm: {data_item.function_name} ---> {data_item.bin_function_name}, prob: {prob}")
         logger.info(f"confirm: {len(filtered_data_items)} ---> {len(confirmed_data_items)}")
