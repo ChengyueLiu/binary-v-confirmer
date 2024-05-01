@@ -44,7 +44,12 @@ class TCRunner:
         is_fixed = self._check_patch(locate_results)
 
         # step 6: summary result
-        self._summary_result(tc, filtered_data_items, confirmed_data_items, locate_results, is_fixed)
+        self._print_log(tc, filtered_data_items, confirmed_data_items, locate_results, is_fixed)
+
+        # step 7: analysis
+        has_vul = self.analyze(tc, locate_results, is_fixed)
+
+        return has_vul
 
     def _confirm_functions(self, filtered_data_items) -> List[DataItemForFunctionConfirmModel]:
         predictions = self.confirm_model.confirm(filtered_data_items)
@@ -52,7 +57,7 @@ class TCRunner:
         for data_item, (pred, prob) in zip(filtered_data_items, predictions):
             if pred == 1 and prob > self.confirm_threshold:
                 confirmed_data_items.append(data_item)
-                logger.info(f"confirm: {data_item.function_name} ---> {data_item.bin_function_name}, prob: {prob}")
+                logger.debug(f"confirm: {data_item.function_name} ---> {data_item.bin_function_name}, prob: {prob}")
         logger.info(f"confirm: {len(filtered_data_items)} ---> {len(confirmed_data_items)}")
         return confirmed_data_items
 
@@ -92,7 +97,8 @@ class TCRunner:
                         if prob < self.locate_threshold:
                             continue
 
-                        logger.info(f"locate confirm: {vul_function_name} ---> {confirmed_data_item.bin_function_name} prob: {prob}")
+                        logger.debug(
+                            f"locate confirm: {vul_function_name} ---> {confirmed_data_item.bin_function_name} prob: {prob}")
                         if prob > most_prob:
                             most_vul_function_name = vul_function_name
                             most_patch_index = i
@@ -102,7 +108,8 @@ class TCRunner:
                             most_result = (vul_function_name,
                                            patch,
                                            confirmed_data_item.bin_function_name,
-                                           locate_model_input_data_items[j].asm_codes)
+                                           locate_model_input_data_items[j].asm_codes,
+                                           pred)
 
             # if find result, print log
             if most_result:
@@ -126,52 +133,97 @@ class TCRunner:
         logger.debug(f"is fixed: {is_fixed}")
         return is_fixed
 
-    def _summary_result(self, tc, filtered_data_items, confirmed_data_items, locate_results, is_fixed):
+    def _print_log(self, tc, filtered_data_items, confirmed_data_items, locate_results, is_fixed):
         logger.success(f"summary result:")
         has_vul_function = False
-        is_fixed = False
+
+        filter_find_flag = False
+        model_1_find_flag = False
+        model_1_2_find_flag = False
+        model_1_2_fp_flag = False
+        model_3_find_flag = False
         for function in tc.vul_functions:
-            logger.success(f"\tvul function: {function.get_function_name()}")
             # filter
             find_flag = False
             for data_item in filtered_data_items:
                 if function.get_function_name() == data_item.bin_function_name:
                     logger.success(f"\t\tfilter success: {function.get_function_name()}!")
                     find_flag = True
+                    filter_find_flag = True
                     break
             if not find_flag:
                 logger.warning(f"\t\tfilter failed: {function.get_function_name()}!")
 
-            # confirm
-            print()
-            if confirmed_data_items:
-                for data_item in confirmed_data_items:
-                    if data_item.function_name == data_item.bin_function_name:
-                        logger.success(f"\t\tconfirm TP: {function.get_function_name()} ---> {data_item.bin_function_name}")
-                    else:
-                        logger.warning(f"\t\tconfirm FP: {function.get_function_name()} ---> {data_item.bin_function_name}")
-            else:
-                logger.warning(f"\t\tno functions confirmed!")
-                continue
+        # confirm
+        print()
+        if confirmed_data_items:
+            for data_item in confirmed_data_items:
+                if data_item.function_name == data_item.bin_function_name:
+                    logger.success(
+                        f"\t\tconfirm TP: {data_item.function_name} ---> {data_item.bin_function_name}")
+                    model_1_find_flag = True
+                else:
+                    logger.warning(
+                        f"\t\tconfirm FP: {data_item.function_name} ---> {data_item.bin_function_name}")
+        else:
+            logger.warning(f"\t\tno functions confirmed!")
 
-            # locate
-            print()
-            if locate_results:
-                for vul_function_name, patch, bin_function_name, asm_codes in locate_results:
-                    if vul_function_name == bin_function_name:
-                        logger.success(f"\t\tlocate TP: {vul_function_name} ---> {bin_function_name}")
-                    else:
-                        logger.warning(f"\t\tlocate FP: {vul_function_name} ---> {bin_function_name}")
-                has_vul_function = True
-            else:
-                logger.warning(f"\t\tno patch located!")
-                continue
+        # locate
+        print()
+        if locate_results:
+            for vul_function_name, patch, bin_function_name, asm_codes, pred in locate_results:
+                if vul_function_name == bin_function_name:
+                    logger.success(f"\t\tlocate TP: {vul_function_name} ---> {bin_function_name}")
+                    model_1_2_find_flag = True
+                else:
+                    logger.warning(f"\t\tlocate FP: {vul_function_name} ---> {bin_function_name}")
+                    model_1_2_fp_flag = True
+            has_vul_function = True
+        else:
+            logger.warning(f"\t\tno patch located!")
 
-            # check
-            print()
-            if is_fixed == tc.ground_truth.is_fixed:
-                logger.success(f"\t\tcheck Success: {tc.ground_truth.is_fixed} ---> {is_fixed}")
-            else:
-                logger.error(f"\t\tcheck Failed: {tc.ground_truth.is_fixed} ---> {is_fixed}")
+        # precisely confirmed
+        print()
+        logger.info(f"precisely confirmed: {not model_1_2_fp_flag}")
+
+        # check
+        print()
+        if is_fixed == tc.ground_truth.is_fixed:
+            logger.success(f"\t\tcheck Success: {tc.ground_truth.is_fixed} ---> {is_fixed}")
+            model_3_find_flag = True
+        else:
+            logger.error(f"\t\tcheck Failed: {tc.ground_truth.is_fixed} ---> {is_fixed}")
+
+        if not filter_find_flag:
+            self.analysis.over_filter_count += 1
+
+        if model_1_find_flag:
+            self.analysis.model_1_find_count += 1
+
+        if model_1_2_find_flag:
+            self.analysis.model_1_2_find_count += 1
+            if not model_1_2_fp_flag:
+                self.analysis.model_1_2_precisely_find_count += 1
+
+        if model_3_find_flag:
+            self.analysis.model_3_find_count += 1
+        print(filter_find_flag, model_1_find_flag, model_1_2_find_flag, not model_1_2_fp_flag, model_3_find_flag)
         logger.info(f"ground truth: {tc.has_vul_function()} {tc.ground_truth.is_fixed}")
         logger.info(f"      result: {has_vul_function} {is_fixed}")
+
+    def analyze(self, tc, locate_results, is_fixed):
+        has_vul_function = bool(locate_results)
+        has_vul = False
+        if has_vul_function and not is_fixed:
+            has_vul = True
+
+        if tc.has_vul():
+            if has_vul:
+                self.analysis.tp += 1
+            else:
+                self.analysis.fn += 1
+        else:
+            if has_vul:
+                self.analysis.fp += 1
+            else:
+                self.analysis.tn += 1

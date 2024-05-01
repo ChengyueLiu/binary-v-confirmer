@@ -113,3 +113,6 @@ if __name__ == '__main__':
     # prepare_data()
     # prepare_train_data_for_model_2_new()
     train_model_2()
+
+    # 今天分析一下，失败的原因，各个阶段失败的原因。然后解决问题。先不写论文。
+    # 3-5行太少了，改成10行代码定位

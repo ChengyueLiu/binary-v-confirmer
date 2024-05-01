@@ -61,13 +61,14 @@ class Analysis:
         logger.info(
             f"over filter count: {self.over_filter_count}, {round((self.over_filter_count / tc_count) * 100, 2)}%")
         logger.info(
-            f"model 1 find count: {self.model_1_find_count}, {round((self.model_1_find_count / tc_count) * 100, 2)}%")
+            f"model 1 find count: {self.model_1_find_count}, {round((self.model_1_find_count / tc_count) * 100, 2)}%, {round((self.model_1_find_count / tc_count- self.over_filter_count) * 100, 2)}%")
         logger.info(
-            f"model 1 and 2 find count: {self.model_1_2_find_count}, {round((self.model_1_2_find_count / tc_count) * 100, 2)}%")
+            f"model 1 and 2 find count: {self.model_1_2_find_count}, {round((self.model_1_2_find_count / tc_count) * 100, 2)}%, {round((self.model_1_2_find_count / self.model_1_find_count) * 100, 2)}%")
         logger.info(
-            f"model 1 and 2 precisely find count: {self.model_1_2_precisely_find_count}, {round((self.model_1_2_precisely_find_count / tc_count) * 100, 2)}%")
+            f"model 1 and 2 precisely find count: {self.model_1_2_precisely_find_count}, {round((self.model_1_2_precisely_find_count / tc_count) * 100, 2)}, {round((self.model_1_2_precisely_find_count / self.model_1_2_find_count) * 100, 2)}%")
         logger.info(
-            f"model 3 find count: {self.model_3_find_count}, {round((self.model_3_find_count / tc_count) * 100, 2)}%")
+            f"model 3 find count: {self.model_3_find_count}, {round((self.model_3_find_count / tc_count) * 100, 2)}%, {round((self.model_3_find_count / self.model_1_2_find_count) * 100, 2)}%")
+
         logger.info(f"\ttp: {self.tp}, fp: {self.fp}, tn: {self.tn}, fn: {self.fn}")
         logger.info(f"\tprecision: {self.precision}")
         logger.info(f"\trecall: {self.recall}")

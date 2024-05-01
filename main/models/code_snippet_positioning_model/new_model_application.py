@@ -93,4 +93,5 @@ class SnippetPositioner:
 
         # predict
         predictions = self._predict(data_loader)
+
         return predictions

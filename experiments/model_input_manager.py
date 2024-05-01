@@ -149,9 +149,19 @@ def generate_snippet_locate_model_input(function_name, bin_function_name, source
 
 def generate_snippet_choice_model_input(locate_results):
     data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
-    for function_name, patch, bin_funciton_name, normalized_asm_codes_snippet in locate_results:
+    for function_name, patch, bin_funciton_name, normalized_asm_codes,pred in locate_results:
+        # 找到定位的片段在原始汇编代码中的位置
+        start_index = 0
+        while pred in " ".join(normalized_asm_codes[start_index:]) and start_index < len(
+                normalized_asm_codes):
+            start_index += 1
+        start_index -= 1
+
+        # 最终定位结果
+        snippet = normalized_asm_codes[start_index:start_index + 50]
+
         data_item = DataItemForCodeSnippetConfirmModelMC(function_name=function_name,
-                                                         asm_codes=normalized_asm_codes_snippet,
+                                                         asm_codes=snippet,
                                                          src_codes_0=patch.vul_snippet_codes,
                                                          src_codes_1=patch.fixed_snippet_codes)
         data_item.normalized_str_codes()
