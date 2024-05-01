@@ -190,7 +190,10 @@ class TCRunner:
 
         # precisely confirmed
         print()
-        logger.info(f"precisely confirmed: {not model_1_2_fp_flag}")
+        if model_1_2_fp_flag:
+            logger.warning(f"\t\tprecisely confirmed: {model_1_2_fp_flag}")
+        else:
+            logger.success(f"\t\tprecisely confirmed: {not model_1_2_fp_flag}")
 
         # check
         print()

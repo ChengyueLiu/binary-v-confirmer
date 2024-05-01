@@ -57,7 +57,8 @@ class Analysis:
 
     def print_analysis_result(self, tc_count: int):
         logger.info(f"test result:")
-        logger.info(f"\t                  tc count: {tc_count}")
+        logger.info(
+            f"\t                          tc count: {tc_count}")
         logger.info(
             f"\t                model 1 find count: {self.model_1_find_count}, {round((self.model_1_find_count / tc_count) * 100, 2)}%")
         logger.info(
