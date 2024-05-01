@@ -78,6 +78,7 @@ class TCRunner:
             most_bin_function_name = None
             most_window_index = 0
             most_result = None
+            most_pred = None
             most_prob = 0
             for confirmed_data_item in confirmed_data_items:
                 vul_function_name = confirmed_data_item.function_name
@@ -97,23 +98,27 @@ class TCRunner:
                         if prob < self.locate_threshold:
                             continue
 
-                        logger.debug(
-                            f"locate confirm: {vul_function_name} ---> {confirmed_data_item.bin_function_name} prob: {prob}")
                         if prob > most_prob:
                             most_vul_function_name = vul_function_name
                             most_patch_index = i
                             most_bin_function_name = confirmed_data_item.bin_function_name
                             most_window_index = j
+                            most_pred = pred
                             most_prob = prob
                             most_result = (vul_function_name,
                                            patch,
                                            confirmed_data_item.bin_function_name,
                                            locate_model_input_data_items[j].asm_codes,
-                                           pred)
+                                           pred,
+                                           prob)
+                        else:
+                            if vul_function_name == confirmed_data_item.bin_function_name:
+                                logger.warning(
+                                    f"locate failed: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}")
 
             # if find result, print log
             if most_result:
-                log_info = f"locate: {most_vul_function_name} patch {most_patch_index} in {most_bin_function_name} window {most_window_index}, asm_codes_length: {len(most_result[-1])}, prob: {most_prob}"
+                log_info = f"locate: {most_vul_function_name} patch {most_patch_index} in {most_bin_function_name} window {most_window_index}, asm_codes_length: {len(most_pred)}, prob: {most_prob}"
                 logger.info(log_info)
                 locate_results.append(most_result)
 
@@ -171,12 +176,12 @@ class TCRunner:
         # locate
         print()
         if locate_results:
-            for vul_function_name, patch, bin_function_name, asm_codes, pred in locate_results:
+            for vul_function_name, patch, bin_function_name, asm_codes, pred, prob in locate_results:
                 if vul_function_name == bin_function_name:
-                    logger.success(f"\t\tlocate TP: {vul_function_name} ---> {bin_function_name}")
+                    logger.success(f"\t\tlocate TP: {vul_function_name} ---> {bin_function_name} {prob}")
                     model_1_2_find_flag = True
                 else:
-                    logger.warning(f"\t\tlocate FP: {vul_function_name} ---> {bin_function_name}")
+                    logger.warning(f"\t\tlocate FP: {vul_function_name} ---> {bin_function_name} {prob}")
                     model_1_2_fp_flag = True
             has_vul_function = True
         else:

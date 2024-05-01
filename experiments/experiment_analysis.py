@@ -61,7 +61,7 @@ class Analysis:
         logger.info(
             f"over filter count: {self.over_filter_count}, {round((self.over_filter_count / tc_count) * 100, 2)}%")
         logger.info(
-            f"model 1 find count: {self.model_1_find_count}, {round((self.model_1_find_count / tc_count) * 100, 2)}%, {round((self.model_1_find_count / tc_count- self.over_filter_count) * 100, 2)}%")
+            f"model 1 find count: {self.model_1_find_count}, {round((self.model_1_find_count / tc_count) * 100, 2)}%, {round((self.model_1_find_count / (tc_count - self.over_filter_count)) * 100, 2)}%")
         logger.info(
             f"model 1 and 2 find count: {self.model_1_2_find_count}, {round((self.model_1_2_find_count / tc_count) * 100, 2)}%, {round((self.model_1_2_find_count / self.model_1_find_count) * 100, 2)}%")
         logger.info(

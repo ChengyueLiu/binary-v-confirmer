@@ -43,7 +43,11 @@ def _is_reserved_function_name(function_name):
 def _generate_function_confirm_model_input(asm_function, vul_function: VulFunction):
     # 过滤条件 1：保留函数名
     if _is_reserved_function_name(asm_function.function_name):
-        return None
+        if vul_function.get_function_name() == asm_function.function_name:
+            logger.warning(
+                f"\t\twrongly judged as reserved function: {vul_function.get_function_name()}")
+        else:
+            return None
 
     # 构成模型输入
     asm_codes, _ = asm_function.get_asm_codes()
@@ -61,7 +65,11 @@ def _generate_function_confirm_model_input(asm_function, vul_function: VulFuncti
 
     # 过滤条件 2：汇编代码长度检验
     if not 1 < len(data_item.asm_codes) / len(data_item.src_codes):
-        return None
+        if vul_function.get_function_name() == asm_function.function_name:
+            logger.warning(
+                f"\t\tasm length < src length: {vul_function.get_function_name()}, {len(data_item.src_codes)}, {len(data_item.asm_codes)}")
+        else:
+            return None
 
     # 过滤条件 3：参数数量检验
     asm_body_start_index, asm_param_count = analyze_asm_codes(data_item.asm_codes)
@@ -70,10 +78,11 @@ def _generate_function_confirm_model_input(asm_function, vul_function: VulFuncti
     if asm_param_count != src_param_count:
         if vul_function.get_function_name() == asm_function.function_name:
             logger.warning(
-                f"\t\tmissing vul function:: {vul_function.get_function_name()}, {src_param_count}, {asm_param_count}")
+                f"\t\tparam count not equal: {vul_function.get_function_name()}, {src_param_count}, {asm_param_count}")
             logger.warning(f"\t\tsrc codes: {data_item.src_codes}")
             logger.warning(f"\t\tasm codes: {data_item.asm_codes}")
-        return None
+        else:
+            return None
 
     # 截去函数定义和参数部分
     data_item.asm_codes = data_item.asm_codes[asm_body_start_index:]
@@ -149,7 +158,7 @@ def generate_snippet_locate_model_input(function_name, bin_function_name, source
 
 def generate_snippet_choice_model_input(locate_results):
     data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
-    for function_name, patch, bin_funciton_name, normalized_asm_codes,pred in locate_results:
+    for function_name, patch, bin_funciton_name, normalized_asm_codes, pred, prob in locate_results:
         # 找到定位的片段在原始汇编代码中的位置
         start_index = 0
         while pred in " ".join(normalized_asm_codes[start_index:]) and start_index < len(
