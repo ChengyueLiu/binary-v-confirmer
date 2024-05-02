@@ -106,7 +106,7 @@ def train_model_2():
               model_save_path=model_save_path,
               test_only=False,
               epochs=30,
-              batch_size=80)
+              batch_size=100)
 
 
 if __name__ == '__main__':

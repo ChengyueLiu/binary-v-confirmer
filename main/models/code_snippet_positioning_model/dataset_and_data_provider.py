@@ -114,10 +114,12 @@ class CodeSnippetPositioningDataset(Dataset):
             'end_positions': answer_tokens_end_index_tensor,
         }
 
+
 def init_data_item_obj_from_dict(item):
     data_item = DataItemForCodeSnippetPositioningModel.init_from_dict(item)
     data_item.normalize()
     return data_item
+
 
 def create_dataset(file_path, tokenizer, max_len=512):
     train_data_json = load_from_json_file(file_path)
@@ -172,7 +174,8 @@ def create_dataset_from_model_input(data_items: List[DataItemForCodeSnippetPosit
 
 
 def create_dataloaders(train_dataset, val_dataset, test_dataset, batch_size=16):
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+    logger.info(f"batch size: {batch_size}")
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
     return train_loader, val_loader, test_loader
