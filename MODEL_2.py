@@ -97,8 +97,8 @@ def train_model_2():
     val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_2.json"
     test_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/test_data_items_for_model_2.json"
 
-    back_model_save_path = r"Resources/model_weights/model_2_weights_back_2.pth"
-    model_save_path = r"Resources/model_weights/model_2_weights.pth"
+    back_model_save_path = r"Resources/model_weights/model_2_weights_back_3.pth"
+    model_save_path = r"Resources/model_weights/model_2_weights_back_3.pth"
     run_train(train_data_save_path,
               val_data_save_path,
               test_data_save_path,

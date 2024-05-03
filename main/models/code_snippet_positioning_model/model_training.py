@@ -63,6 +63,9 @@ def init_train(train_data_json_file_path,
 
 # 辅助函数：计算重叠和长度
 def calculate_overlap(true_start, true_end, pred_start, pred_end):
+    if pred_end <= pred_start:
+        true_length = true_end - true_start + 1
+        return 0, true_length, 0
     # 计算真实答案和预测答案的交集
     overlap = max(0, min(true_end, pred_end) - max(true_start, pred_start) + 1)
     true_length = true_end - true_start + 1
