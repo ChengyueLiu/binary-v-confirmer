@@ -183,17 +183,18 @@ class TCRunner:
                     model_1_2_find_flag = True
                 else:
                     logger.warning(f"\t\tlocate FP: {vul_function_name} ---> {bin_function_name} {prob}")
-                    model_1_2_fp_flag = True
+                    model_1_2_fp_flag = False
             has_vul_function = True
         else:
             logger.warning(f"\t\tno patch located!")
 
         # precisely confirmed
         print()
-        if model_1_2_fp_flag:
-            logger.warning(f"\t\tprecisely confirmed: {model_1_2_fp_flag}")
+        precisely_find_flag = model_1_2_find_flag and (not model_1_2_fp_flag)
+        if precisely_find_flag:
+            logger.success(f"\t\tprecisely confirmed: {precisely_find_flag}")
         else:
-            logger.success(f"\t\tprecisely confirmed: {not model_1_2_fp_flag}")
+            logger.warning(f"\t\tprecisely confirmed: {precisely_find_flag}")
 
         # check
         print()
@@ -211,12 +212,12 @@ class TCRunner:
 
         if model_1_2_find_flag:
             self.analysis.model_1_2_find_count += 1
-            if not model_1_2_fp_flag:
+            if precisely_find_flag:
                 self.analysis.model_1_2_precisely_find_count += 1
 
         if model_3_find_flag:
             self.analysis.model_3_find_count += 1
-        print(filter_find_flag, model_1_find_flag, model_1_2_find_flag, not model_1_2_fp_flag, model_3_find_flag)
+        print(filter_find_flag, model_1_find_flag, model_1_2_find_flag, precisely_find_flag, model_3_find_flag)
         logger.info(f"ground truth: {tc.has_vul_function()} {tc.ground_truth.is_fixed}")
         logger.info(f"      result: {has_vul_function} {is_fixed}")
 

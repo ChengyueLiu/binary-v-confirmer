@@ -26,9 +26,9 @@ def run_experiment():
 
     # tc runner
     # model 1 的 back 4 是比较好用的，back 5 是用心的训练数据训练的，但是训练效果不太好。
-    function_confirm_model_pth = r"Resources/model_weights/model_1_weights_back_4.pth"
-    snippet_position_model_pth = r"Resources/model_weights/model_2_weights_back_2.pth"
-    snippet_choice_model_pth = r"Resources/model_weights/model_3_weights.pth"
+    function_confirm_model_pth = r"Resources/model_weights/model_1_weights.pth"
+    snippet_position_model_pth = r"Resources/model_weights/model_2_weights_back_3.pth"
+    snippet_choice_model_pth = r"Resources/model_weights/model_3_weights_back_2.pth"
     tc_runner = TCRunner(function_confirm_model_pth, snippet_position_model_pth, snippet_choice_model_pth)
 
     # experiment test cases
