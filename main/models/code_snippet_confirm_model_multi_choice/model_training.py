@@ -125,8 +125,8 @@ def run_train(train_data_json_file_path,
         epochs=epochs)
     if not test_only:
         if model_save_path_back_up:
-            logger.info(f'load model state from {model_save_path}...')
-            model.load_state_dict(torch.load(model_save_path))
+            logger.info(f'load model state from {model_save_path_back_up}...')
+            model.load_state_dict(torch.load(model_save_path_back_up))
             logger.info('model loaded.')
         logger.info('inited, start train, epochs: 3, batch_size: 32...')
         # train scheduler

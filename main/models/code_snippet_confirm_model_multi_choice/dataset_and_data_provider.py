@@ -34,7 +34,6 @@ class CodeSnippetConfirmDataset(Dataset):
         choice_1 = self.choice_1_list[idx]
         choice_index = self.choice_index_list[idx]
 
-
         # 使用tokenizer的__call__方法同时处理问题和选项
         # 注意：我们需要为每个选项重复问题文本
         prompts = [question, question]
@@ -62,6 +61,7 @@ def init_data_item_obj_from_dict(item):
     data_item.normalize()
     return data_item
 
+
 def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
     questions = []
     choice_0_list = []
@@ -76,6 +76,8 @@ def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
     # print("原始数据数量: ", len(questions))
     dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len)
     return dataset
+
+
 def create_dataset(file_path, tokenizer, max_len=512):
     logger.info(f"读取文件：{file_path}")
     train_data_json = load_from_json_file(file_path)
