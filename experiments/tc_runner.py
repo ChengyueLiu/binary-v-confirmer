@@ -199,10 +199,10 @@ class TCRunner:
         # check
         print()
         if is_fixed == tc.ground_truth.is_fixed:
-            logger.success(f"\t\tcheck Success: {tc.ground_truth.is_fixed} ---> {is_fixed}")
+            logger.success(f"\t\tfix check: {tc.ground_truth.is_fixed} ---> {is_fixed}")
             model_3_find_flag = True
         else:
-            logger.error(f"\t\tcheck Failed: {tc.ground_truth.is_fixed} ---> {is_fixed}")
+            logger.warning(f"\t\tfix check: {tc.ground_truth.is_fixed} ---> {is_fixed}")
 
         if not filter_find_flag:
             self.analysis.over_filter_count += 1
@@ -218,8 +218,15 @@ class TCRunner:
         if model_3_find_flag:
             self.analysis.model_3_find_count += 1
         print(filter_find_flag, model_1_find_flag, model_1_2_find_flag, precisely_find_flag, model_3_find_flag)
-        logger.info(f"ground truth: {tc.has_vul_function()} {tc.ground_truth.is_fixed}")
-        logger.info(f"      result: {has_vul_function} {is_fixed}")
+
+        # final result
+        has_vul = has_vul_function and not is_fixed
+        if has_vul == tc.has_vul():
+            logger.success(f"ground truth: {tc.has_vul_function()} {tc.ground_truth.is_fixed}")
+            logger.success(f"      result: {has_vul_function} {is_fixed}")
+        else:
+            logger.error(f"ground truth: {tc.has_vul_function()} {tc.ground_truth.is_fixed}")
+            logger.error(f"      result: {has_vul_function} {is_fixed}")
 
     def analyze(self, tc, locate_results, is_fixed):
         has_vul_function = bool(locate_results)

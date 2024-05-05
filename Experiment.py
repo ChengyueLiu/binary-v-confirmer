@@ -33,7 +33,7 @@ def run_experiment():
 
     # experiment test cases
     test_cases: List[VulConfirmTC] = [tc for tc in test_cases
-                                      if tc.has_vul()][:20]
+                                      if tc.has_vul()][10:20]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     # run test cases
