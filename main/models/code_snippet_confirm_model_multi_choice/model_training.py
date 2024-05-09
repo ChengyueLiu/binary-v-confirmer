@@ -1,5 +1,6 @@
 import torch
 from loguru import logger
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForMultipleChoice
 
@@ -16,7 +17,8 @@ def init_train(train_data_json_file_path,
                token_max_length=512,
                batch_size=512,
                learn_rate=5e-5,
-               epochs=3):
+               epochs=3,
+               test_only=False):
     """
 
     :param test_data_json_file_path:
@@ -44,20 +46,30 @@ def init_train(train_data_json_file_path,
     model = torch.nn.DataParallel(model).to(device)
 
     # datasets
-    train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length)
-    val_dataset = create_dataset(val_data_json_file_path, tokenizer, token_max_length)
+    if test_only:
+        train_dataset = None
+        val_dataset = None
+    else:
+        train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length)
+        val_dataset = create_dataset(val_data_json_file_path, tokenizer, token_max_length)
     test_dataset = create_dataset(test_data_json_file_path, tokenizer, token_max_length)
 
     # dataloader
-    train_loader, val_loader, test_loader = create_dataloaders(train_dataset,
-                                                               val_dataset,
-                                                               test_dataset,
-                                                               batch_size=batch_size)
+    if test_only:
+        train_loader = None
+        val_loader = None
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
+
 
     # optimizer
     optimizer = AdamW(model.parameters(), lr=learn_rate)
-
-    total_steps = len(train_loader) * epochs
+    if test_only:
+        total_steps = len(test_loader) * epochs
+    else:
+        total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
     return device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler
 
@@ -72,7 +84,9 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
     epoch_loss = 0
     total_correct = 0
     total_instances = 0
+    error_type_counts = {}  # 初始化错误统计字典
     for batch in tqdm(iterator, desc="train_or_evaluate"):
+        question_types = batch['question_types'].to(device)
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
         labels = batch['labels'].to(device)
@@ -100,7 +114,27 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
         total_correct += correct_predictions.sum().item()
         total_instances += labels.size(0)
 
+        # 更新错误统计
+        # Update error statistics
+        incorrect_indices = (predicted_classes != labels).nonzero(as_tuple=False).squeeze()
+        if incorrect_indices.numel() == 0:
+            continue  # Skip if there are no incorrect predictions
+        if incorrect_indices.dim() == 0:
+            incorrect_indices = incorrect_indices.unsqueeze(0)  # Ensure tensor is 1D
+        incorrect_types = question_types[incorrect_indices]
+        if incorrect_types.dim() == 0:
+            incorrect_types = incorrect_types.unsqueeze(0)  # Make sure it's iterable
+
+        for t in incorrect_types:
+            type_str = t.item() if hasattr(t, 'item') else t  # 从tensor转为Python基本类型
+            if type_str not in error_type_counts:
+                error_type_counts[type_str] = 0
+            error_type_counts[type_str] += 1
     epoch_acc = total_correct / total_instances
+    # 打印错误统计
+    print("Error type counts:")
+    for question_type, count in error_type_counts.items():
+        print(f"Type {question_type}: {count} errors")
     return epoch_loss / len(iterator), epoch_acc
 
 
@@ -122,7 +156,8 @@ def run_train(train_data_json_file_path,
         val_data_json_file_path,
         test_data_json_file_path,
         batch_size=batch_size,
-        epochs=epochs)
+        epochs=epochs,
+        test_only=test_only)
     if not test_only:
         if model_save_path_back_up:
             logger.info(f'load model state from {model_save_path_back_up}...')

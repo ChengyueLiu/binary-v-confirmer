@@ -1,5 +1,6 @@
 import multiprocessing
 import random
+from collections import Counter
 
 import transformers
 from loguru import logger
@@ -17,8 +18,13 @@ transformers.logging.set_verbosity_error()
 
 
 class CodeSnippetConfirmDataset(Dataset):
-    def __init__(self, questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len=512):
+    def __init__(self, questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, question_types=None,
+                 max_len=512):
         self.questions = questions
+        if question_types is None:
+            self.question_types = [0] * len(questions)
+        else:
+            self.question_types = question_types
         self.choice_0_list = choice_0_list
         self.choice_1_list = choice_1_list
         self.choice_index_list = choice_index_list
@@ -30,6 +36,7 @@ class CodeSnippetConfirmDataset(Dataset):
 
     def __getitem__(self, idx):
         question = self.questions[idx]
+        question_type = self.question_types[idx]
         choice_0 = self.choice_0_list[idx]
         choice_1 = self.choice_1_list[idx]
         choice_index = self.choice_index_list[idx]
@@ -50,6 +57,7 @@ class CodeSnippetConfirmDataset(Dataset):
         labels = torch.tensor(choice_index, dtype=torch.long)  # 不需要unsqueeze(0)
 
         return {
+            'question_types': question_type,
             'input_ids': input_ids,  # Shape: [1, num_choices, sequence_length]
             'attention_mask': attention_mask,  # Shape: [1, num_choices, sequence_length]
             'labels': labels
@@ -73,8 +81,9 @@ def create_dataset_from_model_input(data_items, tokenizer, max_len=512):
         choice_1_list.append(data_item.get_src_codes_1_text())
         choice_index_list.append(data_item.choice_index)
 
-    # print("原始数据数量: ", len(questions))
-    dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len)
+    # print("原始数据数量: ",
+    dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer,
+                                        max_len=max_len)
     return dataset
 
 
@@ -89,6 +98,7 @@ def create_dataset(file_path, tokenizer, max_len=512):
     pool.join()
 
     questions = []
+    question_types = []
     choice_0_list = []
     choice_1_list = []
     choice_index_list = []
@@ -98,16 +108,14 @@ def create_dataset(file_path, tokenizer, max_len=512):
         if not src_codes_0_text or not src_codes_1_text:
             continue
         questions.append(data_item.get_question_text())
+        question_types.append(data_item.wrong_type)
         choice_0_list.append(src_codes_0_text)
         choice_1_list.append(src_codes_1_text)
         choice_index_list.append(data_item.choice_index)
-
-        # print(data_item.get_question_text())
-        # print(data_item.get_src_codes_0_text())
-        # print(data_item.get_src_codes_1_text())
-        # print(data_item.choice_index, "\n")
-    print("原始数据数量: ", len(questions))
-    dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer, max_len)
+    counter = Counter(question_types)
+    print("原始数据数量: ", len(questions), " 类别分布: ", counter)
+    dataset = CodeSnippetConfirmDataset(questions, choice_0_list, choice_1_list, choice_index_list, tokenizer,
+                                        question_types=question_types, max_len=max_len)
     return dataset
 
 

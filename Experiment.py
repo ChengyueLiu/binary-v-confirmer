@@ -28,12 +28,12 @@ def run_experiment():
     # model 1 的 back 4 是比较好用的，back 5 是用心的训练数据训练的，但是训练效果不太好。
     function_confirm_model_pth = r"Resources/model_weights/model_1_weights.pth"
     snippet_position_model_pth = r"Resources/model_weights/model_2_weights_back_3.pth"
-    snippet_choice_model_pth = r"Resources/model_weights/model_3_weights_back_2.pth"
+    snippet_choice_model_pth = r"Resources/model_weights/model_3_weights.pth"
     tc_runner = TCRunner(function_confirm_model_pth, snippet_position_model_pth, snippet_choice_model_pth)
 
     # experiment test cases
     test_cases: List[VulConfirmTC] = [tc for tc in test_cases
-                                      if tc.has_vul()][10:20]
+                                      if not tc.has_vul_function()]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     # run test cases

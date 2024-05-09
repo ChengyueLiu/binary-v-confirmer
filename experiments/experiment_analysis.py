@@ -56,17 +56,39 @@ class Analysis:
         return numerator / denominator if denominator != 0 else 0
 
     def print_analysis_result(self, tc_count: int):
-        logger.info(f"test result:")
+        if tc_count == 0:
+            logger.error("tc_count is zero, cannot perform calculations")
+            return
+
+        logger.info("Test result:")
+        logger.info(f"\t                          tc count: {tc_count}")
+
+        model_1_percentage = round((self.model_1_find_count / tc_count) * 100, 2)
+        logger.info(f"\t                model 1 find count: {self.model_1_find_count}, {model_1_percentage}%")
+
+        model_1_2_percentage = round((self.model_1_2_find_count / tc_count) * 100, 2)
+        model_1_2_relative = round((self.model_1_2_find_count / self.model_1_find_count) * 100,
+                                   2) if self.model_1_find_count else 0
         logger.info(
-            f"\t                          tc count: {tc_count}")
+            f"\t          model 1 and 2 find count: {self.model_1_2_find_count}, {model_1_2_percentage}%, {model_1_2_relative}%")
+
+        model_1_2_precise_percentage = round((self.model_1_2_precisely_find_count / tc_count) * 100, 2)
+        model_1_2_precise_relative = round((self.model_1_2_precisely_find_count / self.model_1_find_count) * 100,
+                                           2) if self.model_1_find_count else 0
+        model_1_2_precise_relative2 = round((self.model_1_2_precisely_find_count / self.model_1_2_find_count) * 100,
+                                            2) if self.model_1_2_find_count else 0
         logger.info(
-            f"\t                model 1 find count: {self.model_1_find_count}, {round((self.model_1_find_count / tc_count) * 100, 2)}%")
+            f"\tmodel 1 and 2 precisely find count: {self.model_1_2_precisely_find_count}, {model_1_2_precise_percentage}%, {model_1_2_precise_relative}%, {model_1_2_precise_relative2}%")
+
+        model_3_percentage = round((self.model_3_find_count / tc_count) * 100, 2)
+        model_3_relative = round((self.model_3_find_count / self.model_1_find_count) * 100,
+                                 2) if self.model_1_find_count else 0
+        model_3_relative2 = round((self.model_3_find_count / self.model_1_2_find_count) * 100,
+                                  2) if self.model_1_2_find_count else 0
+        model_3_relative3 = round((self.model_3_find_count / self.model_1_2_precisely_find_count) * 100,
+                                  2) if self.model_1_2_precisely_find_count else 0
         logger.info(
-            f"\t          model 1 and 2 find count: {self.model_1_2_find_count}, {round((self.model_1_2_find_count / tc_count) * 100, 2)}%, {round((self.model_1_2_find_count / self.model_1_find_count) * 100, 2)}%")
-        logger.info(
-            f"\tmodel 1 and 2 precisely find count: {self.model_1_2_precisely_find_count}, {round((self.model_1_2_precisely_find_count / tc_count) * 100, 2)}%, {round((self.model_1_2_precisely_find_count / self.model_1_find_count) * 100, 2)}%, {round((self.model_1_2_precisely_find_count / self.model_1_2_find_count) * 100, 2)}%")
-        logger.info(
-            f"\t                model 3 find count: {self.model_3_find_count}, {round((self.model_3_find_count / tc_count) * 100, 2)}%, {round((self.model_3_find_count / self.model_1_find_count) * 100, 2)}%, {round((self.model_3_find_count / self.model_1_2_find_count) * 100, 2)}%, {round((self.model_3_find_count / self.model_1_2_precisely_find_count) * 100, 2)}%")
+            f"\t                model 3 find count: {self.model_3_find_count}, {model_3_percentage}%, {model_3_relative}%, {model_3_relative2}%, {model_3_relative3}%")
 
         logger.info(f"\ttp: {self.tp}, fp: {self.fp}, tn: {self.tn}, fn: {self.fn}")
         logger.info(f"\tprecision: {self.precision}")

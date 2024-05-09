@@ -1,5 +1,6 @@
 import torch
 from loguru import logger
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW, get_linear_schedule_with_warmup, RobertaTokenizer, RobertaForQuestionAnswering, \
     AutoTokenizer
@@ -15,7 +16,8 @@ def init_train(train_data_json_file_path,
                token_max_length=512,
                batch_size=512,
                learn_rate=5e-5,
-               epochs=3):
+               epochs=3,
+               test_only=False):
     """
 
     :param test_data_json_file_path:
@@ -43,20 +45,31 @@ def init_train(train_data_json_file_path,
     model = torch.nn.DataParallel(model).to(device)
 
     # datasets
-    train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length)
-    val_dataset = create_dataset(val_data_json_file_path, tokenizer, token_max_length)
+    if test_only:
+        train_dataset = None
+        val_dataset = None
+    else:
+        train_dataset = create_dataset(train_data_json_file_path, tokenizer, token_max_length)
+        val_dataset = create_dataset(val_data_json_file_path, tokenizer, token_max_length)
     test_dataset = create_dataset(test_data_json_file_path, tokenizer, token_max_length)
 
     # dataloader
-    train_loader, val_loader, test_loader = create_dataloaders(train_dataset,
-                                                               val_dataset,
-                                                               test_dataset,
-                                                               batch_size=batch_size)
+    logger.info(f"batch size: {batch_size}")
+    if test_only:
+        train_loader = None
+        val_loader = None
+    else:
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 
     # optimizer
     optimizer = AdamW(model.parameters(), lr=learn_rate)
 
-    total_steps = len(train_loader) * epochs
+    if test_only:
+        total_steps = len(test_loader) * epochs
+    else:
+        total_steps = len(train_loader) * epochs
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
     return device, tokenizer, model, train_loader, val_loader, test_loader, optimizer, scheduler
 
@@ -152,6 +165,7 @@ def run_train(train_data_json_file_path,
         train_data_json_file_path,
         val_data_json_file_path,
         test_data_json_file_path,
+        test_only=test_only,
         **kwargs)  # 确保其他参数也能被传递
     logger.info('Initialized, start training, epochs: {}, batch_size: {}...'.format(epochs, batch_size))
     if not test_only:

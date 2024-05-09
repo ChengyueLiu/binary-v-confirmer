@@ -88,7 +88,7 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
     epoch_loss = 0
     total_correct = 0
     total_instances = 0
-    incorrect_id_list = []
+    incorrect_id_dict = {}
     for batch in tqdm(iterator, desc="train_or_evaluate"):
         item_ids = batch['item_ids'].to(device)
         input_ids = batch['input_ids'].to(device)
@@ -124,9 +124,14 @@ def train_or_evaluate(model, iterator, optimizer, scheduler, device, is_train=Tr
             if incorrect_indices.dim() == 0:
                 incorrect_indices = incorrect_indices.unsqueeze(0)
             incorrect_ids = item_ids[incorrect_indices].tolist()
-            incorrect_id_list.extend(incorrect_ids)  # 收集错误的ID
+            for idx, label in enumerate(labels[incorrect_indices]):
+                label = label.item()  # 从tensor中获取具体的label值
+                if label not in incorrect_id_dict:
+                    incorrect_id_dict[label] = []
+                incorrect_id_dict[label].append(incorrect_ids[idx])
     epoch_acc = total_correct / total_instances
-    print(incorrect_id_list)
+    for label, incorrect_ids in incorrect_id_dict.items():
+        logger.info(f'Label: {label}, Incorrect IDs: {len(incorrect_ids)}')
     return epoch_loss / len(iterator), epoch_acc
 
 
