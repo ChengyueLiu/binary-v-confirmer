@@ -33,7 +33,7 @@ def run_experiment():
 
     # experiment test cases
     test_cases: List[VulConfirmTC] = [tc for tc in test_cases
-                                      if not tc.has_vul_function()]
+                                      if tc.has_vul()][:1]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     # run test cases

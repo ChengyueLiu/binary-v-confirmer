@@ -168,13 +168,15 @@ def generate_snippet_choice_model_input(locate_results):
 
         # 最终定位结果
         snippet = normalized_asm_codes[start_index:start_index + 50]
-
+        print(" ".join(snippet))
         data_item = DataItemForCodeSnippetConfirmModelMC(function_name=function_name,
                                                          asm_codes=snippet,
                                                          src_codes_0=patch.vul_snippet_codes,
                                                          src_codes_1=patch.fixed_snippet_codes)
         data_item.normalized_str_codes()
         data_item.is_normalized = True
+        print(data_item.get_src_codes_0_text())
+        print(data_item.get_src_codes_1_text())
         data_items.append(data_item)
 
     return data_items

@@ -6,7 +6,7 @@ from experiments.model_input_manager import filter_and_generate_function_confirm
     generate_snippet_locate_model_input, generate_snippet_choice_model_input
 from experiments.experiment_analysis import Analysis
 from experiments.extractor_runner import extract_asm_functions
-from main.interface import DataItemForFunctionConfirmModel
+from main.interface import DataItemForFunctionConfirmModel, DataItemForCodeSnippetPositioningModel
 from main.models.code_snippet_confirm_model_multi_choice.new_model_application import SnippetChoicer
 from main.models.code_snippet_positioning_model.new_model_application import SnippetPositioner
 from main.models.function_confirm_model.new_model_application import FunctionConfirmer
@@ -16,7 +16,7 @@ from main.tc_models import VulConfirmTC, VulFunction, TestBin
 class TCRunner:
     def __init__(self, function_confirm_model_pth, snippet_position_model_pth, snippet_choice_model_pth):
         self.confirm_threshold = 0.99
-        self.locate_threshold = 0.6
+        self.locate_threshold = 0.5
 
         logger.info(f"init model...")
         self.confirm_model = FunctionConfirmer(model_save_path=function_confirm_model_pth, batch_size=128)
@@ -87,7 +87,7 @@ class TCRunner:
 
                 for i, patch in enumerate(vul_function.patches, 1):
                     # generate model input
-                    locate_model_input_data_items = generate_snippet_locate_model_input(vul_function_name,
+                    locate_model_input_data_items:List[DataItemForCodeSnippetPositioningModel] = generate_snippet_locate_model_input(vul_function_name,
                                                                                         confirmed_data_item.bin_function_name,
                                                                                         patch.vul_snippet_codes,
                                                                                         confirmed_data_item.asm_codes)
@@ -95,8 +95,10 @@ class TCRunner:
                     predictions = self.locate_model.locate(locate_model_input_data_items)
 
                     # find most possible result
-                    for j, (pred, prob) in enumerate(predictions):
+                    for j, (data_item, (pred, prob)) in enumerate(zip(locate_model_input_data_items, predictions)):
                         if prob < self.locate_threshold:
+                            logger.warning(
+                                f"locate failed: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}")
                             continue
 
                         if prob > most_prob:
@@ -133,10 +135,17 @@ class TCRunner:
         vul_prob = 0
         fix_prob = 0
         for (_, option_0_prob), (_, option_1_prob) in predictions:
+            logger.info(f"choice: vul_prob: {option_0_prob}, fix_prob: {option_1_prob}")
             vul_prob += option_0_prob
             fix_prob += option_1_prob
-        is_fixed = fix_prob > vul_prob
-        logger.debug(f"is fixed: {is_fixed}")
+
+        if vul_prob > fix_prob:
+            is_fixed = False
+        elif vul_prob < fix_prob:
+            is_fixed = True
+        else:
+            is_fixed = None
+        logger.info(f"is fixed: {is_fixed}, vul_prob: {vul_prob}, fix_prob: {fix_prob}")
         return is_fixed
 
     def _print_log(self, tc, filtered_data_items, confirmed_data_items, locate_results, is_fixed):
@@ -183,7 +192,7 @@ class TCRunner:
                     model_1_2_find_flag = True
                 else:
                     logger.warning(f"\t\tlocate FP: {vul_function_name} ---> {bin_function_name} {prob}")
-                    model_1_2_fp_flag = False
+                    model_1_2_fp_flag = True
             has_vul_function = True
         else:
             logger.warning(f"\t\tno patch located!")

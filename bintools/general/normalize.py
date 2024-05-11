@@ -48,15 +48,11 @@ def normalize_asm_code(asm_code: str,
     # 简化内存访问，替换为统一标记
     asm_code = re.sub(r"\[[^\]]+\]", mem_token, asm_code)
 
-    # 简化控制流指令，保留跳转逻辑，并处理跳转指令后的地址标记为 <LOC>
-    asm_code = re.sub(r"\bj(mp|e|z|nz|ne|g|ge|l|le|b|be|a|ae)\s+(short\s+)?[0-9a-f]+\s+<[^>]+>",
-                      jump_token + " " + loc_token, asm_code)
+    # 保留控制流指令，但替换地址标记为 <LOC>
+    asm_code = re.sub(r"\b(j(mp|e|z|nz|ne|g|ge|l|le|b|be|a|ae))\s+(short\s+)?[0-9a-f]+\s+<[^>]+>",
+                      r"\1 " + loc_token, asm_code)
 
-    # # 移除jmp指令后的short关键字，并保留跳转标签
-    asm_code = re.sub(r"\b(j(mp|e|z|nz|ne|g|ge|l|le|b|be|a|ae))\s+short\s+[0-9a-f]+\s+<([^>]+)>", jump_token + r" <\3>",
-                      asm_code)
-
-    # 移除call和jump指令后的直接内存地址，保留函数名和跳转标签，处理可选的偏移量
+    # 保留call和jump指令，但替换地址为标签
     asm_code = re.sub(r"\bcall\s+[0-9a-f]+\s+<([^>]+)>", r"call <\1>", asm_code)
 
     # 移除short
@@ -65,7 +61,6 @@ def normalize_asm_code(asm_code: str,
     asm_code = re.sub(r"<([^+]+)\+\S+>", r"<\1+OFFSET>", asm_code)
     # 处理空格和逗号
     asm_code = asm_code.replace("  ", " ").replace(", ", ",")
-
     return asm_code
 
 
