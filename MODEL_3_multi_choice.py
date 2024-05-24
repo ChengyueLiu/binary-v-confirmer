@@ -30,14 +30,14 @@ def train_model_3():
     train_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/train_data_items_for_model_3.json"
     val_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/val_data_items_for_model_3.json"
     test_data_save_path = r"/home/chengyue/projects/RESEARCH_DATA/test_cases/bin_vul_confirm_tcs/test_data_items_for_model_3.json"
-    model_save_path_back_up = "Resources/model_weights/model_3_weights_back_2.pth"
+    model_save_path_back_up = "Resources/model_weights/model_3_weights.pth"
     model_save_path = "Resources/model_weights/model_3_weights.pth"
     run_train(train_data_save_path,
               val_data_save_path,
               test_data_save_path,
               model_save_path_back_up=model_save_path_back_up,
               model_save_path=model_save_path,
-              test_only=True,
+              test_only=False,
               epochs=30,
               batch_size=50)
 

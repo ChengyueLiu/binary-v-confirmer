@@ -32,8 +32,8 @@ def run_experiment():
     tc_runner = TCRunner(function_confirm_model_pth, snippet_position_model_pth, snippet_choice_model_pth)
 
     # experiment test cases
-    test_cases: List[VulConfirmTC] = [tc for tc in test_cases
-                                      if tc.has_vul()][:1]
+    # test_cases: List[VulConfirmTC] = [tc for tc in test_cases if tc.has_vul()][:20]
+    test_cases: List[VulConfirmTC] = [tc for tc in test_cases if tc.has_vul_function()][2:4]
     logger.info(f"Experiment tc num: {len(test_cases)}")
 
     # run test cases
@@ -56,6 +56,11 @@ def run_experiment():
         # analysis result
         tc_runner.analysis.print_analysis_result(tc_count)
 
+    # write tc_runner.csv_data into csv file
+    file_path = "score.csv"
+    with open(file_path, "w") as f:
+        for line in tc_runner.csv_data:
+            f.write(f"{line}\n")
     logger.success(f"all done.")
 
 

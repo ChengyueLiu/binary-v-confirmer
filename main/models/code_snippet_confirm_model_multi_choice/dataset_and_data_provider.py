@@ -107,6 +107,8 @@ def create_dataset(file_path, tokenizer, max_len=512):
         src_codes_1_text = data_item.get_src_codes_1_text()
         if not src_codes_0_text or not src_codes_1_text:
             continue
+        if data_item.wrong_type == 1:
+            continue
         questions.append(data_item.get_question_text())
         question_types.append(data_item.wrong_type)
         choice_0_list.append(src_codes_0_text)

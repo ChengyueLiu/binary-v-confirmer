@@ -25,8 +25,11 @@ class TCRunner:
         logger.info(f"model init success")
 
         self.analysis = Analysis()
+        self.csv_data = []
 
     def run(self, tc: VulConfirmTC, asm_functions_cache):
+        self.csv_data.append(f"{tc.has_vul_function()},{tc.has_vul()}")
+
         # step 1: prepare data
         vul_function_dict = {vf.get_function_name(): vf for vf in tc.vul_functions}
         asm_function_dict = extract_asm_functions(tc.test_bin, asm_functions_cache)
@@ -38,7 +41,7 @@ class TCRunner:
         confirmed_data_items = self._confirm_functions(filtered_data_items)
 
         # step 4: locate vul snippet
-        locate_results = self._locate_patch(vul_function_dict, confirmed_data_items)
+        locate_results = self._locate_vul_snippet(vul_function_dict, confirmed_data_items)
 
         # step 5: check patch
         is_fixed = self._check_patch(locate_results)
@@ -62,7 +65,7 @@ class TCRunner:
         logger.info(f"confirm: {len(filtered_data_items)} ---> {len(confirmed_data_items)}")
         return confirmed_data_items
 
-    def _locate_patch(self, vul_function_dict, confirmed_data_items: List[DataItemForFunctionConfirmModel]):
+    def _locate_vul_snippet(self, vul_function_dict, confirmed_data_items: List[DataItemForFunctionConfirmModel]):
         # group by vul function
         group_dict = {}
         for data_item in confirmed_data_items:
@@ -86,21 +89,28 @@ class TCRunner:
                 vul_function: VulFunction = vul_function_dict[vul_function_name]
 
                 for i, patch in enumerate(vul_function.patches, 1):
-                    # generate model input
-                    locate_model_input_data_items:List[DataItemForCodeSnippetPositioningModel] = generate_snippet_locate_model_input(vul_function_name,
-                                                                                        confirmed_data_item.bin_function_name,
-                                                                                        patch.vul_snippet_codes,
-                                                                                        confirmed_data_item.asm_codes)
+                    locate_part = patch.vul_snippet_codes
+                    # locate_part = patch.vul_snippet_codes[3:]
+                    # locate_part = patch.fixed_snippet_codes[3:-3]
+                    locate_model_input_data_items: List[
+                        DataItemForCodeSnippetPositioningModel] = generate_snippet_locate_model_input(vul_function_name,
+                                                                                                      confirmed_data_item.bin_function_name,
+                                                                                                      locate_part,
+                                                                                                      confirmed_data_item.asm_codes)
                     # predict
                     predictions = self.locate_model.locate(locate_model_input_data_items)
 
                     # find most possible result
                     for j, (data_item, (pred, prob)) in enumerate(zip(locate_model_input_data_items, predictions)):
                         if prob < self.locate_threshold:
-                            logger.warning(
-                                f"locate failed: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}")
+                            # logger.warning(
+                            #     f"locate failed: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}")
                             continue
+                        else:
+                            logger.info(
+                                f"possible: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}, pred: {pred}")
 
+                        # if True:
                         if prob > most_prob:
                             most_vul_function_name = vul_function_name
                             most_patch_index = i
@@ -116,8 +126,9 @@ class TCRunner:
                                            prob)
                         else:
                             if vul_function_name == confirmed_data_item.bin_function_name:
-                                logger.warning(
-                                    f"locate failed: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}")
+                                pass
+                                # logger.warning(
+                                #     f"locate failed: {vul_function_name} patch {i} in {confirmed_data_item.bin_function_name} window {j}, asm_codes_length: {len(pred)}, prob: {prob}")
 
             # if find result, print log
             if most_result:
@@ -130,22 +141,38 @@ class TCRunner:
         return locate_results
 
     def _check_patch(self, locate_results):
-        choice_model_input_data_items = generate_snippet_choice_model_input(locate_results)
+        choice_model_input_data_items, diff_nums = generate_snippet_choice_model_input(locate_results)
         predictions = self.choice_model.choice(choice_model_input_data_items)
         vul_prob = 0
         fix_prob = 0
-        for (_, option_0_prob), (_, option_1_prob) in predictions:
-            logger.info(f"choice: vul_prob: {option_0_prob}, fix_prob: {option_1_prob}")
+
+        vul_score = 0
+        fix_score = 0
+        for ((choice, option_0_score, option_0_prob), (choice, option_1_score, option_1_prob)), diff_num in zip(
+                predictions, diff_nums):
+            diff_num = 0 if diff_num < 0 else diff_num
+            # if diff_num < 4:
+            #     option_1_score -= (diff_num * 1.4)
+            # else:
+            #     option_1_score -= (diff_num * 2.1)
+            logger.info(
+                f"diff_num: {diff_num}, choice: vul_score: {option_0_score}, fix_score: {option_1_score}, vul_prob: {option_0_prob}, fix_prob: {option_1_prob}")
+
             vul_prob += option_0_prob
             fix_prob += option_1_prob
+            vul_score += option_0_score
+            fix_score += option_1_score
+            self.csv_data[-1] = (f"{self.csv_data[-1]},{diff_num},{vul_score},{fix_score}")
 
-        if vul_prob > fix_prob:
+        if vul_score > fix_score:
             is_fixed = False
-        elif vul_prob < fix_prob:
+        elif vul_score < fix_score:
             is_fixed = True
         else:
             is_fixed = None
-        logger.info(f"is fixed: {is_fixed}, vul_prob: {vul_prob}, fix_prob: {fix_prob}")
+        logger.info(
+            f"is fixed: {is_fixed}, vul_score: {vul_score}, fix_score: {fix_score}, vul_prob: {vul_prob}, fix_prob: {fix_prob}")
+
         return is_fixed
 
     def _print_log(self, tc, filtered_data_items, confirmed_data_items, locate_results, is_fixed):

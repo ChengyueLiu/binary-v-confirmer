@@ -525,7 +525,8 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
                  src_codes_0: List[str],
                  src_codes_1: List[str],
                  choice_index=0,
-                 wrong_type=1):
+                 wrong_type=1,
+                 question_text= None):
         self.function_name = function_name
         self.choice_index = choice_index
         self.wrong_type = wrong_type
@@ -533,43 +534,49 @@ class DataItemForCodeSnippetConfirmModelMC(Serializable):
         self.src_codes_0 = src_codes_0
         self.src_codes_1 = src_codes_1
         self.is_normalized = False
+        self.question_text = None
 
     @classmethod
     def get_special_tokens(cls):
         return SpecialToken.get_asm_special_tokens()
 
     def get_question_text(self):
-        # 限制最多50行汇编代码
-        return " ".join(self.asm_codes[:50])
+        if self.question_text:
+            return self.question_text
+        else:
+            # 限制最多50行汇编代码
+            return " ".join(self.asm_codes[:50])
 
     def get_diff_start_index(self):
         """
         不同前的行，增加一行相同的，避免内容太少
         """
-        for i, (line_0, line_1) in enumerate(zip(self.src_codes_0, self.src_codes_1)):
-            if line_0 != line_1:
-                return i - 1 if i > 0 else 0
-        return -1
+        for i in range(min(len(self.src_codes_0), len(self.src_codes_1))):
+            if self.src_codes_0[i] != self.src_codes_1[i]:
+                return i
+        return 0
 
     def get_diff_end_index(self):
         """
         不同后的行，增加一行相同的，避免内容太少
         """
-        for i, (line_0, line_1) in enumerate(zip(self.src_codes_0[::-1], self.src_codes_1[::-1])):
-            if line_0 != line_1:
-                return len(self.src_codes_0)
+        for i in range(min(len(self.src_codes_0), len(self.src_codes_1))):
+            if self.src_codes_0[-i] != self.src_codes_1[-i]:
+                return -i
         return -1
 
     def get_src_codes_0_text(self):
         diff_start_index = self.get_diff_start_index()
         diff_end_index = self.get_diff_end_index()
-        src_codes_0_text = remove_comments(" ".join(self.src_codes_0[diff_start_index:diff_end_index]))
+        src_codes_0_text = remove_comments(" ".join(self.src_codes_0[diff_start_index:diff_start_index+10]))
+        # src_codes_0_text = remove_comments(" ".join(self.src_codes_0))
         return src_codes_0_text
 
     def get_src_codes_1_text(self):
         diff_start_index = self.get_diff_start_index()
         diff_end_index = self.get_diff_end_index()
-        src_codes_1_text = remove_comments(" ".join(self.src_codes_1[diff_start_index:diff_end_index]))
+        src_codes_1_text = remove_comments(" ".join(self.src_codes_1[diff_start_index:diff_start_index+10]))
+        # src_codes_1_text = remove_comments(" ".join(self.src_codes_1))
         return src_codes_1_text
 
     def get_choice_index(self):

@@ -158,7 +158,8 @@ def generate_snippet_locate_model_input(function_name, bin_function_name, source
 
 def generate_snippet_choice_model_input(locate_results):
     data_items: List[DataItemForCodeSnippetConfirmModelMC] = []
-    for function_name, patch, bin_funciton_name, normalized_asm_codes, pred, prob in locate_results:
+    diff_nums = []
+    for function_name, patch, bin_function_name, normalized_asm_codes, pred, prob in locate_results:
         # 找到定位的片段在原始汇编代码中的位置
         start_index = 0
         while pred in " ".join(normalized_asm_codes[start_index:]) and start_index < len(
@@ -167,16 +168,22 @@ def generate_snippet_choice_model_input(locate_results):
         start_index -= 1
 
         # 最终定位结果
-        snippet = normalized_asm_codes[start_index:start_index + 50]
-        print(" ".join(snippet))
+        snippet = normalized_asm_codes[start_index:start_index + 30]
+        print("汇编指令: " + " ".join(normalized_asm_codes))
         data_item = DataItemForCodeSnippetConfirmModelMC(function_name=function_name,
                                                          asm_codes=snippet,
                                                          src_codes_0=patch.vul_snippet_codes,
                                                          src_codes_1=patch.fixed_snippet_codes)
         data_item.normalized_str_codes()
         data_item.is_normalized = True
-        print(data_item.get_src_codes_0_text())
-        print(data_item.get_src_codes_1_text())
+        print("修复前源代码片段: " + data_item.get_src_codes_0_text())
+        print("修复后源代码片段: " + data_item.get_src_codes_1_text())
+        print("定位结果 pred: " + pred)
+        print("定位结果: " + " ".join(snippet))
+        diff_num = len(data_item.src_codes_1) - len(data_item.src_codes_0)
+        diff_nums.append(diff_num)
+        print(f"长度差异：{len(data_item.src_codes_1)} - {len(data_item.src_codes_0)} = {diff_num}")
+
         data_items.append(data_item)
 
-    return data_items
+    return data_items, diff_nums

@@ -79,7 +79,7 @@ class SnippetPositioner:
                 predict_answer_tokens = input_ids[answer_token_start_index: answer_token_start_index + 50]
                 # 解码
                 answer = self.tokenizer.decode(predict_answer_tokens, skip_special_tokens=True)
-                logger.info(f'answer_token_start_index: {answer_token_start_index}, answer_token_end_index: {answer_token_end_index}, predict_answer: {answer}')
+                # logger.info(f'answer_token_start_index: {answer_token_start_index}, answer_token_end_index: {answer_token_end_index}, predict_answer: {answer}')
 
                 predicted_answers.append(answer)
                 # 计算平均置信度（开始和结束概率的平均）
